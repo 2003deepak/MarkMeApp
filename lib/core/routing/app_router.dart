@@ -7,7 +7,9 @@ import 'package:markmeapp/presentation/pages/auth/login_page.dart';
 import 'package:markmeapp/presentation/pages/auth/signup_page.dart';
 import 'package:markmeapp/presentation/pages/auth/forgot_password_page.dart';
 // import 'package:markmeapp/presentation/pages/common/landing_page.dart';
-import 'package:markmeapp/presentation/pages/student/student_dashboard.dart';
+import 'package:markmeapp/presentation/pages/home_page.dart';
+import 'package:markmeapp/presentation/pages/notification_page.dart';
+import 'package:markmeapp/presentation/pages/schedule_page.dart';
 import 'package:markmeapp/presentation/pages/teacher/teacher_dashboard.dart';
 
 class AppRouter {
@@ -45,11 +47,20 @@ class AppRouter {
         ],
       ),
 
-      // ✅ Student
+      // ✅ Student - Main Home Page with Bottom Navigation
       GoRoute(
         path: '/student',
-        builder: (context, state) => const StudentDashboard(),
+        builder: (context, state) => const HomePage(),
         routes: [
+          // Individual pages accessible via deep links
+          GoRoute(
+            path: 'notifications',
+            builder: (context, state) => const NotificationPage(),
+          ),
+          GoRoute(
+            path: 'schedule',
+            builder: (context, state) => const SchedulePage(),
+          ),
           GoRoute(
             path: 'attendance',
             builder: (context, state) => const Scaffold(

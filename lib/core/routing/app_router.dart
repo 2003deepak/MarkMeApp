@@ -10,7 +10,7 @@ import 'package:markmeapp/presentation/pages/auth/forgot_password_page.dart';
 import 'package:markmeapp/presentation/pages/home_page.dart';
 import 'package:markmeapp/presentation/pages/notification_page.dart';
 import 'package:markmeapp/presentation/pages/schedule_page.dart';
-import 'package:markmeapp/presentation/pages/teacher/teacher_dashboard.dart';
+import 'package:markmeapp/presentation/pages/teacher/teacher_dashboard_page.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -36,7 +36,7 @@ class AppRouter {
       // ✅ Teacher
       GoRoute(
         path: '/teacher',
-        builder: (context, state) => const TeacherDashboard(),
+        builder: (context, state) => const TeacherDashboardPage(),
         routes: [
           GoRoute(
             path: 'profile',

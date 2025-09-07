@@ -1,19 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:fl_chart/fl_chart.dart';
 
-class StudentDashboard extends StatefulWidget {
-  const StudentDashboard({super.key});
+class StudentDashboardContent extends StatefulWidget {
+  const StudentDashboardContent({super.key});
 
   @override
-  State<StudentDashboard> createState() => _StudentDashboardState();
+  State<StudentDashboardContent> createState() => _StudentDashboardContentState();
 }
 
-class _StudentDashboardState extends State<StudentDashboard>
+class _StudentDashboardContentState extends State<StudentDashboardContent>
     with TickerProviderStateMixin {
-  late AnimationController _rotationController;
   late AnimationController _scaleController;
-  late Animation<double> _rotationAnimation;
   late Animation<double> _scaleAnimation;
 
   String? selectedSubject;
@@ -57,38 +54,22 @@ class _StudentDashboardState extends State<StudentDashboard>
   void initState() {
     super.initState();
     
-    _rotationController = AnimationController(
-      duration: const Duration(seconds: 2),
-      vsync: this,
-    );
-    
     _scaleController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
 
-    _rotationAnimation = Tween<double>(
-      begin: 0,
-      end: 1,
-    ).animate(CurvedAnimation(
-      parent: _rotationController,
-      curve: Curves.easeInOutCubic,
-    ));
-
     _scaleAnimation = Tween<double>(
       begin: 1.0,
-      end: 1.1,
+      end: 1.05,
     ).animate(CurvedAnimation(
       parent: _scaleController,
       curve: Curves.elasticOut,
     ));
-
-    _rotationController.forward();
   }
 
   @override
   void dispose() {
-    _rotationController.dispose();
     _scaleController.dispose();
     super.dispose();
   }
@@ -111,24 +92,16 @@ class _StudentDashboardState extends State<StudentDashboard>
         PieChartSectionData(
           color: _getAttendanceColor(data['percentage']),
           value: attended.toDouble(),
-          title: '${data['percentage'].toStringAsFixed(1)}%',
-          radius: touchedIndex == 0 ? 110 : 100,
-          titleStyle: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
+          title: '', // Remove title to avoid overlap
+          radius: touchedIndex == 0 ? 85 : 75,
+          titleStyle: const TextStyle(fontSize: 0), // Hide title
         ),
         PieChartSectionData(
           color: Colors.grey.shade300,
           value: missed.toDouble(),
-          title: '${(100 - data['percentage']).toStringAsFixed(1)}%',
-          radius: touchedIndex == 1 ? 110 : 100,
-          titleStyle: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Colors.black54,
-          ),
+          title: '', // Remove title to avoid overlap
+          radius: touchedIndex == 1 ? 85 : 75,
+          titleStyle: const TextStyle(fontSize: 0), // Hide title
         ),
       ];
     } else {
@@ -148,24 +121,16 @@ class _StudentDashboardState extends State<StudentDashboard>
         PieChartSectionData(
           color: _getAttendanceColor(overallPercentage),
           value: totalAttended.toDouble(),
-          title: '${overallPercentage.toStringAsFixed(1)}%',
-          radius: touchedIndex == 0 ? 110 : 100,
-          titleStyle: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
+          title: '', // Remove title to avoid overlap
+          radius: touchedIndex == 0 ? 85 : 75,
+          titleStyle: const TextStyle(fontSize: 0), // Hide title
         ),
         PieChartSectionData(
           color: Colors.grey.shade300,
           value: missed.toDouble(),
-          title: '${(100 - overallPercentage).toStringAsFixed(1)}%',
-          radius: touchedIndex == 1 ? 110 : 100,
-          titleStyle: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Colors.black54,
-          ),
+          title: '', // Remove title to avoid overlap
+          radius: touchedIndex == 1 ? 85 : 75,
+          titleStyle: const TextStyle(fontSize: 0), // Hide title
         ),
       ];
     }
@@ -176,71 +141,21 @@ class _StudentDashboardState extends State<StudentDashboard>
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth > 600;
     
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.white,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Student Dashboard',
-              style: TextStyle(
-                fontSize: isDesktop ? 24 : 20,
-                fontWeight: FontWeight.w700,
-                color: Colors.black87,
-              ),
-            ),
-            Text(
-              'Rahul Kumar',
-              style: TextStyle(
-                fontSize: isDesktop ? 14 : 12,
-                color: Colors.grey.shade600,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 16),
-            child: IconButton(
-              icon: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.red.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  Icons.logout,
-                  size: isDesktop ? 24 : 20,
-                  color: Colors.red.shade600,
-                ),
-              ),
-              onPressed: () {
-                context.go('/login');
-              },
-            ),
-          ),
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(isDesktop ? 24.0 : 16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSubjectSelector(isDesktop),
+          const SizedBox(height: 24),
+          _buildAttendanceChart(isDesktop),
+          const SizedBox(height: 24),
+          _buildAttendanceStats(isDesktop),
+          const SizedBox(height: 24),
+          _buildUpcomingLectures(isDesktop),
+          const SizedBox(height: 24),
+          _buildRecentActivity(isDesktop),
         ],
-      ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(isDesktop ? 24.0 : 16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildSubjectSelector(isDesktop),
-            const SizedBox(height: 24),
-            _buildAttendanceChart(isDesktop),
-            const SizedBox(height: 24),
-            _buildAttendanceStats(isDesktop),
-            const SizedBox(height: 24),
-            _buildUpcomingLectures(isDesktop),
-            const SizedBox(height: 24),
-            _buildRecentActivity(isDesktop),
-          ],
-        ),
       ),
     );
   }
@@ -281,8 +196,10 @@ class _StudentDashboardState extends State<StudentDashboard>
           selectedSubject = value;
           touchedIndex = -1;
         });
-        _rotationController.reset();
-        _rotationController.forward();
+        // Subtle animation when subject changes
+        _scaleController.reverse().then((_) {
+          _scaleController.forward();
+        });
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
@@ -308,6 +225,26 @@ class _StudentDashboardState extends State<StudentDashboard>
   }
 
   Widget _buildAttendanceChart(bool isDesktop) {
+    // Get current data for display
+    Map<String, dynamic> currentData;
+    if (selectedSubject != null) {
+      currentData = subjectData[selectedSubject]!;
+    } else {
+      int totalLectures = 0;
+      int totalAttended = 0;
+      
+      for (var subject in subjectData.values) {
+        totalLectures += subject['totalLectures'] as int;
+        totalAttended += subject['attendedLectures'] as int;
+      }
+      
+      currentData = {
+        'totalLectures': totalLectures,
+        'attendedLectures': totalAttended,
+        'percentage': (totalAttended / totalLectures) * 100,
+      };
+    }
+
     return Container(
       padding: EdgeInsets.all(isDesktop ? 24 : 20),
       decoration: BoxDecoration(
@@ -324,6 +261,7 @@ class _StudentDashboardState extends State<StudentDashboard>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header
           Row(
             children: [
               Icon(
@@ -344,20 +282,28 @@ class _StudentDashboardState extends State<StudentDashboard>
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
+          
+          // Pie Chart with Center Info
           Center(
-            child: AnimatedBuilder(
-              animation: _rotationAnimation,
-              builder: (context, child) {
-                return Transform.rotate(
-                  angle: _rotationAnimation.value * 2 * 3.14159,
-                  child: AnimatedBuilder(
+            child: Container(
+              height: isDesktop ? 240 : 200,
+              width: isDesktop ? 240 : 200,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Pie Chart
+                  AnimatedBuilder(
                     animation: _scaleAnimation,
                     builder: (context, child) {
                       return Transform.scale(
                         scale: _scaleAnimation.value,
                         child: SizedBox(
-                          height: isDesktop ? 250 : 200,
+                          height: isDesktop ? 220 : 180,
+                          width: isDesktop ? 220 : 180,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 800),
+                          curve: Curves.easeInOutCubic,
                           child: PieChart(
                             PieChartData(
                               pieTouchData: PieTouchData(
@@ -377,56 +323,156 @@ class _StudentDashboardState extends State<StudentDashboard>
                                 },
                               ),
                               borderData: FlBorderData(show: false),
-                              sectionsSpace: 4,
-                              centerSpaceRadius: isDesktop ? 60 : 50,
+                              sectionsSpace: 2,
+                              centerSpaceRadius: isDesktop ? 65 : 55,
                               sections: _getPieChartSections(),
                             ),
                           ),
                         ),
-                      );
-                    },
+                      ),
+                    );
+                  },
+                ),
+                
+                  // Center Information
+                  Container(
+                    width: isDesktop ? 110 : 90,
+                    height: isDesktop ? 110 : 90,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                );
-              },
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        '${currentData['percentage'].toStringAsFixed(1)}%',
+                        style: TextStyle(
+                          fontSize: isDesktop ? 24 : 20,
+                          fontWeight: FontWeight.w800,
+                          color: _getAttendanceColor(currentData['percentage']),
+                        ),
+                      ),
+                      Text(
+                        'Attendance',
+                        style: TextStyle(
+                          fontSize: isDesktop ? 12 : 10,
+                          color: Colors.grey.shade600,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                  ),
+                ],
+              ),
             ),
           ),
-          const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildLegendItem('Present', Colors.green, isDesktop),
-              _buildLegendItem('Absent', Colors.grey.shade300, isDesktop),
-            ],
+          
+          const SizedBox(height: 16),
+          
+          // Lecture Count Information
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    children: [
+                      Text(
+                        '${currentData['attendedLectures']}',
+                        style: TextStyle(
+                          fontSize: isDesktop ? 24 : 20,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.green.shade600,
+                        ),
+                      ),
+                      Text(
+                        'Attended',
+                        style: TextStyle(
+                          fontSize: isDesktop ? 14 : 12,
+                          color: Colors.grey.shade600,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  width: 1,
+                  height: 40,
+                  color: Colors.grey.shade300,
+                ),
+                Expanded(
+                  child: Column(
+                    children: [
+                      Text(
+                        '${currentData['totalLectures'] - currentData['attendedLectures']}',
+                        style: TextStyle(
+                          fontSize: isDesktop ? 24 : 20,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.red.shade400,
+                        ),
+                      ),
+                      Text(
+                        'Missed',
+                        style: TextStyle(
+                          fontSize: isDesktop ? 14 : 12,
+                          color: Colors.grey.shade600,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  width: 1,
+                  height: 40,
+                  color: Colors.grey.shade300,
+                ),
+                Expanded(
+                  child: Column(
+                    children: [
+                      Text(
+                        '${currentData['totalLectures']}',
+                        style: TextStyle(
+                          fontSize: isDesktop ? 24 : 20,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.blue.shade600,
+                        ),
+                      ),
+                      Text(
+                        'Total',
+                        style: TextStyle(
+                          fontSize: isDesktop ? 14 : 12,
+                          color: Colors.grey.shade600,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildLegendItem(String label, Color color, bool isDesktop) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: isDesktop ? 16 : 12,
-          height: isDesktop ? 16 : 12,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: isDesktop ? 16 : 14,
-            fontWeight: FontWeight.w500,
-            color: Colors.grey.shade700,
-          ),
-        ),
-      ],
-    );
-  }
+
 
   Widget _buildAttendanceStats(bool isDesktop) {
     Map<String, dynamic> stats;

@@ -13,7 +13,7 @@ lib/generated_plugin_registrant.dart
 
 # Dependency lock files (keep if you want exact versions)
 pubspec.lock
-
+.kiro/
 # ----------------------------
 # Android related
 # ----------------------------

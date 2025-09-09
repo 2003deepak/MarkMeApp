@@ -13,15 +13,15 @@ class AppTheme {
     ),
     textTheme: const TextTheme(
       headlineLarge: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87),
-      bodyMedium: TextStyle(fontSize: 16, color: Colors.black87),
-      bodyLarge: TextStyle(fontSize: 16, color: Colors.black87),
-      bodySmall: TextStyle(fontSize: 14, color: Colors.black87),
+      bodyMedium: TextStyle(fontSize: 16, color: Colors.black),
+      bodyLarge: TextStyle(fontSize: 16, color: Colors.black),
+      bodySmall: TextStyle(fontSize: 14, color: Colors.black),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: Colors.indigo,
         foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(
+        shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(12)),
         ),
       ),
@@ -30,6 +30,8 @@ class AppTheme {
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
       ),
+      hintStyle: TextStyle(color: Colors.grey.shade600),
+      labelStyle: const TextStyle(color: Colors.black),
     ),
     textSelectionTheme: const TextSelectionThemeData(
       cursorColor: Colors.indigo,
@@ -58,7 +60,7 @@ class AppTheme {
       style: ElevatedButton.styleFrom(
         backgroundColor: Colors.indigo,
         foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(
+        shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(12)),
         ),
       ),
@@ -67,6 +69,8 @@ class AppTheme {
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
       ),
+      hintStyle: TextStyle(color: Colors.grey.shade400),
+      labelStyle: const TextStyle(color: Colors.white70),
     ),
     textSelectionTheme: const TextSelectionThemeData(
       cursorColor: Colors.indigo,

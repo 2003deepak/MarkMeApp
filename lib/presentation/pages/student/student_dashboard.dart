@@ -329,7 +329,7 @@ class _StudentDashboardState extends State<StudentDashboard>
               Icon(
                 Icons.pie_chart,
                 color: Colors.blue.shade600,
-                size: isDesktop ? 28 : 24,
+                size: isDesktop ?  : 24,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -357,7 +357,7 @@ class _StudentDashboardState extends State<StudentDashboard>
                       return Transform.scale(
                         scale: _scaleAnimation.value,
                         child: SizedBox(
-                          height: isDesktop ? 250 : 200,
+                          height: isDesktop ? 100 : 120,
                           child: PieChart(
                             PieChartData(
                               pieTouchData: PieTouchData(

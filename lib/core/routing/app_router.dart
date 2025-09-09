@@ -6,7 +6,6 @@ import 'package:markmeapp/presentation/pages/splash/splash_page.dart';
 import 'package:markmeapp/presentation/pages/auth/login_page.dart';
 import 'package:markmeapp/presentation/pages/auth/signup_page.dart';
 import 'package:markmeapp/presentation/pages/auth/forgot_password_page.dart';
-// import 'package:markmeapp/presentation/pages/common/landing_page.dart';
 import 'package:markmeapp/presentation/pages/home_page.dart';
 import 'package:markmeapp/presentation/pages/notification_page.dart';
 import 'package:markmeapp/presentation/pages/schedule_page.dart';
@@ -33,7 +32,7 @@ class AppRouter {
         builder: (context, state) => const ForgotPasswordPage(),
       ),
 
-      // ✅ Teacher
+      // Teacher routes
       GoRoute(
         path: '/teacher',
         builder: (context, state) => const TeacherDashboardPage(),
@@ -47,12 +46,11 @@ class AppRouter {
         ],
       ),
 
-      // ✅ Student - Main Home Page with Bottom Navigation
+      // Student routes
       GoRoute(
         path: '/student',
         builder: (context, state) => const HomePage(),
         routes: [
-          // Individual pages accessible via deep links
           GoRoute(
             path: 'notifications',
             builder: (context, state) => const NotificationPage(),
@@ -68,6 +66,14 @@ class AppRouter {
             ),
           ),
         ],
+      ),
+
+      // Admin routes (add these if needed)
+      GoRoute(
+        path: '/admin-dashboard',
+        builder: (context, state) => const Scaffold(
+          body: Center(child: Text("Admin Dashboard")),
+        ),
       ),
     ],
   );

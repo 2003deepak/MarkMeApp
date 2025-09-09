@@ -324,7 +324,7 @@ class _StudentDashboardContentState extends State<StudentDashboardContent>
                               ),
                               borderData: FlBorderData(show: false),
                               sectionsSpace: 2,
-                              centerSpaceRadius: isDesktop ? 65 : 55,
+                              centerSpaceRadius: isDesktop ? 30 : 20,
                               sections: _getPieChartSections(),
                             ),
                           ),

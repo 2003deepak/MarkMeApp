@@ -1,6 +1,9 @@
+// lib/presentation/pages/auth/signup_page.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:go_router/go_router.dart';
+import 'package:markmeapp/data/models/user_model.dart';
+import 'package:markmeapp/data/repositories/auth_repository.dart';
 
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
@@ -17,6 +20,7 @@ class _SignupPageState extends State<SignupPage> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _agreeToTerms = false;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -33,7 +37,7 @@ class _SignupPageState extends State<SignupPage> {
     });
   }
 
-  void _handleSignup() {
+  Future<void> _handleSignup() async {
     if (_formKey.currentState!.validate()) {
       if (!_agreeToTerms) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -46,33 +50,59 @@ class _SignupPageState extends State<SignupPage> {
         );
         return;
       }
-      
-      // TODO: Implement actual signup logic
-      print('Signup with: ${_firstNameController.text} ${_lastNameController.text} - ${_emailController.text}');
-      
-      // Show success message and navigate to login
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Account created successfully! Please sign in.'),
-          backgroundColor: Colors.green.shade600,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
+
+      setState(() {
+        _isLoading = true;
+      });
+
+      final user = User(
+        firstName: _firstNameController.text.trim(),
+        lastName: _lastNameController.text.trim(),
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
       );
-      
-      // Navigate to login page (student account created)
-      context.go('/login');
+
+      final authRepo = AuthRepository();
+      final result = await authRepo.registerUser(user);
+
+      if (result['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Account created successfully! Redirecting...'),
+            backgroundColor: Colors.green.shade600,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+
+        await Future.delayed(const Duration(seconds: 1));
+        if (context.mounted) {
+          context.go('/login');
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['error'] ?? 'Registration failed. Please try again.'),
+            backgroundColor: Colors.red.shade600,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      }
+
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
     final isDesktop = screenWidth > 600;
-    
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA), // Light background matching login page
+      backgroundColor: const Color(0xFFF5F7FA),
       body: SafeArea(
         child: Center(
           child: Container(
@@ -84,7 +114,6 @@ class _SignupPageState extends State<SignupPage> {
               child: Column(
                 children: [
                   SizedBox(height: isDesktop ? 40 : 20),
-                  // Enhanced Logo with subtle gradient and shadow (matching login)
                   Container(
                     width: 80,
                     height: 80,
@@ -121,10 +150,7 @@ class _SignupPageState extends State<SignupPage> {
                       ),
                     ),
                   ),
-                  
                   const SizedBox(height: 32),
-                  
-                  // Welcome Text (matching login style)
                   const Text(
                     'Create Account',
                     style: TextStyle(
@@ -134,9 +160,7 @@ class _SignupPageState extends State<SignupPage> {
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  
                   const SizedBox(height: 8),
-                  
                   Text(
                     'Join us today and get started with your learning journey',
                     style: TextStyle(
@@ -145,17 +169,12 @@ class _SignupPageState extends State<SignupPage> {
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  
                   const SizedBox(height: 40),
-                  
-                  // Form
                   Form(
                     key: _formKey,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                      
-                        // First Name and Last Name Fields (enhanced styling)
                         Row(
                           children: [
                             Expanded(
@@ -167,7 +186,7 @@ class _SignupPageState extends State<SignupPage> {
                                     style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w500,
-                                      color: Colors.grey.shade700,
+                                      color: Colors.black,
                                     ),
                                   ),
                                   const SizedBox(height: 8),
@@ -289,11 +308,7 @@ class _SignupPageState extends State<SignupPage> {
                             ),
                           ],
                         ),
-                      
-                        
                         const SizedBox(height: 20),
-                        
-                        // Email Field (enhanced styling matching login)
                         Text(
                           'Email Address',
                           style: TextStyle(
@@ -355,11 +370,7 @@ class _SignupPageState extends State<SignupPage> {
                             },
                           ),
                         ),
-                      
-                        
                         const SizedBox(height: 20),
-                        
-                        // Password Field (enhanced styling matching login)
                         Text(
                           'Password',
                           style: TextStyle(
@@ -429,11 +440,7 @@ class _SignupPageState extends State<SignupPage> {
                             },
                           ),
                         ),
-                      
-                        
                         const SizedBox(height: 20),
-                        
-                        // Terms and Conditions (enhanced styling)
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -470,9 +477,7 @@ class _SignupPageState extends State<SignupPage> {
                                           fontWeight: FontWeight.w600,
                                         ),
                                         recognizer: TapGestureRecognizer()
-                                          ..onTap = () {
-                                            // TODO: Navigate to Terms of Service
-                                          },
+                                          ..onTap = () {},
                                       ),
                                       const TextSpan(text: ' and '),
                                       TextSpan(
@@ -482,9 +487,7 @@ class _SignupPageState extends State<SignupPage> {
                                           fontWeight: FontWeight.w600,
                                         ),
                                         recognizer: TapGestureRecognizer()
-                                          ..onTap = () {
-                                            // TODO: Navigate to Privacy Policy
-                                          },
+                                          ..onTap = () {},
                                       ),
                                     ],
                                   ),
@@ -493,11 +496,7 @@ class _SignupPageState extends State<SignupPage> {
                             ),
                           ],
                         ),
-                      
-                        
                         const SizedBox(height: 32),
-                        
-                        // Enhanced Create Account Button with gradient (matching login)
                         Container(
                           width: double.infinity,
                           height: 50,
@@ -517,7 +516,7 @@ class _SignupPageState extends State<SignupPage> {
                             ],
                           ),
                           child: ElevatedButton(
-                            onPressed: _handleSignup,
+                            onPressed: _isLoading ? null : _handleSignup,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.transparent,
                               shadowColor: Colors.transparent,
@@ -525,20 +524,24 @@ class _SignupPageState extends State<SignupPage> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
-                            child: const Text(
-                              'Create Account',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
-                            ),
+                            child: _isLoading
+                                ? const Center(
+                                    child: CircularProgressIndicator(
+                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Text(
+                                    'Create Account',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
+                                  ),
                           ),
                         ),
-                        
                         const SizedBox(height: 32),
-                        
-                        // Divider (matching login page)
                         Row(
                           children: [
                             Expanded(
@@ -565,10 +568,7 @@ class _SignupPageState extends State<SignupPage> {
                             ),
                           ],
                         ),
-                        
                         const SizedBox(height: 20),
-                        
-                        // Sign In Button (matching login page)
                         SizedBox(
                           width: double.infinity,
                           height: 50,
@@ -603,4 +603,4 @@ class _SignupPageState extends State<SignupPage> {
       ),
     );
   }
-} 
+}

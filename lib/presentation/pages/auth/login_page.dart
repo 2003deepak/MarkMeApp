@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import 'package:markmeapp/data/models/user_model.dart';       
+import 'package:markmeapp/presentation/state/auth_provider.dart'; 
+import 'package:markmeapp/presentation/state/auth_provider.dart';
+import 'package:provider/provider.dart';                      
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -9,6 +14,7 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
+
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -30,15 +36,30 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _handleLogin() {
+    print('🔵 [LoginPage] _handleLogin called');
+    
+    if (!mounted) {
+      print('🔴 [LoginPage] Widget not mounted, returning');
+      return;
+    }
+
     if (_formKey.currentState!.validate()) {
-      // TODO: Implement login logic
-      print('Login with: ${_emailController.text}');
-      // Navigate to appropriate dashboard based on user role
-      if (_isStaff) {
-        context.go('/teacher');
-      } else {
-        context.go('/student');
-      }
+      print('🟢 [LoginPage] Form validation passed');
+      
+      final user = User(
+        firstName: '',
+        lastName: '',
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+
+      final role = _isStaff ? 'teacher' : 'student';
+      print('🔵 [LoginPage] Attempting login with email: ${user.email}, role: $role');
+
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      authProvider.loginUser(user, role, context);
+    } else {
+      print('🔴 [LoginPage] Form validation failed');
     }
   }
 

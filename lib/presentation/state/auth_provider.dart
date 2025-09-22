@@ -24,13 +24,10 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Save user data - FIXED TYPE CASTING
+  /// Save user data
   Future<void> _saveUserData(dynamic data) async {
     print('🔵 [AuthProvider] _saveUserData called with data: $data');
-    print('🔵 [AuthProvider] Data type: ${data.runtimeType}');
-    
     try {
-      // Convert to Map<String, dynamic>
       Map<String, dynamic> userData;
       if (data is Map<String, dynamic>) {
         userData = data;
@@ -39,7 +36,7 @@ class AuthProvider extends ChangeNotifier {
       } else {
         throw Exception('Invalid data type for user data: ${data.runtimeType}');
       }
-      
+
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('userData', jsonEncode(userData));
       _userData = userData;
@@ -64,14 +61,12 @@ class AuthProvider extends ChangeNotifier {
         } else if (decoded is Map) {
           _userData = decoded.cast<String, dynamic>();
         }
-        print('🟢 [AuthProvider] Loaded user data from storage: $_userData');
+        print('🟢 [AuthProvider] Loaded user data: $_userData');
         notifyListeners();
       } catch (e) {
         print('🔴 [AuthProvider] Failed to decode stored user data: $e');
         await clearUserData();
       }
-    } else {
-      print('🔵 [AuthProvider] No stored user data found');
     }
   }
 
@@ -84,47 +79,33 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Login - FIXED NAVIGATION
+  /// Login
   Future<void> loginUser(User user, String role, BuildContext context) async {
-    print('🔵 [AuthProvider] loginUser called with email: ${user.email}, role: $role');
-    
+    print(
+      '🔵 [AuthProvider] loginUser called with email: ${user.email}, role: $role',
+    );
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
       final result = await _authRepo.loginUser(user, role);
-      print('🔵 [AuthProvider] Login result: $result');
-
       if (result['success'] == true) {
-        final data = result['data'];
-        print('🟢 [AuthProvider] Login successful, saving user data');
-        await _saveUserData(data);
-
+        await _saveUserData(result['data']);
         if (context.mounted) {
-          print('🔵 [AuthProvider] Navigating to dashboard based on role: $role');
-          
-          // Add small delay to ensure UI updates
-          await Future.delayed(const Duration(milliseconds: 50));
-          
           if (role == 'teacher') {
-            print('🔵 [AuthProvider] Navigating to /teacher');
             context.go('/teacher');
           } else if (role == 'admin') {
-            print('🔵 [AuthProvider] Navigating to /admin-dashboard');
             context.go('/admin-dashboard');
           } else {
-            print('🔵 [AuthProvider] Navigating to /student');
             context.go('/student');
           }
         }
       } else {
         _errorMessage = result['error'] ?? 'Login failed';
-        print('🔴 [AuthProvider] Login failed: $_errorMessage');
       }
     } catch (e) {
       _errorMessage = 'Login error: $e';
-      print('🔴 [AuthProvider] Login exception: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -134,31 +115,131 @@ class AuthProvider extends ChangeNotifier {
   /// Register
   Future<void> registerUser(User user, BuildContext context) async {
     print('🔵 [AuthProvider] registerUser called with email: ${user.email}');
-    
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
       final result = await _authRepo.registerUser(user);
-      print('🔵 [AuthProvider] Registration result: $result');
-      
       if (result['success'] == true) {
-        print('🟢 [AuthProvider] Registration successful');
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Registration successful! Please login.')),
+            const SnackBar(
+              content: Text('Registration successful! Please login.'),
+            ),
           );
-          await Future.delayed(const Duration(milliseconds: 500));
           context.go('/login');
         }
       } else {
         _errorMessage = result['error'] ?? 'Registration failed';
-        print('🔴 [AuthProvider] Registration failed: $_errorMessage');
       }
     } catch (e) {
       _errorMessage = 'Registration error: $e';
-      print('🔴 [AuthProvider] Registration exception: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Forgot password (Step 1)
+  Future<bool> forgotPassword(
+    String email,
+    String role,
+    BuildContext context,
+  ) async {
+    print('🔵 [AuthProvider] forgotPassword called');
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final result = await _authRepo.forgotPassword(email, role);
+      if (result['success'] == true) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(result['message'] ?? 'OTP sent to email')),
+          );
+          context.go('/verify-otp');
+        }
+        return true;
+      } else {
+        _errorMessage = result['error'];
+        return false;
+      }
+    } catch (e) {
+      _errorMessage = 'Forgot password error: $e';
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Verify OTP (Step 2)
+  Future<bool> verifyOtp(
+    String email,
+    String role,
+    String otp,
+    BuildContext context,
+  ) async {
+    print('🔵 [AuthProvider] verifyOtp called');
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final result = await _authRepo.verifyOtp(email, role, otp);
+      if (result['success'] == true) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(result['message'] ?? 'OTP verified')),
+          );
+        }
+        return true; // ✅ no navigation, ResetPasswordPage continues with _isOtpStep=false
+      } else {
+        _errorMessage = result['error'];
+        return false;
+      }
+    } catch (e) {
+      _errorMessage = 'OTP verification error: $e';
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Reset Password (Step 3)
+  Future<bool> resetPassword(
+    String email,
+    String role,
+    String newPassword,
+    BuildContext context,
+  ) async {
+    print('🔵 [AuthProvider] resetPassword called');
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final result = await _authRepo.resetPassword(email, role, newPassword);
+      if (result['success'] == true) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['message'] ?? 'Password reset successful'),
+            ),
+          );
+          context.go('/login'); // ✅ After reset, send user back to login
+        }
+        return true;
+      } else {
+        _errorMessage = result['error'];
+        return false;
+      }
+    } catch (e) {
+      _errorMessage = 'Reset password error: $e';
+      return false;
     } finally {
       _isLoading = false;
       notifyListeners();

@@ -56,32 +56,27 @@ class _StudentDashboardState extends State<StudentDashboard>
   @override
   void initState() {
     super.initState();
-    
+
     _rotationController = AnimationController(
       duration: const Duration(seconds: 2),
       vsync: this,
     );
-    
+
     _scaleController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
 
-    _rotationAnimation = Tween<double>(
-      begin: 0,
-      end: 1,
-    ).animate(CurvedAnimation(
-      parent: _rotationController,
-      curve: Curves.easeInOutCubic,
-    ));
+    _rotationAnimation = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(
+        parent: _rotationController,
+        curve: Curves.easeInOutCubic,
+      ),
+    );
 
-    _scaleAnimation = Tween<double>(
-      begin: 1.0,
-      end: 1.1,
-    ).animate(CurvedAnimation(
-      parent: _scaleController,
-      curve: Curves.elasticOut,
-    ));
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
+      CurvedAnimation(parent: _scaleController, curve: Curves.elasticOut),
+    );
 
     _rotationController.forward();
   }
@@ -106,7 +101,7 @@ class _StudentDashboardState extends State<StudentDashboard>
       final attended = data['attendedLectures'] as int;
       final total = data['totalLectures'] as int;
       final missed = total - attended;
-      
+
       return [
         PieChartSectionData(
           color: _getAttendanceColor(data['percentage']),
@@ -135,15 +130,15 @@ class _StudentDashboardState extends State<StudentDashboard>
       // Show overall attendance for all subjects
       int totalLectures = 0;
       int totalAttended = 0;
-      
+
       for (var subject in subjectData.values) {
         totalLectures += subject['totalLectures'] as int;
         totalAttended += subject['attendedLectures'] as int;
       }
-      
+
       final overallPercentage = (totalAttended / totalLectures) * 100;
       final missed = totalLectures - totalAttended;
-      
+
       return [
         PieChartSectionData(
           color: _getAttendanceColor(overallPercentage),
@@ -175,7 +170,7 @@ class _StudentDashboardState extends State<StudentDashboard>
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth > 600;
-    
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
@@ -264,8 +259,9 @@ class _StudentDashboardState extends State<StudentDashboard>
         child: Row(
           children: [
             _buildSubjectChip('All Subjects', null, isDesktop),
-            ...subjectData.keys.map((subject) => 
-              _buildSubjectChip(subject, subject, isDesktop)),
+            ...subjectData.keys.map(
+              (subject) => _buildSubjectChip(subject, subject, isDesktop),
+            ),
           ],
         ),
       ),
@@ -274,7 +270,7 @@ class _StudentDashboardState extends State<StudentDashboard>
 
   Widget _buildSubjectChip(String label, String? value, bool isDesktop) {
     final isSelected = selectedSubject == value;
-    
+
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -329,7 +325,7 @@ class _StudentDashboardState extends State<StudentDashboard>
               Icon(
                 Icons.pie_chart,
                 color: Colors.blue.shade600,
-                size: isDesktop ?  : 24,
+                size: isDesktop ? 20 : 24,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -361,20 +357,24 @@ class _StudentDashboardState extends State<StudentDashboard>
                           child: PieChart(
                             PieChartData(
                               pieTouchData: PieTouchData(
-                                touchCallback: (FlTouchEvent event, pieTouchResponse) {
-                                  setState(() {
-                                    if (!event.isInterestedForInteractions ||
-                                        pieTouchResponse == null ||
-                                        pieTouchResponse.touchedSection == null) {
-                                      touchedIndex = -1;
-                                      _scaleController.reverse();
-                                      return;
-                                    }
-                                    touchedIndex = pieTouchResponse
-                                        .touchedSection!.touchedSectionIndex;
-                                    _scaleController.forward();
-                                  });
-                                },
+                                touchCallback:
+                                    (FlTouchEvent event, pieTouchResponse) {
+                                      setState(() {
+                                        if (!event
+                                                .isInterestedForInteractions ||
+                                            pieTouchResponse == null ||
+                                            pieTouchResponse.touchedSection ==
+                                                null) {
+                                          touchedIndex = -1;
+                                          _scaleController.reverse();
+                                          return;
+                                        }
+                                        touchedIndex = pieTouchResponse
+                                            .touchedSection!
+                                            .touchedSectionIndex;
+                                        _scaleController.forward();
+                                      });
+                                    },
                               ),
                               borderData: FlBorderData(show: false),
                               sectionsSpace: 4,
@@ -410,10 +410,7 @@ class _StudentDashboardState extends State<StudentDashboard>
         Container(
           width: isDesktop ? 16 : 12,
           height: isDesktop ? 16 : 12,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 8),
         Text(
@@ -430,25 +427,25 @@ class _StudentDashboardState extends State<StudentDashboard>
 
   Widget _buildAttendanceStats(bool isDesktop) {
     Map<String, dynamic> stats;
-    
+
     if (selectedSubject != null) {
       stats = subjectData[selectedSubject]!;
     } else {
       int totalLectures = 0;
       int totalAttended = 0;
-      
+
       for (var subject in subjectData.values) {
         totalLectures += subject['totalLectures'] as int;
         totalAttended += subject['attendedLectures'] as int;
       }
-      
+
       stats = {
         'totalLectures': totalLectures,
         'attendedLectures': totalAttended,
         'percentage': (totalAttended / totalLectures) * 100,
       };
     }
-    
+
     return Container(
       padding: EdgeInsets.all(isDesktop ? 24 : 20),
       decoration: BoxDecoration(
@@ -476,11 +473,7 @@ class _StudentDashboardState extends State<StudentDashboard>
               isDesktop,
             ),
           ),
-          Container(
-            width: 1,
-            height: 50,
-            color: Colors.white.withOpacity(0.3),
-          ),
+          Container(width: 1, height: 50, color: Colors.white.withOpacity(0.3)),
           Expanded(
             child: _buildStatItem(
               'Attended',
@@ -489,11 +482,7 @@ class _StudentDashboardState extends State<StudentDashboard>
               isDesktop,
             ),
           ),
-          Container(
-            width: 1,
-            height: 50,
-            color: Colors.white.withOpacity(0.3),
-          ),
+          Container(width: 1, height: 50, color: Colors.white.withOpacity(0.3)),
           Expanded(
             child: _buildStatItem(
               'Percentage',
@@ -507,14 +496,15 @@ class _StudentDashboardState extends State<StudentDashboard>
     );
   }
 
-  Widget _buildStatItem(String label, String value, IconData icon, bool isDesktop) {
+  Widget _buildStatItem(
+    String label,
+    String value,
+    IconData icon,
+    bool isDesktop,
+  ) {
     return Column(
       children: [
-        Icon(
-          icon,
-          color: Colors.white,
-          size: isDesktop ? 28 : 24,
-        ),
+        Icon(icon, color: Colors.white, size: isDesktop ? 28 : 24),
         const SizedBox(height: 8),
         Text(
           value,
@@ -551,18 +541,44 @@ class _StudentDashboardState extends State<StudentDashboard>
         const SizedBox(height: 16),
         Row(
           children: [
-            Expanded(child: _buildLectureCard('Mathematics', '09:00 AM - 10:30 AM', Colors.blue, isDesktop)),
+            Expanded(
+              child: _buildLectureCard(
+                'Mathematics',
+                '09:00 AM - 10:30 AM',
+                Colors.blue,
+                isDesktop,
+              ),
+            ),
             const SizedBox(width: 12),
-            Expanded(child: _buildLectureCard('Physics', '10:30 AM - 12:00 PM', Colors.green, isDesktop)),
+            Expanded(
+              child: _buildLectureCard(
+                'Physics',
+                '10:30 AM - 12:00 PM',
+                Colors.green,
+                isDesktop,
+              ),
+            ),
             const SizedBox(width: 12),
-            Expanded(child: _buildLectureCard('Chemistry', '12:00 PM - 01:30 PM', Colors.orange, isDesktop)),
+            Expanded(
+              child: _buildLectureCard(
+                'Chemistry',
+                '12:00 PM - 01:30 PM',
+                Colors.orange,
+                isDesktop,
+              ),
+            ),
           ],
         ),
       ],
     );
   }
 
-  Widget _buildLectureCard(String subject, String time, Color color, bool isDesktop) {
+  Widget _buildLectureCard(
+    String subject,
+    String time,
+    Color color,
+    bool isDesktop,
+  ) {
     return Container(
       padding: EdgeInsets.all(isDesktop ? 16 : 12),
       decoration: BoxDecoration(
@@ -687,11 +703,7 @@ class _StudentDashboardState extends State<StudentDashboard>
               color: color.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(
-              icon,
-              color: color,
-              size: isDesktop ? 24 : 20,
-            ),
+            child: Icon(icon, color: color, size: isDesktop ? 24 : 20),
           ),
           const SizedBox(width: 16),
           Expanded(

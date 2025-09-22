@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:markmeapp/presentation/pages/auth/reset_password_page.dart';
 
 // Pages
 import 'package:markmeapp/presentation/pages/splash/splash_page.dart';
@@ -15,21 +16,22 @@ class AppRouter {
   static final GoRouter router = GoRouter(
     initialLocation: '/',
     routes: [
-      GoRoute(
-        path: '/',
-        builder: (context, state) => const SplashPage(),
-      ),
-      GoRoute(
-        path: '/login',
-        builder: (context, state) => const LoginPage(),
-      ),
-      GoRoute(
-        path: '/signup',
-        builder: (context, state) => const SignupPage(),
-      ),
+      GoRoute(path: '/', builder: (context, state) => const SplashPage()),
+      GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
+      GoRoute(path: '/signup', builder: (context, state) => const SignupPage()),
       GoRoute(
         path: '/forgot-password',
         builder: (context, state) => const ForgotPasswordPage(),
+      ),
+      GoRoute(
+        path: '/reset-password',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          final email = extra?['email'] as String? ?? '';
+          final role = extra?['role'] as String? ?? '';
+
+          return ResetPasswordPage(email: email, role: role);
+        },
       ),
 
       // Teacher routes
@@ -39,9 +41,8 @@ class AppRouter {
         routes: [
           GoRoute(
             path: 'profile',
-            builder: (context, state) => const Scaffold(
-              body: Center(child: Text("Teacher Profile")),
-            ),
+            builder: (context, state) =>
+                const Scaffold(body: Center(child: Text("Teacher Profile"))),
           ),
         ],
       ),
@@ -61,9 +62,8 @@ class AppRouter {
           ),
           GoRoute(
             path: 'attendance',
-            builder: (context, state) => const Scaffold(
-              body: Center(child: Text("Student Attendance")),
-            ),
+            builder: (context, state) =>
+                const Scaffold(body: Center(child: Text("Student Attendance"))),
           ),
         ],
       ),
@@ -71,9 +71,8 @@ class AppRouter {
       // Admin routes (add these if needed)
       GoRoute(
         path: '/admin-dashboard',
-        builder: (context, state) => const Scaffold(
-          body: Center(child: Text("Admin Dashboard")),
-        ),
+        builder: (context, state) =>
+            const Scaffold(body: Center(child: Text("Admin Dashboard"))),
       ),
     ],
   );

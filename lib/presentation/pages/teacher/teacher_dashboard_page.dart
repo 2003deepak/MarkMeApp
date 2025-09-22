@@ -8,19 +8,6 @@ import 'attendance_management_page.dart';
 import 'teacher_reports_page.dart';
 import 'teacher_analytics_page.dart';
 
-/// Teacher Dashboard Page - Main dashboard for staff members
-/// This page provides teachers with:
-/// - Quick action cards for common tasks
-/// - Today's lecture schedule
-/// - Recent activity feed
-/// - Navigation to detailed sections
-/// 
-/// Backend developers: This page will need teacher-specific API integration
-/// Expected endpoints:
-/// - GET /api/teacher/dashboard - Get teacher dashboard data
-/// - GET /api/teacher/lectures/today - Get today's lectures for teacher
-/// - GET /api/teacher/activities - Get recent teacher activities
-/// - POST /api/notifications/send - Send notifications to students
 class TeacherDashboardPage extends StatefulWidget {
   const TeacherDashboardPage({Key? key}) : super(key: key);
 

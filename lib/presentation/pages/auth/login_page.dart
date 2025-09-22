@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'package:markmeapp/data/models/user_model.dart';       
-import 'package:markmeapp/presentation/state/auth_provider.dart'; 
+import 'package:markmeapp/data/models/user_model.dart';
 import 'package:markmeapp/presentation/state/auth_provider.dart';
-import 'package:provider/provider.dart';                      
+import 'package:markmeapp/presentation/widgets/build_fancy_radiobutton.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -14,13 +13,12 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _rememberMe = false;
-  bool _isStaff = false; // Toggle between Staff Member and Student
+  String _selectedRole = 'student'; // Default role
 
   @override
   void dispose() {
@@ -37,7 +35,7 @@ class _LoginPageState extends State<LoginPage> {
 
   void _handleLogin() {
     print('🔵 [LoginPage] _handleLogin called');
-    
+
     if (!mounted) {
       print('🔴 [LoginPage] Widget not mounted, returning');
       return;
@@ -45,7 +43,7 @@ class _LoginPageState extends State<LoginPage> {
 
     if (_formKey.currentState!.validate()) {
       print('🟢 [LoginPage] Form validation passed');
-      
+
       final user = User(
         firstName: '',
         lastName: '',
@@ -53,11 +51,12 @@ class _LoginPageState extends State<LoginPage> {
         password: _passwordController.text.trim(),
       );
 
-      final role = _isStaff ? 'teacher' : 'student';
-      print('🔵 [LoginPage] Attempting login with email: ${user.email}, role: $role');
+      print(
+        '🔵 [LoginPage] Attempting login with email: ${user.email}, role: $_selectedRole',
+      );
 
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      authProvider.loginUser(user, role, context);
+      authProvider.loginUser(user, _selectedRole, context);
     } else {
       print('🔴 [LoginPage] Form validation failed');
     }
@@ -66,26 +65,28 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
     final isDesktop = screenWidth > 600;
-    
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA), // Light background like in image
+      backgroundColor: const Color(0xFFF5F7FA),
       body: SafeArea(
         child: Center(
           child: Container(
             constraints: BoxConstraints(
               maxWidth: isDesktop ? 400 : double.infinity,
+              maxHeight: screenHeight,
             ),
             child: SingleChildScrollView(
-              padding: EdgeInsets.all(isDesktop ? 32.0 : 24.0),
+              padding: EdgeInsets.all(isDesktop ? 24.0 : 20.0),
               child: Column(
                 children: [
-                  SizedBox(height: isDesktop ? 60 : 40),
-                  
+                  SizedBox(height: isDesktop ? 40 : 20),
+
                   // Enhanced Logo with subtle gradient and shadow
                   Container(
-                    width: 80,
-                    height: 80,
+                    width: 70,
+                    height: 70,
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [Colors.blue.shade600, Colors.blue.shade700],
@@ -103,8 +104,8 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     child: Center(
                       child: Container(
-                        width: 40,
-                        height: 40,
+                        width: 35,
+                        height: 35,
                         decoration: BoxDecoration(
                           color: Colors.white,
                           shape: BoxShape.circle,
@@ -119,51 +120,45 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                   ),
-                  
-                  const SizedBox(height: 32),
-                  
-                  // Welcome Text (matching image)
+
+                  const SizedBox(height: 24),
+
+                  // Welcome Text
                   const Text(
                     'Welcome Back',
                     style: TextStyle(
-                      fontSize: 28,
+                      fontSize: 26,
                       fontWeight: FontWeight.w700,
                       color: Colors.black87,
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  
-                  const SizedBox(height: 8),
-                  
+
+                  const SizedBox(height: 6),
+
                   Text(
                     'Sign in to your account to continue',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey.shade600,
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
                     textAlign: TextAlign.center,
                   ),
-                  
-                  const SizedBox(height: 40),
-                  
-                  // Enhanced Staff/Student Toggle with creative design
+
+                  const SizedBox(height: 28),
+
+                  // Enhanced Role Toggle: Student vs College Staff
                   Container(
-                    padding: const EdgeInsets.all(4),
+                    padding: const EdgeInsets.all(3),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [Colors.blue.shade100, Colors.blue.shade50],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: Colors.blue.shade200,
-                        width: 1,
-                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.blue.shade200, width: 1),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.blue.withOpacity(0.1),
-                          blurRadius: 8,
+                          blurRadius: 6,
                           offset: const Offset(0, 2),
                         ),
                       ],
@@ -172,44 +167,56 @@ class _LoginPageState extends State<LoginPage> {
                       children: [
                         Expanded(
                           child: GestureDetector(
-                            onTap: () => setState(() => _isStaff = true),
+                            onTap: () =>
+                                setState(() => _selectedRole = 'student'),
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 200),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
                               decoration: BoxDecoration(
-                                gradient: _isStaff 
+                                gradient: _selectedRole == 'student'
                                     ? LinearGradient(
-                                        colors: [Colors.blue.shade600, Colors.blue.shade500],
+                                        colors: [
+                                          Colors.blue.shade600,
+                                          Colors.blue.shade500,
+                                        ],
                                         begin: Alignment.topLeft,
                                         end: Alignment.bottomRight,
                                       )
                                     : null,
-                                color: _isStaff ? null : Colors.transparent,
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: _isStaff ? [
-                                  BoxShadow(
-                                    color: Colors.blue.withOpacity(0.3),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ] : null,
+                                color: _selectedRole == 'student'
+                                    ? null
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(11),
+                                boxShadow: _selectedRole == 'student'
+                                    ? [
+                                        BoxShadow(
+                                          color: Colors.blue.withOpacity(0.3),
+                                          blurRadius: 6,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ]
+                                    : null,
                               ),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Icon(
-                                    Icons.work_outline,
-                                    color: _isStaff ? Colors.white : Colors.blue.shade600,
-                                    size: 18,
+                                    Icons.school_outlined,
+                                    color: _selectedRole == 'student'
+                                        ? Colors.white
+                                        : Colors.blue.shade600,
+                                    size: 16,
                                   ),
-                                  const SizedBox(width: 8),
+                                  const SizedBox(width: 6),
                                   Text(
-                                    'Staff Member',
+                                    'Student',
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
-                                      color: _isStaff ? Colors.white : Colors.blue.shade600,
+                                      color: _selectedRole == 'student'
+                                          ? Colors.white
+                                          : Colors.blue.shade600,
                                       fontWeight: FontWeight.w600,
-                                      fontSize: 15,
+                                      fontSize: 14,
                                     ),
                                   ),
                                 ],
@@ -217,47 +224,59 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 3),
                         Expanded(
                           child: GestureDetector(
-                            onTap: () => setState(() => _isStaff = false),
+                            onTap: () =>
+                                setState(() => _selectedRole = 'teacher'),
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 200),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
                               decoration: BoxDecoration(
-                                gradient: !_isStaff 
+                                gradient: _selectedRole != 'student'
                                     ? LinearGradient(
-                                        colors: [Colors.blue.shade600, Colors.blue.shade500],
+                                        colors: [
+                                          Colors.blue.shade600,
+                                          Colors.blue.shade500,
+                                        ],
                                         begin: Alignment.topLeft,
                                         end: Alignment.bottomRight,
                                       )
                                     : null,
-                                color: !_isStaff ? null : Colors.transparent,
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: !_isStaff ? [
-                                  BoxShadow(
-                                    color: Colors.blue.withOpacity(0.3),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ] : null,
+                                color: _selectedRole != 'student'
+                                    ? null
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(11),
+                                boxShadow: _selectedRole != 'student'
+                                    ? [
+                                        BoxShadow(
+                                          color: Colors.blue.withOpacity(0.3),
+                                          blurRadius: 6,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ]
+                                    : null,
                               ),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Icon(
-                                    Icons.school_outlined,
-                                    color: !_isStaff ? Colors.white : Colors.blue.shade600,
-                                    size: 18,
+                                    Icons.work_outline,
+                                    color: _selectedRole != 'student'
+                                        ? Colors.white
+                                        : Colors.blue.shade600,
+                                    size: 16,
                                   ),
-                                  const SizedBox(width: 8),
+                                  const SizedBox(width: 6),
                                   Text(
-                                    'Student',
+                                    'College Staff',
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
-                                      color: !_isStaff ? Colors.white : Colors.blue.shade600,
+                                      color: _selectedRole != 'student'
+                                          ? Colors.white
+                                          : Colors.blue.shade600,
                                       fontWeight: FontWeight.w600,
-                                      fontSize: 15,
+                                      fontSize: 14,
                                     ),
                                   ),
                                 ],
@@ -268,25 +287,87 @@ class _LoginPageState extends State<LoginPage> {
                       ],
                     ),
                   ),
-                  
-                  const SizedBox(height: 32),
-                  
+
+                  // Fancy Radio Buttons for Staff Roles (compact design)
+                  if (_selectedRole != 'student')
+                    Padding(
+                      padding: const EdgeInsets.only(top: 16),
+                      child: Column(
+                        children: [
+                          Text(
+                            'Select Your Role',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.grey.shade700,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: Colors.grey.shade300),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.blue.withOpacity(0.05),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              children: [
+                                buildFancyRadioButton(
+                                  value: 'teacher',
+                                  label: 'Teacher',
+                                  icon: Icons.school,
+                                  groupValue: _selectedRole,
+                                  onChanged: (value) =>
+                                      setState(() => _selectedRole = value),
+                                ),
+                                buildFancyRadioButton(
+                                  value: 'clerk',
+                                  label: 'Clerk',
+                                  icon: Icons.assignment_ind,
+                                  groupValue: _selectedRole,
+                                  onChanged: (value) =>
+                                      setState(() => _selectedRole = value),
+                                ),
+                                buildFancyRadioButton(
+                                  value: 'admin',
+                                  label: 'Admin',
+                                  icon: Icons.admin_panel_settings,
+                                  groupValue: _selectedRole,
+                                  onChanged: (value) =>
+                                      setState(() => _selectedRole = value),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  const SizedBox(height: 20),
+
                   // Form
                   Form(
                     key: _formKey,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Email Field (matching image style)
+                        // Email Field
                         Text(
                           'Email Address',
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: 15,
                             fontWeight: FontWeight.w500,
                             color: Colors.grey.shade700,
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 6),
                         Container(
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(12),
@@ -307,51 +388,60 @@ class _LoginPageState extends State<LoginPage> {
                               prefixIcon: Icon(
                                 Icons.email_outlined,
                                 color: Colors.blue.shade400,
-                                size: 20,
+                                size: 18,
                               ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: Colors.grey.shade300),
+                                borderSide: BorderSide(
+                                  color: Colors.grey.shade300,
+                                ),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: Colors.grey.shade300),
+                                borderSide: BorderSide(
+                                  color: Colors.grey.shade300,
+                                ),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: Colors.blue.shade600, width: 2),
+                                borderSide: BorderSide(
+                                  color: Colors.blue.shade600,
+                                  width: 2,
+                                ),
                               ),
                               filled: true,
                               fillColor: Colors.white,
                               contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 16,
-                                vertical: 16,
+                                vertical: 14,
                               ),
                             ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter your email';
-                            }
-                            if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                              return 'Please enter a valid email';
-                            }
-                            return null;
-                          },
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter your email';
+                              }
+                              if (!RegExp(
+                                r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                              ).hasMatch(value)) {
+                                return 'Please enter a valid email';
+                              }
+                              return null;
+                            },
                           ),
                         ),
-                        
-                        const SizedBox(height: 20),
-                        
-                        // Password Field (matching image style)
+
+                        const SizedBox(height: 16),
+
+                        // Password Field
                         Text(
                           'Password',
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: 15,
                             fontWeight: FontWeight.w500,
                             color: Colors.grey.shade700,
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 6),
                         Container(
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(12),
@@ -372,68 +462,80 @@ class _LoginPageState extends State<LoginPage> {
                               prefixIcon: Icon(
                                 Icons.lock_outline,
                                 color: Colors.blue.shade400,
-                                size: 20,
+                                size: 18,
                               ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: Colors.grey.shade300),
+                                borderSide: BorderSide(
+                                  color: Colors.grey.shade300,
+                                ),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: Colors.grey.shade300),
+                                borderSide: BorderSide(
+                                  color: Colors.grey.shade300,
+                                ),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: Colors.blue.shade600, width: 2),
+                                borderSide: BorderSide(
+                                  color: Colors.blue.shade600,
+                                  width: 2,
+                                ),
                               ),
                               filled: true,
                               fillColor: Colors.white,
                               contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 16,
-                                vertical: 16,
+                                vertical: 14,
                               ),
                               suffixIcon: IconButton(
                                 icon: Icon(
-                                  _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                                  _obscurePassword
+                                      ? Icons.visibility_outlined
+                                      : Icons.visibility_off_outlined,
                                   color: Colors.blue.shade400,
-                                  size: 20,
+                                  size: 18,
                                 ),
                                 onPressed: _togglePasswordVisibility,
                               ),
                             ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter your password';
-                            }
-                            if (value.length < 6) {
-                              return 'Password must be at least 6 characters';
-                            }
-                            return null;
-                          },
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter your password';
+                              }
+                              if (value.length < 6) {
+                                return 'Password must be at least 6 characters';
+                              }
+                              return null;
+                            },
                           ),
                         ),
-                        
-                        const SizedBox(height: 20),
-                        
-                        // Remember Me and Forgot Password (matching image)
+
+                        const SizedBox(height: 16),
+
+                        // Remember Me and Forgot Password
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Row(
                               children: [
-                                Checkbox(
-                                  value: _rememberMe,
-                                  onChanged: (value) {
-                                    setState(() {
-                                      _rememberMe = value ?? false;
-                                    });
-                                  },
-                                  activeColor: Colors.blue.shade600,
+                                Transform.scale(
+                                  scale: 0.8,
+                                  child: Checkbox(
+                                    value: _rememberMe,
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _rememberMe = value ?? false;
+                                      });
+                                    },
+                                    activeColor: Colors.blue.shade600,
+                                  ),
                                 ),
                                 Text(
                                   'Remember me',
                                   style: TextStyle(
-                                    fontSize: 14,
+                                    fontSize: 13,
                                     color: Colors.grey.shade700,
                                   ),
                                 ),
@@ -447,23 +549,26 @@ class _LoginPageState extends State<LoginPage> {
                                 'Forgot password?',
                                 style: TextStyle(
                                   color: Colors.blue.shade600,
-                                  fontSize: 14,
+                                  fontSize: 13,
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
                             ),
                           ],
                         ),
-                        
-                        const SizedBox(height: 32),
-                        
+
+                        const SizedBox(height: 24),
+
                         // Enhanced Sign In Button with gradient
                         Container(
                           width: double.infinity,
-                          height: 50,
+                          height: 48,
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
-                              colors: [Colors.blue.shade600, Colors.blue.shade700],
+                              colors: [
+                                Colors.blue.shade600,
+                                Colors.blue.shade700,
+                              ],
                               begin: Alignment.centerLeft,
                               end: Alignment.centerRight,
                             ),
@@ -495,9 +600,9 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                           ),
                         ),
-                        
-                        const SizedBox(height: 32),
-                        
+
+                        const SizedBox(height: 24),
+
                         // Divider
                         Row(
                           children: [
@@ -508,12 +613,14 @@ class _LoginPageState extends State<LoginPage> {
                               ),
                             ),
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                              ),
                               child: Text(
                                 "Don't have an account?",
                                 style: TextStyle(
                                   color: Colors.grey.shade600,
-                                  fontSize: 14,
+                                  fontSize: 13,
                                 ),
                               ),
                             ),
@@ -525,13 +632,13 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                           ],
                         ),
-                        
-                        const SizedBox(height: 20),
-                        
-                        // Create Account Button (matching image)
+
+                        const SizedBox(height: 16),
+
+                        // Create Account Button
                         SizedBox(
                           width: double.infinity,
-                          height: 50,
+                          height: 48,
                           child: OutlinedButton(
                             onPressed: () {
                               context.go('/signup');

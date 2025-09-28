@@ -11,6 +11,9 @@ import 'package:markmeapp/presentation/pages/home_page.dart';
 import 'package:markmeapp/presentation/pages/notification_page.dart';
 import 'package:markmeapp/presentation/pages/schedule_page.dart';
 import 'package:markmeapp/presentation/pages/teacher/teacher_dashboard_page.dart';
+import 'package:markmeapp/presentation/pages/clerk/clerk_dashboard_page.dart';
+import 'package:markmeapp/presentation/pages/clerk/add_subject_page.dart';
+import 'package:markmeapp/presentation/pages/clerk/add_teacher_page.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -68,9 +71,39 @@ class AppRouter {
         ],
       ),
 
+      // Clerk routes
+      GoRoute(
+        path: '/clerk',
+        builder: (context, state) => const ClerkDashboardPage(),
+        routes: [
+          GoRoute(
+            path: 'notifications',
+            builder: (context, state) => const NotificationPage(),
+          ),
+          GoRoute(
+            path: 'schedule',
+            builder: (context, state) => const SchedulePage(),
+          ),
+          GoRoute(
+            path: 'attendance',
+            builder: (context, state) =>
+                const Scaffold(body: Center(child: Text("Student Attendance"))),
+          ),
+          GoRoute(
+            path: 'new-subject',
+            builder: (context, state) => const AddSubjectPage(),
+          ),
+          GoRoute(
+            path: 'new-teacher',
+            builder: (context, state) => const AddTeacherPage(),
+          ),
+
+        ],
+      ),
+
       // Admin routes (add these if needed)
       GoRoute(
-        path: '/admin-dashboard',
+        path: '/admin',
         builder: (context, state) =>
             const Scaffold(body: Center(child: Text("Admin Dashboard"))),
       ),

@@ -1,57 +1,68 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart'; 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'core/theme/app_theme.dart';
 import 'core/routing/app_router.dart';
 import 'data/services/notification_service.dart';
 import 'data/services/schedule_service.dart';
 import 'presentation/bloc/notification_bloc.dart';
 import 'presentation/bloc/schedule_bloc.dart';
-import 'package:provider/provider.dart'; 
-import 'presentation/state/auth_provider.dart';
+import 'stores/auth_store.dart';
+import 'state/auth_state.dart';
+import 'providers/auth_provider.dart';
 
-void main() async { 
-  WidgetsFlutterBinding.ensureInitialized(); 
-
-  await dotenv.load(fileName: "/home/deepakcodex/Desktop/MarkMeApp/.env"); 
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await dotenv.load(fileName: ".env"); // Load environment variables
+  } catch (e) {
+    throw Exception('Error loading .env file: $e'); // Print error if any
+  }
 
   runApp(
-    MultiProvider(
-      providers: [
-        BlocProvider<NotificationBloc>(
-          create: (context) => NotificationBloc(
-            notificationService: NotificationService(),
+    ProviderScope(
+      // 👈 Riverpod root
+      child: MultiBlocProvider(
+        providers: [
+          BlocProvider<NotificationBloc>(
+            create: (context) =>
+                NotificationBloc(notificationService: NotificationService()),
           ),
-        ),
-        BlocProvider<ScheduleBloc>(
-          create: (context) => ScheduleBloc(
-            scheduleService: ScheduleService(),
+          BlocProvider<ScheduleBloc>(
+            create: (context) =>
+                ScheduleBloc(scheduleService: ScheduleService()),
           ),
-        ),
-        ChangeNotifierProvider(
-          create: (context) => AuthProvider()..loadUserData(),
-        ),
-      ],
-      child: const MyApp(),
+        ],
+        child: const MyApp(),
+      ),
     ),
   );
 }
 
-class MyApp extends StatefulWidget {
+class MyApp extends ConsumerStatefulWidget {
   const MyApp({super.key});
 
   @override
-  State<MyApp> createState() => _MyAppState();
+  ConsumerState<MyApp> createState() => _MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
+class _MyAppState extends ConsumerState<MyApp> {
   @override
   void initState() {
     super.initState();
-    // Add navigation listener for debugging
+
+    // Load user data once
+    Future.microtask(() {
+      ref.read(authStoreProvider.notifier).loadUserData();
+    });
+
+    // Debug navigation
     AppRouter.router.routerDelegate.addListener(() {
-      final route = AppRouter.router.routerDelegate.currentConfiguration.uri.toString();
+      final route = AppRouter.router.routerDelegate.currentConfiguration.uri
+          .toString();
       print('🔵 [Navigation] Current route: $route');
     });
   }

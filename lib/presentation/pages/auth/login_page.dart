@@ -1,24 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:markmeapp/data/models/user_model.dart';
-import 'package:markmeapp/presentation/state/auth_provider.dart';
+import '../../../providers/auth_provider.dart';
 import 'package:markmeapp/presentation/widgets/build_fancy_radiobutton.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
-class LoginPage extends StatefulWidget {
+class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  ConsumerState<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _LoginPageState extends ConsumerState<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _rememberMe = false;
   String _selectedRole = 'student'; // Default role
+
+  @override
+  void initState() {
+    super.initState();
+    // Load user data when the page initializes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(authStoreProvider.notifier).loadUserData();
+    });
+  }
 
   @override
   void dispose() {
@@ -55,8 +65,10 @@ class _LoginPageState extends State<LoginPage> {
         '🔵 [LoginPage] Attempting login with email: ${user.email}, role: $_selectedRole',
       );
 
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      authProvider.loginUser(user, _selectedRole, context);
+      // Use Riverpod to call login
+      ref
+          .read(authStoreProvider.notifier)
+          .loginUser(user, _selectedRole, context);
     } else {
       print('🔴 [LoginPage] Form validation failed');
     }
@@ -64,6 +76,25 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Watch auth state for loading and errors
+    final isLoading = ref.watch(authLoadingProvider);
+    final errorMessage = ref.watch(authErrorProvider);
+
+    // Show error message if any
+    if (errorMessage != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        // Clear error after showing
+        ref.read(authStoreProvider.notifier).clearError();
+      });
+    }
+
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     final isDesktop = screenWidth > 600;
@@ -83,42 +114,10 @@ class _LoginPageState extends State<LoginPage> {
                 children: [
                   SizedBox(height: isDesktop ? 40 : 20),
 
-                  // Enhanced Logo with subtle gradient and shadow
-                  Container(
-                    width: 70,
-                    height: 70,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Colors.blue.shade600, Colors.blue.shade700],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.blue.withOpacity(0.3),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Center(
-                      child: Container(
-                        width: 35,
-                        height: 35,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.blue.withOpacity(0.1),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                  // Logo
+                  SvgPicture.asset(
+                    'assets/logo.svg',
+                    height: 80,   // adjust size as needed
                   ),
 
                   const SizedBox(height: 24),
@@ -325,7 +324,7 @@ class _LoginPageState extends State<LoginPage> {
                                   icon: Icons.school,
                                   groupValue: _selectedRole,
                                   onChanged: (value) =>
-                                      setState(() => _selectedRole = value),
+                                      setState(() => _selectedRole = value!),
                                 ),
                                 buildFancyRadioButton(
                                   value: 'clerk',
@@ -333,7 +332,7 @@ class _LoginPageState extends State<LoginPage> {
                                   icon: Icons.assignment_ind,
                                   groupValue: _selectedRole,
                                   onChanged: (value) =>
-                                      setState(() => _selectedRole = value),
+                                      setState(() => _selectedRole = value!),
                                 ),
                                 buildFancyRadioButton(
                                   value: 'admin',
@@ -341,7 +340,7 @@ class _LoginPageState extends State<LoginPage> {
                                   icon: Icons.admin_panel_settings,
                                   groupValue: _selectedRole,
                                   onChanged: (value) =>
-                                      setState(() => _selectedRole = value),
+                                      setState(() => _selectedRole = value!),
                                 ),
                               ],
                             ),
@@ -559,7 +558,7 @@ class _LoginPageState extends State<LoginPage> {
 
                         const SizedBox(height: 24),
 
-                        // Enhanced Sign In Button with gradient
+                        // Enhanced Sign In Button with gradient and loading state
                         Container(
                           width: double.infinity,
                           height: 48,
@@ -582,22 +581,34 @@ class _LoginPageState extends State<LoginPage> {
                             ],
                           ),
                           child: ElevatedButton(
-                            onPressed: _handleLogin,
+                            onPressed: isLoading ? null : _handleLogin,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.transparent,
                               shadowColor: Colors.transparent,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
+                              disabledBackgroundColor: Colors.grey.shade400,
                             ),
-                            child: const Text(
-                              'Sign In',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
-                            ),
+                            child: isLoading
+                                ? SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white,
+                                      ),
+                                    ),
+                                  )
+                                : const Text(
+                                    'Sign In',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
+                                  ),
                           ),
                         ),
 
@@ -640,9 +651,11 @@ class _LoginPageState extends State<LoginPage> {
                           width: double.infinity,
                           height: 48,
                           child: OutlinedButton(
-                            onPressed: () {
-                              context.go('/signup');
-                            },
+                            onPressed: isLoading
+                                ? null
+                                : () {
+                                    context.go('/signup');
+                                  },
                             style: OutlinedButton.styleFrom(
                               foregroundColor: Colors.blue.shade600,
                               side: BorderSide(color: Colors.blue.shade600),

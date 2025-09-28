@@ -16,6 +16,8 @@ pubspec.lock
 .kiro/
 
 .env
+assets/*.env
+
 # ----------------------------
 # Android related
 # ----------------------------

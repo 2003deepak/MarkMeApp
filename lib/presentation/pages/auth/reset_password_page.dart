@@ -1,22 +1,26 @@
+// lib/presentation/pages/reset_password_page.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
-import 'package:provider/provider.dart';
-import 'package:markmeapp/presentation/state/auth_provider.dart';
+import 'package:markmeapp/providers/auth_provider.dart';
 
-class ResetPasswordPage extends StatefulWidget {
+class ResetPasswordPage extends ConsumerStatefulWidget {
   final String email;
   final String role;
 
-  const ResetPasswordPage({Key? key, required this.email, required this.role})
-    : super(key: key);
+  const ResetPasswordPage({
+    Key? key,
+    required this.email,
+    required this.role,
+  }) : super(key: key);
 
   @override
-  _ResetPasswordPageState createState() => _ResetPasswordPageState();
+  ConsumerState<ResetPasswordPage> createState() => _ResetPasswordPageState();
 }
 
-class _ResetPasswordPageState extends State<ResetPasswordPage> {
+class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
   final List<TextEditingController> _otpControllers = List.generate(
     6,
     (index) => TextEditingController(),
@@ -43,12 +47,9 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
   );
 
   bool _isOtpStep = true;
-  bool _isLoading = false;
   int _countdown = 30;
   Timer? _timer;
   String _errorMessage = '';
-
-  // Password validation states
   bool _passwordsMatch = false;
 
   @override
@@ -90,7 +91,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
   }
 
   void _startCountdown() {
-    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_countdown > 0) {
         setState(() {
           _countdown--;
@@ -103,9 +104,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
 
   void _validatePassword() {
     final password = _passwordControllers.map((c) => c.text).join();
-    final confirmPassword = _confirmPasswordControllers
-        .map((c) => c.text)
-        .join();
+    final confirmPassword = _confirmPasswordControllers.map((c) => c.text).join();
 
     setState(() {
       _passwordsMatch = password.isNotEmpty && password == confirmPassword;
@@ -143,40 +142,30 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
     }
   }
 
-  void _verifyOtp() async {
-    String otp = _otpControllers.map((controller) => controller.text).join();
+  Future<void> _verifyOtp() async {
+    final otp = _otpControllers.map((controller) => controller.text).join();
 
     if (otp.length == 6) {
       setState(() {
-        _isLoading = true;
         _errorMessage = '';
       });
 
-      try {
-        final authProvider = Provider.of<AuthProvider>(context, listen: false);
-        final success = await authProvider.verifyOtp(
-          widget.email,
-          widget.role.toLowerCase(),
-          otp,
-          context,
-        );
+      final authNotifier = ref.read(authStoreProvider.notifier);
+      final success = await authNotifier.verifyOtp(
+        widget.email,
+        widget.role.toLowerCase(),
+        otp,
+        context,
+      );
 
-        if (success) {
-          setState(() {
-            _isLoading = false;
-            _isOtpStep = false; // Switch to password reset UI
-          });
-        } else {
-          setState(() {
-            _isLoading = false;
-            _errorMessage =
-                authProvider.errorMessage ?? 'OTP verification failed';
-          });
-        }
-      } catch (e) {
+      if (success && mounted) {
         setState(() {
-          _isLoading = false;
-          _errorMessage = 'Error verifying OTP: $e';
+          _isOtpStep = false;
+        });
+      } else if (mounted) {
+        final error = ref.read(authErrorProvider);
+        setState(() {
+          _errorMessage = error ?? 'OTP verification failed';
         });
       }
     } else {
@@ -186,45 +175,29 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
     }
   }
 
-  void _resetPassword() async {
+  Future<void> _resetPassword() async {
     final password = _passwordControllers.map((c) => c.text).join();
-    final confirmPassword = _confirmPasswordControllers
-        .map((c) => c.text)
-        .join();
+    final confirmPassword = _confirmPasswordControllers.map((c) => c.text).join();
 
-    if (password.length == 6 &&
-        confirmPassword.length == 6 &&
-        _passwordsMatch) {
+    if (password.length == 6 && confirmPassword.length == 6 && _passwordsMatch) {
       setState(() {
-        _isLoading = true;
         _errorMessage = '';
       });
 
-      try {
-        final authProvider = Provider.of<AuthProvider>(context, listen: false);
-        final success = await authProvider.resetPassword(
-          widget.email,
-          widget.role.toLowerCase(),
-          password,
-          context,
-        );
+      final authNotifier = ref.read(authStoreProvider.notifier);
+      final success = await authNotifier.resetPassword(
+        widget.email,
+        widget.role.toLowerCase(),
+        password,
+        context,
+      );
 
-        if (success) {
-          setState(() {
-            _isLoading = false;
-          });
-          _showSuccessDialog();
-        } else {
-          setState(() {
-            _isLoading = false;
-            _errorMessage =
-                authProvider.errorMessage ?? 'Password reset failed';
-          });
-        }
-      } catch (e) {
+      if (success && mounted) {
+        _showSuccessDialog();
+      } else if (mounted) {
+        final error = ref.read(authErrorProvider);
         setState(() {
-          _isLoading = false;
-          _errorMessage = 'Error resetting password: $e';
+          _errorMessage = error ?? 'Password reset failed';
         });
       }
     } else {
@@ -253,36 +226,36 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                   color: Colors.green.shade100,
                   shape: BoxShape.circle,
                 ),
-                child: Icon(Icons.check, color: Colors.green, size: 40),
+                child: const Icon(Icons.check, color: Colors.green, size: 40),
               ),
-              SizedBox(height: 24),
-              Text(
+              const SizedBox(height: 24),
+              const Text(
                 'PIN Reset Successful!',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
               ),
-              SizedBox(height: 12),
+              const SizedBox(height: 12),
               Text(
                 'Your PIN has been successfully reset. You can now login with your new PIN.',
                 style: TextStyle(color: Colors.grey[600], fontSize: 14),
                 textAlign: TextAlign.center,
               ),
-              SizedBox(height: 24),
+              const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
                     Navigator.of(context).pop();
-                    context.go('/login'); // Navigate to login page
+                    context.go('/login');
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFF4A90E2),
-                    padding: EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: const Color(0xFF4A90E2),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: Text(
+                  child: const Text(
                     'Back to Login',
                     style: TextStyle(color: Colors.white, fontSize: 16),
                   ),
@@ -304,6 +277,8 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
   }
 
   Widget _buildOtpInput() {
+    final isLoading = ref.watch(authLoadingProvider);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -311,13 +286,13 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
           width: 80,
           height: 80,
           decoration: BoxDecoration(
-            color: Color(0xFF4A90E2).withOpacity(0.1),
+            color: const Color(0xFF4A90E2).withOpacity(0.1),
             shape: BoxShape.circle,
           ),
-          child: Icon(Icons.lock_reset, color: Color(0xFF4A90E2), size: 40),
+          child: const Icon(Icons.lock_reset, color: Color(0xFF4A90E2), size: 40),
         ),
-        SizedBox(height: 32),
-        Text(
+        const SizedBox(height: 32),
+        const Text(
           'Enter OTP',
           style: TextStyle(
             fontSize: 28,
@@ -325,12 +300,12 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
             color: Colors.black87,
           ),
         ),
-        SizedBox(height: 12),
+        const SizedBox(height: 12),
         Text(
-          'We\'ve sent a 6-digit OTP to your email address. Please enter it below to reset your PIN.',
+          'We\'ve sent a 6-digit OTP to ${widget.email}. Please enter it below to reset your PIN.',
           style: TextStyle(color: Colors.grey[600], fontSize: 16, height: 1.4),
         ),
-        SizedBox(height: 32),
+        const SizedBox(height: 32),
 
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -347,10 +322,10 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                 controller: _otpControllers[index],
                 focusNode: _otpFocusNodes[index],
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 keyboardType: TextInputType.number,
                 maxLength: 1,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   counterText: '',
                   border: InputBorder.none,
                 ),
@@ -361,7 +336,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
           }),
         ),
 
-        SizedBox(height: 24),
+        const SizedBox(height: 24),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -372,10 +347,10 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
               style: TextStyle(color: Colors.grey[600]),
             ),
             if (_countdown == 0) ...[
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               GestureDetector(
                 onTap: _resendOtp,
-                child: Text(
+                child: const Text(
                   'Resend',
                   style: TextStyle(
                     color: Color(0xFF4A90E2),
@@ -386,21 +361,28 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
             ],
           ],
         ),
-        SizedBox(height: 32),
+        const SizedBox(height: 32),
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: _isLoading ? null : () => _verifyOtp(),
+            onPressed: isLoading ? null : _verifyOtp,
             style: ElevatedButton.styleFrom(
-              backgroundColor: Color(0xFF4A90E2),
-              padding: EdgeInsets.symmetric(vertical: 16),
+              backgroundColor: const Color(0xFF4A90E2),
+              padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            child: _isLoading
-                ? CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
-                : Text(
+            child: isLoading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  )
+                : const Text(
                     'Verify OTP',
                     style: TextStyle(color: Colors.white, fontSize: 16),
                   ),
@@ -411,6 +393,8 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
   }
 
   Widget _buildPasswordReset() {
+    final isLoading = ref.watch(authLoadingProvider);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -418,13 +402,13 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
           width: 80,
           height: 80,
           decoration: BoxDecoration(
-            color: Color(0xFF4A90E2).withOpacity(0.1),
+            color: const Color(0xFF4A90E2).withOpacity(0.1),
             shape: BoxShape.circle,
           ),
-          child: Icon(Icons.lock_outline, color: Color(0xFF4A90E2), size: 40),
+          child: const Icon(Icons.lock_outline, color: Color(0xFF4A90E2), size: 40),
         ),
-        SizedBox(height: 32),
-        Text(
+        const SizedBox(height: 32),
+        const Text(
           'Create New PIN',
           style: TextStyle(
             fontSize: 28,
@@ -432,18 +416,18 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
             color: Colors.black87,
           ),
         ),
-        SizedBox(height: 12),
-        Text(
+        const SizedBox(height: 12),
+        const Text(
           'Please create a 6-digit PIN that you will remember.',
-          style: TextStyle(color: Colors.grey[600], fontSize: 16, height: 1.4),
+          style: TextStyle(color: Colors.grey, fontSize: 16, height: 1.4),
         ),
-        SizedBox(height: 32),
+        const SizedBox(height: 32),
 
-        Text(
+        const Text(
           'New PIN',
           style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
         ),
-        SizedBox(height: 8),
+        const SizedBox(height: 8),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: List.generate(6, (index) {
@@ -459,11 +443,11 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                 controller: _passwordControllers[index],
                 focusNode: _passwordFocusNodes[index],
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 keyboardType: TextInputType.number,
                 maxLength: 1,
                 obscureText: true,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   counterText: '',
                   border: InputBorder.none,
                 ),
@@ -474,12 +458,12 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
           }),
         ),
 
-        SizedBox(height: 20),
-        Text(
+        const SizedBox(height: 20),
+        const Text(
           'Confirm PIN',
           style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
         ),
-        SizedBox(height: 8),
+        const SizedBox(height: 8),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: List.generate(6, (index) {
@@ -495,11 +479,11 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                 controller: _confirmPasswordControllers[index],
                 focusNode: _confirmPasswordFocusNodes[index],
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 keyboardType: TextInputType.number,
                 maxLength: 1,
                 obscureText: true,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   counterText: '',
                   border: InputBorder.none,
                 ),
@@ -510,24 +494,31 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
           }),
         ),
 
-        SizedBox(height: 24),
+        const SizedBox(height: 24),
         _buildValidationItem('PINs match', _passwordsMatch),
 
-        SizedBox(height: 32),
+        const SizedBox(height: 32),
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: _isLoading ? null : _resetPassword,
+            onPressed: isLoading ? null : _resetPassword,
             style: ElevatedButton.styleFrom(
-              backgroundColor: Color(0xFF4A90E2),
-              padding: EdgeInsets.symmetric(vertical: 16),
+              backgroundColor: const Color(0xFF4A90E2),
+              padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            child: _isLoading
-                ? CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
-                : Text(
+            child: isLoading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  )
+                : const Text(
                     'Reset PIN',
                     style: TextStyle(color: Colors.white, fontSize: 16),
                   ),
@@ -539,7 +530,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
 
   Widget _buildValidationItem(String text, bool isValid) {
     return Padding(
-      padding: EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         children: [
           Icon(
@@ -547,7 +538,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
             color: isValid ? Colors.green : Colors.red,
             size: 16,
           ),
-          SizedBox(width: 8),
+          const SizedBox(width: 8),
           Text(
             text,
             style: TextStyle(
@@ -562,28 +553,44 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Watch for error messages from auth state
+    final errorMessage = ref.watch(authErrorProvider);
+    
+    // Show error message if any from auth state
+    if (errorMessage != null && errorMessage.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            _errorMessage = errorMessage;
+          });
+          // Clear error after showing
+          ref.read(authStoreProvider.notifier).clearError();
+        }
+      });
+    }
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.black87),
-          onPressed: () => Navigator.of(context).pop(),
+          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          onPressed: () => context.pop(),
         ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: EdgeInsets.all(24),
+          padding: const EdgeInsets.all(24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _isOtpStep ? _buildOtpInput() : _buildPasswordReset(),
 
               if (_errorMessage.isNotEmpty) ...[
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
                 Container(
-                  padding: EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: Colors.red.shade50,
                     borderRadius: BorderRadius.circular(8),
@@ -591,12 +598,12 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.error_outline, color: Colors.red, size: 20),
-                      SizedBox(width: 8),
+                      const Icon(Icons.error_outline, color: Colors.red, size: 20),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           _errorMessage,
-                          style: TextStyle(color: Colors.red, fontSize: 14),
+                          style: const TextStyle(color: Colors.red, fontSize: 14),
                         ),
                       ),
                     ],
@@ -604,15 +611,15 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                 ),
               ],
 
-              SizedBox(height: 24),
+              const SizedBox(height: 24),
               Center(
                 child: GestureDetector(
-                  onTap: () => Navigator.of(context).pop(),
+                  onTap: () => context.go('/login'),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(Icons.arrow_back, color: Colors.grey[600], size: 16),
-                      SizedBox(width: 4),
+                      const SizedBox(width: 4),
                       Text(
                         'Back to Login page',
                         style: TextStyle(color: Colors.grey[600], fontSize: 14),

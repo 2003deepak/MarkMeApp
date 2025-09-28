@@ -8,8 +8,7 @@ class AuthRepository {
 
   AuthRepository()
     : baseUrl =
-          dotenv.env['BASE_URL'] ??
-          (throw Exception('BASE_URL not found in .env file'));
+          dotenv.env['BASE_URL'] ?? 'http://localhost:3000'; // Fallback URL
 
   Future<Map<String, dynamic>> registerUser(User user) async {
     print('🔵 [AuthRepository] registerUser called with email: ${user.email}');
@@ -18,61 +17,47 @@ class AuthRepository {
       final url = '$baseUrl/student/register';
       print('🔵 [AuthRepository] Making POST request to: $url');
 
-      final response = await http.post(
-        Uri.parse(url),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'first_name': user.firstName,
-          'last_name': user.lastName,
-          'email': user.email,
-          'password': user.password,
-        }),
-      );
+      final response = await http
+          .post(
+            Uri.parse(url),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'first_name': user.firstName,
+              'last_name': user.lastName,
+              'email': user.email,
+              'password': user.password,
+            }),
+          )
+          .timeout(const Duration(seconds: 30));
 
       print('🔵 [AuthRepository] HTTP Status Code: ${response.statusCode}');
       print('🔵 [AuthRepository] Response Body: ${response.body}');
 
-      if (response.statusCode != 200) {
-        print(
-          '🔴 [AuthRepository] Registration failed with status: ${response.statusCode}',
-        );
-        return {
-          'success': false,
-          'error': 'Server responded with status: ${response.statusCode}',
-        };
-      }
+      final responseBody = jsonDecode(response.body);
 
-      final dynamic responseBody = jsonDecode(response.body);
-
-      if (responseBody is! Map<String, dynamic>) {
-        print('🔴 [AuthRepository] Invalid response format');
-        return {
-          'success': false,
-          'error': 'Invalid response format from server',
-        };
-      }
-
-      final responseData = responseBody;
-
-      if (responseData['status'] == 'success') {
-        print('🟢 [AuthRepository] Registration successful');
-        return {'success': true, 'data': responseData['data']};
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        if (responseBody['status'] == 'success') {
+          print('🟢 [AuthRepository] Registration successful');
+          return {'success': true, 'data': responseBody['data']};
+        } else {
+          return {
+            'success': false,
+            'error': responseBody['message'] ?? 'Registration failed',
+          };
+        }
       } else {
-        print(
-          '🔴 [AuthRepository] Registration failed: ${responseData['message']}',
-        );
         return {
           'success': false,
-          'error': responseData['message'] ?? 'Unknown error occurred',
+          'error':
+              responseBody['message'] ?? 'Server error: ${response.statusCode}',
         };
       }
     } catch (e) {
       print('🔴 [AuthRepository] Exception caught: $e');
-      return {'success': false, 'error': 'Exception: $e'};
+      return {'success': false, 'error': e.toString()};
     }
   }
 
-  /// Login with role-based endpoint - FIXED ENDPOINT PATHS
   Future<Map<String, dynamic>> loginUser(User user, String role) async {
     print(
       '🔵 [AuthRepository] loginUser called with email: ${user.email}, role: $role',
@@ -82,107 +67,77 @@ class AuthRepository {
       final url = '$baseUrl/auth/login';
       print('🔵 [AuthRepository] Making POST request to: $url');
 
-      final response = await http.post(
-        Uri.parse(url),
-        headers: {
-          'accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'email': user.email,
-          'password': user.password,
-          'role': role, // Added role parameter as per your working API
-        }),
-      );
+      final response = await http
+          .post(
+            Uri.parse(url),
+            headers: {
+              'accept': 'application/json',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode({
+              'email': user.email,
+              'password': user.password,
+              'role': role,
+            }),
+          )
+          .timeout(const Duration(seconds: 30));
 
       print('🔵 [AuthRepository] HTTP Status Code: ${response.statusCode}');
       print('🔵 [AuthRepository] Response Body: ${response.body}');
 
-      if (response.statusCode != 200) {
-        print(
-          '🔴 [AuthRepository] Login failed with status: ${response.statusCode}',
-        );
-        return {
-          'success': false,
-          'error': 'Server responded with status: ${response.statusCode}',
-        };
-      }
+      final responseBody = jsonDecode(response.body);
 
-      final dynamic responseBody = jsonDecode(response.body);
-
-      if (responseBody is! Map<String, dynamic>) {
-        print('🔴 [AuthRepository] Invalid response format');
-        return {
-          'success': false,
-          'error': 'Invalid response format from server',
-        };
-      }
-
-      final responseData = responseBody;
-
-      if (responseData['status'] == 'success') {
+      if (response.statusCode == 200) {
         print('🟢 [AuthRepository] Login successful');
-        return {
-          'success': true,
-          'data': {...responseData['data'], 'role': role},
-        };
+        // Ensure role is included in the response data
+        final userData = responseBody['data'] ?? {};
+        if (userData is Map<String, dynamic>) {
+          userData['role'] = role;
+        }
+        return {'success': true, 'data': userData};
       } else {
-        print('🔴 [AuthRepository] Login failed: ${responseData['message']}');
+        print(responseBody);
         return {
           'success': false,
-          'error': responseData['message'] ?? 'Unknown error occurred',
+          'error': responseBody['message'] ?? 'Login failed',
         };
       }
     } catch (e) {
       print('🔴 [AuthRepository] Exception caught: $e');
-      return {'success': false, 'error': 'Exception: $e'};
+      return {'success': false, 'error': e.toString()};
     }
   }
 
   Future<Map<String, dynamic>> forgotPassword(String email, String role) async {
-    print(
-      '🔵 [AuthRepository] forgotPassword called with email: $email, role: $role',
-    );
-
     try {
       final url = '$baseUrl/auth/forgot-password';
-      print('🔵 [AuthRepository] Making POST request to: $url');
+      final response = await http
+          .post(
+            Uri.parse(url),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'email': email, 'role': role}),
+          )
+          .timeout(const Duration(seconds: 30));
 
-      final response = await http.post(
-        Uri.parse(url),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': email, 'role': role}),
-      );
+      final responseBody = jsonDecode(response.body);
 
-      print('🔵 [AuthRepository] HTTP Status Code: ${response.statusCode}');
-      print('🔵 [AuthRepository] Response Body: ${response.body}');
-
-      final dynamic responseBody = jsonDecode(response.body);
-
-      if (responseBody is! Map<String, dynamic>) {
-        print('🔴 [AuthRepository] Invalid response format');
-        return {
-          'success': false,
-          'error': 'Invalid response format from server',
-        };
-      }
-
-      // ✅ Check API status field
-      if (responseBody['status'] == 'success') {
-        print('🟢 [AuthRepository] Forgot password successful');
-        return {'success': true, 'message': responseBody['message']};
+      if (response.statusCode == 200) {
+        if (responseBody['status'] == 'success') {
+          return {'success': true, 'message': responseBody['message']};
+        } else {
+          return {
+            'success': false,
+            'error': responseBody['message'] ?? 'Failed to send OTP',
+          };
+        }
       } else {
-        print(
-          '🔴 [AuthRepository] Forgot password failed: ${responseBody['message']}',
-        );
         return {
           'success': false,
-          'error': responseBody['message'] ?? 'Unknown error occurred',
+          'error': responseBody['message'] ?? 'Server error',
         };
       }
     } catch (e) {
-      print('🔴 [AuthRepository] Exception caught: $e');
-      return {'success': false, 'error': 'Exception: $e'};
+      return {'success': false, 'error': e.toString()};
     }
   }
 
@@ -191,48 +146,35 @@ class AuthRepository {
     String role,
     String otp,
   ) async {
-    print(
-      '🔵 [AuthRepository] verifyOtp called with email: $email, role: $role, otp: $otp',
-    );
-
     try {
       final url = '$baseUrl/auth/verify-otp';
-      print('🔵 [AuthRepository] Making POST request to: $url');
+      final response = await http
+          .post(
+            Uri.parse(url),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'email': email, 'role': role, 'otp': otp}),
+          )
+          .timeout(const Duration(seconds: 30));
 
-      final response = await http.post(
-        Uri.parse(url),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': email, 'role': role, 'otp': otp}),
-      );
+      final responseBody = jsonDecode(response.body);
 
-      print('🔵 [AuthRepository] HTTP Status Code: ${response.statusCode}');
-      print('🔵 [AuthRepository] Response Body: ${response.body}');
-
-      final dynamic responseBody = jsonDecode(response.body);
-
-      if (responseBody is! Map<String, dynamic>) {
-        print('🔴 [AuthRepository] Invalid response format');
-        return {
-          'success': false,
-          'error': 'Invalid response format from server',
-        };
-      }
-
-      if (responseBody['status'] == 'success') {
-        print('🟢 [AuthRepository] OTP verification successful');
-        return {'success': true, 'message': responseBody['message']};
+      if (response.statusCode == 200) {
+        if (responseBody['status'] == 'success') {
+          return {'success': true, 'message': responseBody['message']};
+        } else {
+          return {
+            'success': false,
+            'error': responseBody['message'] ?? 'OTP verification failed',
+          };
+        }
       } else {
-        print(
-          '🔴 [AuthRepository] OTP verification failed: ${responseBody['message']}',
-        );
         return {
           'success': false,
-          'error': responseBody['message'] ?? 'Unknown error occurred',
+          'error': responseBody['message'] ?? 'Server error',
         };
       }
     } catch (e) {
-      print('🔴 [AuthRepository] Exception caught: $e');
-      return {'success': false, 'error': 'Exception: $e'};
+      return {'success': false, 'error': e.toString()};
     }
   }
 
@@ -241,52 +183,39 @@ class AuthRepository {
     String role,
     String newPassword,
   ) async {
-    print(
-      '🔵 [AuthRepository] resetPassword called with email: $email, role: $role, newPassword: $newPassword',
-    );
-
     try {
       final url = '$baseUrl/auth/reset-password';
-      print('🔵 [AuthRepository] Making POST request to: $url');
+      final response = await http
+          .post(
+            Uri.parse(url),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'email': email,
+              'role': role,
+              'new_password': newPassword,
+            }),
+          )
+          .timeout(const Duration(seconds: 30));
 
-      final response = await http.post(
-        Uri.parse(url),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'email': email,
-          'role': role,
-          'new_password': newPassword, // 👈 send snake_case to API
-        }),
-      );
+      final responseBody = jsonDecode(response.body);
 
-      print('🔵 [AuthRepository] HTTP Status Code: ${response.statusCode}');
-      print('🔵 [AuthRepository] Response Body: ${response.body}');
-
-      final dynamic responseBody = jsonDecode(response.body);
-
-      if (responseBody is! Map<String, dynamic>) {
-        print('🔴 [AuthRepository] Invalid response format');
-        return {
-          'success': false,
-          'error': 'Invalid response format from server',
-        };
-      }
-
-      if (responseBody['status'] == 'success') {
-        print('🟢 [AuthRepository] Password reset successful');
-        return {'success': true, 'message': responseBody['message']};
+      if (response.statusCode == 200) {
+        if (responseBody['status'] == 'success') {
+          return {'success': true, 'message': responseBody['message']};
+        } else {
+          return {
+            'success': false,
+            'error': responseBody['message'] ?? 'Password reset failed',
+          };
+        }
       } else {
-        print(
-          '🔴 [AuthRepository] Password reset failed: ${responseBody['message']}',
-        );
         return {
           'success': false,
-          'error': responseBody['message'] ?? 'Unknown error occurred',
+          'error': responseBody['message'] ?? 'Server error',
         };
       }
     } catch (e) {
-      print('🔴 [AuthRepository] Exception caught: $e');
-      return {'success': false, 'error': 'Exception: $e'};
+      return {'success': false, 'error': e.toString()};
     }
   }
 }

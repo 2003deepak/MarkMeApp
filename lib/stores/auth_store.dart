@@ -44,6 +44,7 @@ class AuthStore extends StateNotifier<AuthState> {
       state = state.copyWith(
         user: userData,
         role: userData['role'],
+        token: userData['token'], // ✅ store token
         isLoggedIn: true,
         errorMessage: null,
         isLoading: false,
@@ -72,7 +73,6 @@ class AuthStore extends StateNotifier<AuthState> {
     return Future.value();
   }
 
-  /// Login - CORRECTED METHOD
   Future<void> loginUser(
     User userModel,
     String role,

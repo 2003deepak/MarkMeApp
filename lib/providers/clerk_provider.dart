@@ -21,31 +21,34 @@ class ClerkStore extends StateNotifier<ClerkState> {
     state = state.copyWith(isLoading: true);
     final result = await _repository.getStudents();
     if (result['success']) {
-      state = state.copyWith(students: List<Map<String, dynamic>>.from(result['data']), isLoading: false);
+      state = state.copyWith(
+        students: List<Map<String, dynamic>>.from(result['data']),
+        isLoading: false,
+      );
     } else {
       state = state.copyWith(errorMessage: result['error'], isLoading: false);
     }
   }
 
   Future<void> loadTeachers() async {
-    state = state.copyWith(isLoading: true);
-    final result = await _repository.getTeachers();
-    if (result['success']) {
-      state = state.copyWith(teachers: List<Map<String, dynamic>>.from(result['data']), isLoading: false);
-    } else {
-      state = state.copyWith(errorMessage: result['error'], isLoading: false);
-    }
+    // state = state.copyWith(isLoading: true);
+    // final result = await _repository.getTeachers();
+    // if (result['success']) {
+    //   state = state.copyWith(teachers: List<Map<String, dynamic>>.from(result['data']), isLoading: false);
+    // } else {
+    //   state = state.copyWith(errorMessage: result['error'], isLoading: false);
+    // }
   }
 
   Future<void> addTeacher(Map<String, dynamic> teacher) async {
-    state = state.copyWith(isLoading: true);
-    final result = await _repository.createTeacher(teacher);
-    if (result['success']) {
-      final updated = [...state.teachers, result['data']];
-      state = state.copyWith(teachers: updated, isLoading: false);
-    } else {
-      state = state.copyWith(errorMessage: result['error'], isLoading: false);
-    }
+    // state = state.copyWith(isLoading: true);
+    // final result = await _repository.createTeacher(teacher);
+    // if (result['success']) {
+    //   final updated = [...state.teachers, result['data']];
+    //   state = state.copyWith(teachers: updated, isLoading: false);
+    // } else {
+    //   state = state.copyWith(errorMessage: result['error'], isLoading: false);
+    // }
   }
 }
 
@@ -54,8 +57,7 @@ final clerkRepositoryProvider = Provider<ClerkRepository>((ref) {
   return ClerkRepository();
 });
 
-final clerkStoreProvider =
-    StateNotifierProvider<ClerkStore, ClerkState>((ref) {
+final clerkStoreProvider = StateNotifierProvider<ClerkStore, ClerkState>((ref) {
   final repo = ref.read(clerkRepositoryProvider);
   return ClerkStore(repo);
 });

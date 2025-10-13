@@ -24,10 +24,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   @override
   void initState() {
     super.initState();
-    // Load user data when the page initializes
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(authStoreProvider.notifier).loadUserData();
-    });
+
+    // // Load user data when the page initializes
+    // WidgetsBinding.instance.addPostFrameCallback((_) {
+    //   ref.read(authStoreProvider.notifier).loadUserData();
+    // });
   }
 
   @override
@@ -100,6 +101,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final isDesktop = screenWidth > 600;
 
     return Scaffold(
+      appBar: AppBar(backgroundColor: const Color(0xFF2563EB)),
       backgroundColor: const Color(0xFFF5F7FA),
       body: SafeArea(
         child: Center(
@@ -117,7 +119,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   // Logo
                   SvgPicture.asset(
                     'assets/logo.svg',
-                    height: 80,   // adjust size as needed
+                    height: 80, // adjust size as needed
                   ),
 
                   const SizedBox(height: 24),

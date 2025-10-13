@@ -1,0 +1,195 @@
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+
+/// Custom Bottom Navigation Bar for GoRouter-based navigation
+class BottomNavigation extends StatefulWidget {
+  const BottomNavigation({Key? key}) : super(key: key);
+
+  @override
+  State<BottomNavigation> createState() => _BottomNavigationState();
+}
+
+class _BottomNavigationState extends State<BottomNavigation> {
+  /// Navigation items - Updated routes to match your router configuration
+  static const List<NavigationDestination> _destinations = [
+    NavigationDestination(
+      route: '/student',
+      icon: Icons.home_outlined,
+      activeIcon: Icons.home,
+      label: 'Home',
+    ),
+    NavigationDestination(
+      route: '/student/schedule',
+      icon: Icons.calendar_today_outlined,
+      activeIcon: Icons.calendar_today,
+      label: 'Schedule',
+    ),
+    NavigationDestination(
+      route: '/student/notifications',
+      icon: Icons.notifications_outlined,
+      activeIcon: Icons.notifications,
+      label: 'Notifications',
+    ),
+    NavigationDestination(
+      route: '/student/profile',
+      icon: Icons.person_outline,
+      activeIcon: Icons.person,
+      label: 'Profile',
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    // Get the current route using GoRouter
+    final String location = GoRouterState.of(context).uri.toString();
+    final int currentIndex = _getSelectedIndex(location);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 16,
+            offset: const Offset(0, -4),
+          ),
+        ],
+        border: Border(top: BorderSide(color: Colors.grey.shade200, width: 1)),
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              for (int i = 0; i < _destinations.length; i++)
+                _buildNavItem(context, _destinations[i], i, currentIndex),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Returns the selected index based on the current location
+  int _getSelectedIndex(String location) {
+    // Normalize location by removing trailing slash
+    final normalizedLocation = location.endsWith('/')
+        ? location.substring(0, location.length - 1)
+        : location;
+
+    // Find the destination with the longest matching prefix
+    int selectedIndex = 0;
+    int longestMatch = -1;
+
+    for (int i = 0; i < _destinations.length; i++) {
+      final route = _destinations[i].route;
+      final normalizedRoute = route.endsWith('/')
+          ? route.substring(0, route.length - 1)
+          : route;
+
+      // Check for exact match or location starts with route + '/'
+      if (normalizedLocation == normalizedRoute ||
+          normalizedLocation.startsWith('$normalizedRoute/')) {
+        if (normalizedRoute.length > longestMatch) {
+          longestMatch = normalizedRoute.length;
+          selectedIndex = i;
+        }
+      }
+    }
+
+    return selectedIndex;
+  }
+
+  /// Build individual navigation item
+  Widget _buildNavItem(
+    BuildContext context,
+    NavigationDestination destination,
+    int index,
+    int currentIndex,
+  ) {
+    final isSelected = currentIndex == index;
+
+    return GestureDetector(
+      onTap: () {
+        final route = destination.route;
+        final currentLocation = GoRouterState.of(context).uri.toString();
+
+        print(
+          'BottomNavigation: Navigating to: $route, current: $currentLocation',
+        );
+
+        if (currentLocation != route) {
+          context.go(route);
+        }
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? const Color(0xFF2563EB).withOpacity(0.1)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Stack(
+              children: [
+                Icon(
+                  isSelected ? destination.activeIcon : destination.icon,
+                  color: isSelected
+                      ? const Color(0xFF2563EB)
+                      : Colors.grey.shade600,
+                  size: 24,
+                ),
+                if (destination.route == '/student/notifications')
+                  Positioned(
+                    right: -2,
+                    top: -2,
+                    child: Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade500,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 1.5),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              destination.label,
+              style: TextStyle(
+                fontSize: 12,
+                color: isSelected
+                    ? const Color(0xFF2563EB)
+                    : Colors.grey.shade600,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                letterSpacing: -0.2,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Navigation item model
+class NavigationDestination {
+  final String route;
+  final IconData icon;
+  final IconData activeIcon;
+  final String label;
+
+  const NavigationDestination({
+    required this.route,
+    required this.icon,
+    required this.activeIcon,
+    required this.label,
+  });
+}

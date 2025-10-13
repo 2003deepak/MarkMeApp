@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:markmeapp/presentation/widgets/bottom_navigation.dart';
+import 'package:markmeapp/presentation/widgets/dropdown.dart';
 
 class AddSubjectPage extends StatefulWidget {
   const AddSubjectPage({Key? key}) : super(key: key);
@@ -8,44 +10,36 @@ class AddSubjectPage extends StatefulWidget {
 }
 
 class _AddSubjectPageState extends State<AddSubjectPage> {
+
   final _formKey = GlobalKey<FormState>();
+  final _subjectNameController = TextEditingController();
   final _subjectCodeController = TextEditingController();
 
-  String? _selectedSubject;
-  String? _selectedTeacher;
-  String? _selectedYear;
+  int _selectedIndex = 0;
+  late PageController _pageController;
 
-  final List<String> _subjects = [
-    'Mathematics',
-    'Physics',
-    'Chemistry',
-    'Biology',
-    'Computer Science',
-    'English',
-    'History',
-    'Geography',
+  String? _selectedSemester;
+  String? _selectedComponent;
+  int? _selectedCredits;
+
+  final List<String> _semesters = [
+    'Semester 1',
+    'Semester 2',
+    'Semester 3',
+    'Semester 4',
+    'Semester 5',
+    'Semester 6',
+    'Semester 7',
+    'Semester 8',
   ];
 
-  final List<String> _teachers = [
-    'Dr. Smith',
-    'Prof. Johnson',
-    'Ms. Williams',
-    'Mr. Brown',
-    'Dr. Davis',
-    'Prof. Miller',
-    'Ms. Wilson',
-    'Mr. Moore',
-  ];
+  final List<String> _components = ['Lecture', 'Lab'];
 
-  final List<String> _years = [
-    'First Year',
-    'Second Year',
-    'Third Year',
-    'Fourth Year',
-  ];
+  final List<int> _credits = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
   @override
   void dispose() {
+    _subjectNameController.dispose();
     _subjectCodeController.dispose();
     super.dispose();
   }
@@ -72,21 +66,61 @@ class _AddSubjectPageState extends State<AddSubjectPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 20),
-                _buildSubjectDropdown(),
+                CustomDropdown<String>(
+                  label: "Semester",
+                  hint: "Select Semester",
+                  items: _semesters,
+                  value: _selectedSemester,
+                  onChanged: (val) => setState(() => _selectedSemester = val),
+                  validator: (val) =>
+                      val == null ? "Please select a semester" : null,
+            ),
                 const SizedBox(height: 20),
-                _buildTeacherDropdown(),
+                CustomDropdown<String>(
+              label: "Semester",
+              hint: "Select Semester",
+              items: _semesters,
+              value: _selectedSemester,
+              onChanged: (val) => setState(() => _selectedSemester = val),
+              validator: (val) =>
+                  val == null ? "Please select a semester" : null,
+            ),
                 const SizedBox(height: 20),
-                _buildYearDropdown(),
+                 CustomDropdown<String>(
+              label: "Semester",
+              hint: "Select Semester",
+              items: _semesters,
+              value: _selectedSemester,
+              onChanged: (val) => setState(() => _selectedSemester = val),
+              validator: (val) =>
+                  val == null ? "Please select a semester" : null,
+            ),
                 const SizedBox(height: 20),
-                _buildSubjectCodeField(),
+                 CustomDropdown<String>(
+              label: "Semester",
+              hint: "Select Semester",
+              items: _semesters,
+              value: _selectedSemester,
+              onChanged: (val) => setState(() => _selectedSemester = val),
+              validator: (val) =>
+                  val == null ? "Please select a semester" : null,
+            ),
                 const SizedBox(height: 40),
-                _buildSaveButton(),
+                 CustomDropdown<String>(
+              label: "Semester",
+              hint: "Select Semester",
+              items: _semesters,
+              value: _selectedSemester,
+              onChanged: (val) => setState(() => _selectedSemester = val),
+              validator: (val) =>
+                  val == null ? "Please select a semester" : null,
+            ),
               ],
             ),
           ),
         ),
       ),
-      bottomNavigationBar: _buildBottomNavigation(),
+      bottomNavigationBar: BottomNavigation(pageController: _pageController),
     );
   }
 
@@ -99,12 +133,12 @@ class _AddSubjectPageState extends State<AddSubjectPage> {
     );
   }
 
-  Widget _buildSubjectDropdown() {
+  Widget _buildSubjectNameField() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Subject',
+          'Subject Name',
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w500,
@@ -125,127 +159,21 @@ class _AddSubjectPageState extends State<AddSubjectPage> {
               ),
             ],
           ),
-          child: DropdownButtonFormField<String>(
-            value: _selectedSubject,
-            hint: const Text('Select Subject'),
-            decoration: _dropdownDecoration(),
-            items: _subjects.map((String subject) {
-              return DropdownMenuItem<String>(
-                value: subject,
-                child: Text(subject),
-              );
-            }).toList(),
-            onChanged: (String? newValue) {
-              setState(() {
-                _selectedSubject = newValue;
-              });
-            },
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please select a subject';
-              }
-              return null;
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTeacherDropdown() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Assign Teacher',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-            color: Colors.black87,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey.shade300),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
+          child: TextFormField(
+            controller: _subjectNameController,
+            decoration: InputDecoration(
+              hintText: 'Enter subject name',
+              hintStyle: TextStyle(color: Colors.grey.shade500),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 14,
               ),
-            ],
-          ),
-          child: DropdownButtonFormField<String>(
-            value: _selectedTeacher,
-            hint: const Text('Select Teacher'),
-            decoration: _dropdownDecoration(),
-            items: _teachers.map((String teacher) {
-              return DropdownMenuItem<String>(
-                value: teacher,
-                child: Text(teacher),
-              );
-            }).toList(),
-            onChanged: (String? newValue) {
-              setState(() {
-                _selectedTeacher = newValue;
-              });
-            },
+            ),
+            keyboardType: TextInputType.text,
             validator: (value) {
               if (value == null || value.isEmpty) {
-                return 'Please select a teacher';
-              }
-              return null;
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildYearDropdown() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Year',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-            color: Colors.black87,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey.shade300),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: DropdownButtonFormField<String>(
-            value: _selectedYear,
-            hint: const Text('Select Year'),
-            decoration: _dropdownDecoration(),
-            items: _years.map((String year) {
-              return DropdownMenuItem<String>(value: year, child: Text(year));
-            }).toList(),
-            onChanged: (String? newValue) {
-              setState(() {
-                _selectedYear = newValue;
-              });
-            },
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please select a year';
+                return 'Please enter subject name';
               }
               return null;
             },
@@ -284,7 +212,7 @@ class _AddSubjectPageState extends State<AddSubjectPage> {
           child: TextFormField(
             controller: _subjectCodeController,
             decoration: InputDecoration(
-              hintText: 'Enter 8-digit code',
+              hintText: 'Enter subject code',
               hintStyle: TextStyle(color: Colors.grey.shade500),
               border: InputBorder.none,
               contentPadding: const EdgeInsets.symmetric(
@@ -293,13 +221,9 @@ class _AddSubjectPageState extends State<AddSubjectPage> {
               ),
             ),
             keyboardType: TextInputType.text,
-            maxLength: 8,
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Please enter subject code';
-              }
-              if (value.length != 8) {
-                return 'Subject code must be 8 characters';
               }
               return null;
             },
@@ -329,53 +253,14 @@ class _AddSubjectPageState extends State<AddSubjectPage> {
     );
   }
 
-  Widget _buildBottomNavigation() {
-    return BottomAppBar(
-      elevation: 8,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _buildNavItem(Icons.home, 'Home', true),
-            _buildNavItem(Icons.calendar_today_outlined, 'Schedule', false),
-            _buildNavItem(Icons.notifications_outlined, 'Notifications', false),
-            _buildNavItem(Icons.person_outline, 'Profile', false),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem(IconData icon, String label, bool isActive) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          icon,
-          color: isActive ? const Color(0xFF2563EB) : Colors.grey.shade600,
-          size: 24,
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: isActive ? const Color(0xFF2563EB) : Colors.grey.shade600,
-            fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-          ),
-        ),
-      ],
-    );
-  }
-
   void _saveSubject() {
     if (_formKey.currentState!.validate()) {
       final subjectData = {
-        'subject': _selectedSubject,
-        'teacher': _selectedTeacher,
-        'year': _selectedYear,
+        'subjectName': _subjectNameController.text,
         'subjectCode': _subjectCodeController.text,
+        'semester': _selectedSemester,
+        'component': _selectedComponent,
+        'credits': _selectedCredits,
       };
 
       showDialog(

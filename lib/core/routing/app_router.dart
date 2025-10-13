@@ -1,112 +1,143 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:markmeapp/presentation/pages/auth/reset_password_page.dart';
+import 'package:markmeapp/presentation/layout/role_based_layout.dart';
+import 'package:markmeapp/presentation/pages/student/edit_profile.dart';
+import 'package:markmeapp/presentation/pages/student/profile_page.dart';
+import 'package:markmeapp/presentation/pages/student/student_dashboard.dart';
 
-// Pages
+// ⬇️ Auth + Layout imports
+import 'package:markmeapp/providers/auth_provider.dart';
+
+// ⬇️ Page imports
 import 'package:markmeapp/presentation/pages/splash/splash_page.dart';
 import 'package:markmeapp/presentation/pages/auth/login_page.dart';
 import 'package:markmeapp/presentation/pages/auth/signup_page.dart';
 import 'package:markmeapp/presentation/pages/auth/forgot_password_page.dart';
-import 'package:markmeapp/presentation/pages/home_page.dart';
-import 'package:markmeapp/presentation/pages/notification_page.dart';
-import 'package:markmeapp/presentation/pages/schedule_page.dart';
+import 'package:markmeapp/presentation/pages/auth/reset_password_page.dart';
 import 'package:markmeapp/presentation/pages/teacher/teacher_dashboard_page.dart';
 import 'package:markmeapp/presentation/pages/clerk/clerk_dashboard_page.dart';
-import 'package:markmeapp/presentation/pages/clerk/add_subject_page.dart';
-import 'package:markmeapp/presentation/pages/clerk/add_teacher_page.dart';
 
 class AppRouter {
-  static final GoRouter router = GoRouter(
-    initialLocation: '/',
-    routes: [
-      GoRoute(path: '/', builder: (context, state) => const SplashPage()),
-      GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
-      GoRoute(path: '/signup', builder: (context, state) => const SignupPage()),
-      GoRoute(
-        path: '/forgot-password',
-        builder: (context, state) => const ForgotPasswordPage(),
-      ),
-      GoRoute(
-        path: '/reset-password',
-        builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>?;
-          final email = extra?['email'] as String? ?? '';
-          final role = extra?['role'] as String? ?? '';
+  static final routerProvider = Provider<GoRouter>((ref) {
+    return GoRouter(
+      initialLocation: '/',
+      debugLogDiagnostics: true,
 
-          return ResetPasswordPage(email: email, role: role);
-        },
-      ),
+      redirect: (context, state) {
+        final auth = ref.read(authStoreProvider);
+        final goingToLogin = state.uri.toString() == '/login';
 
-      // Teacher routes
-      GoRoute(
-        path: '/teacher',
-        builder: (context, state) => const TeacherDashboardPage(),
-        routes: [
-          GoRoute(
-            path: 'profile',
-            builder: (context, state) =>
-                const Scaffold(body: Center(child: Text("Teacher Profile"))),
-          ),
-        ],
-      ),
+        // If not logged in, redirect to login
+        if (!auth.isLoggedIn && !goingToLogin) return '/login';
 
-      // Student routes
-      GoRoute(
-        path: '/student',
-        builder: (context, state) => const HomePage(),
-        routes: [
-          GoRoute(
-            path: 'notifications',
-            builder: (context, state) => const NotificationPage(),
-          ),
-          GoRoute(
-            path: 'schedule',
-            builder: (context, state) => const SchedulePage(),
-          ),
-          GoRoute(
-            path: 'attendance',
-            builder: (context, state) =>
-                const Scaffold(body: Center(child: Text("Student Attendance"))),
-          ),
-        ],
-      ),
+        // If logged in and going to public routes, redirect to dashboard
+        if (auth.isLoggedIn) {
+          const publicRoutes = [
+            '/',
+            '/login',
+            '/signup',
+            '/forgot-password',
+            '/reset-password',
+          ];
+          if (publicRoutes.contains(state.uri.toString())) {
+            switch (auth.role) {
+              case 'teacher':
+                return '/teacher';
+              case 'clerk':
+                return '/clerk';
+              case 'admin':
+                return '/admin';
+              default:
+                return '/student';
+            }
+          }
+        }
 
-      // Clerk routes
-      GoRoute(
-        path: '/clerk',
-        builder: (context, state) => const ClerkDashboardPage(),
-        routes: [
-          GoRoute(
-            path: 'notifications',
-            builder: (context, state) => const NotificationPage(),
-          ),
-          GoRoute(
-            path: 'schedule',
-            builder: (context, state) => const SchedulePage(),
-          ),
-          GoRoute(
-            path: 'attendance',
-            builder: (context, state) =>
-                const Scaffold(body: Center(child: Text("Student Attendance"))),
-          ),
-          GoRoute(
-            path: 'new-subject',
-            builder: (context, state) => const AddSubjectPage(),
-          ),
-          GoRoute(
-            path: 'new-teacher',
-            builder: (context, state) => const AddTeacherPage(),
-          ),
+        return null; // no redirect
+      },
 
-        ],
-      ),
+      routes: [
+        // ==========================
+        // Public routes
+        // ==========================
+        GoRoute(path: '/', builder: (context, state) => const SplashPage()),
+        GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
+        GoRoute(
+          path: '/signup',
+          builder: (context, state) => const SignupPage(),
+        ),
+        GoRoute(
+          path: '/forgot-password',
+          builder: (context, state) => const ForgotPasswordPage(),
+        ),
+        GoRoute(
+          path: '/reset-password',
+          builder: (context, state) {
+            final extra = state.extra as Map<String, dynamic>?;
+            final email = extra?['email'] as String? ?? '';
+            final role = extra?['role'] as String? ?? '';
+            return ResetPasswordPage(email: email, role: role);
+          },
+        ),
 
-      // Admin routes (add these if needed)
-      GoRoute(
-        path: '/admin',
-        builder: (context, state) =>
-            const Scaffold(body: Center(child: Text("Admin Dashboard"))),
-      ),
-    ],
-  );
+        // ==========================
+        // Authenticated routes with bottom nav (ShellRoute)
+        // ==========================
+        ShellRoute(
+          builder: (context, state, child) => RoleBasedLayout(child: child),
+          routes: [
+            // Student routes
+            GoRoute(
+              path: '/student',
+              name: 'student_dashboard',
+              builder: (context, state) => const StudentDashboard(),
+            ),
+            GoRoute(
+              path: '/student/profile',
+              name: 'student_profile',
+              builder: (context, state) => const ProfilePage(),
+            ),
+
+            // Teacher routes
+            GoRoute(
+              path: '/teacher',
+              name: 'teacher_dashboard',
+              builder: (context, state) => const TeacherDashboardPage(),
+            ),
+            GoRoute(
+              path: '/teacher/profile',
+              name: 'teacher_profile',
+              builder: (context, state) =>
+                  const Scaffold(body: Center(child: Text('Teacher Profile'))),
+            ),
+
+            // Clerk routes
+            GoRoute(
+              path: '/clerk',
+              name: 'clerk_dashboard',
+              builder: (context, state) => const ClerkDashboardPage(),
+            ),
+
+            // Admin routes
+            GoRoute(
+              path: '/admin',
+              name: 'admin_dashboard',
+              builder: (context, state) =>
+                  const Scaffold(body: Center(child: Text('Admin Dashboard'))),
+            ),
+          ],
+        ),
+
+        // ==========================
+        // Edit Profile route (no bottom nav)
+        // ==========================
+        GoRoute(
+          path: '/student/edit-profile',
+          name: 'edit_profile',
+          builder: (context, state) => const EditProfilePage(),
+        ),
+      ],
+    );
+  });
 }

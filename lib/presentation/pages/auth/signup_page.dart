@@ -1,9 +1,11 @@
-// lib/presentation/pages/auth/signup_page.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:go_router/go_router.dart';
 import 'package:markmeapp/data/models/user_model.dart';
 import 'package:markmeapp/data/repositories/auth_repository.dart';
+
+// Guest Layout Import 
+import 'package:markmeapp/presentation/layout/guest_layout.dart';
 
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
@@ -101,10 +103,7 @@ class _SignupPageState extends State<SignupPage> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth > 600;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-      body: SafeArea(
-        child: Center(
+    return GuestLayout(
           child: Container(
             constraints: BoxConstraints(
               maxWidth: isDesktop ? 450 : double.infinity,
@@ -599,8 +598,6 @@ class _SignupPageState extends State<SignupPage> {
               ),
             ),
           ),
-        ),
-      ),
     );
   }
 }

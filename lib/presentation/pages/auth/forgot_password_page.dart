@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:markmeapp/data/repositories/auth_repository.dart'; // Correct import path
+import 'package:markmeapp/data/repositories/auth_repository.dart'; 
+
+// Guest Layout Import 
+import 'package:markmeapp/presentation/layout/guest_layout.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({Key? key}) : super(key: key);
@@ -84,17 +87,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => context.go('/login'),
-        ),
-      ),
-      body: SafeArea(
+    return GuestLayout(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
           child: Form(
@@ -317,7 +310,6 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             ),
           ),
         ),
-      ),
     );
   }
 }

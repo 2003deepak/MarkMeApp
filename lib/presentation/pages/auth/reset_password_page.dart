@@ -1,10 +1,12 @@
-// lib/presentation/pages/reset_password_page.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
 import 'package:markmeapp/providers/auth_provider.dart';
+
+// Guest Layout Import 
+import 'package:markmeapp/presentation/layout/guest_layout.dart';
 
 class ResetPasswordPage extends ConsumerStatefulWidget {
   final String email;
@@ -569,17 +571,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
       });
     }
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black87),
-          onPressed: () => context.pop(),
-        ),
-      ),
-      body: SafeArea(
+    return GuestLayout(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: Column(
@@ -631,7 +623,6 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
             ],
           ),
         ),
-      ),
-    );
+      );
   }
 }

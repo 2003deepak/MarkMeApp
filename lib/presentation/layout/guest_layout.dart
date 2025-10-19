@@ -6,6 +6,13 @@ class GuestLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(body: SafeArea(child: child));
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF2563EB),
+        toolbarHeight: 20
+      ),
+      backgroundColor: const Color(0xFFF5F7FA),
+      body: SafeArea(child: child),
+    );
   }
 }

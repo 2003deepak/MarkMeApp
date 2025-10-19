@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:markmeapp/core/theme/app_theme.dart';
-import 'package:markmeapp/data/repositories/student_repository.dart';
+// import 'package:markmeapp/data/repositories/student_repository.dart';
 
 class EditProfileInitial {
   final String firstName;
@@ -40,7 +40,8 @@ class EditProfilePage extends StatefulWidget {
 
 class _EditProfilePageState extends State<EditProfilePage> {
   final _formKey = GlobalKey<FormState>();
-  final StudentRepository _studentRepo = StudentRepository();
+
+  // final StudentRepository _studentRepo = StudentRepository();
 
   late final TextEditingController _firstNameCtrl;
   late final TextEditingController _middleNameCtrl;
@@ -114,7 +115,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
         _hasError = false;
       });
 
-      final response = await _studentRepo.fetchProfile();
+      // final response = await _studentRepo.fetchProfile();
+      final response = {};
 
       if (response['success'] == true && mounted) {
         final data = response['data'];

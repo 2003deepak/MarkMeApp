@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/theme/app_theme.dart';
 import 'core/routing/app_router.dart';
+import 'providers/auth_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,12 +25,17 @@ class MyApp extends ConsumerStatefulWidget {
 
   @override
   ConsumerState<MyApp> createState() => _MyAppState();
+  
 }
 
 class _MyAppState extends ConsumerState<MyApp> {
   @override
   void initState() {
     super.initState();
+    Future.microtask(() {
+      final authStore = ref.read(authStoreProvider.notifier);
+      authStore.loadUserData();
+    });
   }
 
   @override

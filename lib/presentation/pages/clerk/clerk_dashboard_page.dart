@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import 'package:markmeapp/presentation/widgets/bottom_navigation.dart'; // Added for SystemChrome
+import 'package:markmeapp/presentation/layout/clerk_layout.dart';
 
 class ClerkDashboardPage extends StatefulWidget {
   const ClerkDashboardPage({Key? key}) : super(key: key);
@@ -32,46 +32,70 @@ class _ClerkDashboardPageState extends State<ClerkDashboardPage> {
     super.dispose();
   }
 
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+    _pageController.jumpToPage(index);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF2563EB),
-        leading: IconButton(
-          icon: Icon(Icons.school, color: Colors.white, size: 28),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: const Text('College Admin'),
-        elevation: 0,
+      body: PageView(
+        controller: _pageController,
+        physics: const NeverScrollableScrollPhysics(), // Disable swipe
+        onPageChanged: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
+        children: [
+          // Dashboard Page
+          _buildDashboardContent(),
+          // Schedule Page
+          _buildPlaceholderPage('Schedule Page'),
+          // Notifications Page
+          _buildPlaceholderPage('Notifications Page'),
+          // Profile Page
+          _buildPlaceholderPage('Profile Page'),
+        ],
       ),
-      // Light background for the whole page
-      body: SafeArea(
-        bottom:
-            false, // Don't reserve space for bottom safe area, handled by bottom nav
-        child: PageView(
-          controller: _pageController,
-          onPageChanged: (index) {
-            setState(() {
-              _selectedIndex = index;
-            });
-          },
-          children: [
-            // Dashboard Page
-            _buildDashboardContent(), // Changed to build the full dashboard
-            // Schedule Page
-            _buildPlaceholderPage('Schedule Page'),
+      bottomNavigationBar: _buildBottomNavigationBar(),
+    );
+  }
 
-            // Notifications Page
-            _buildPlaceholderPage(
-              'Notifications Page',
-            ), // Replaced with placeholder for now
-            // Profile Page
-            _buildPlaceholderPage('Profile Page'),
-          ],
+  BottomNavigationBar _buildBottomNavigationBar() {
+    return BottomNavigationBar(
+      currentIndex: _selectedIndex,
+      onTap: _onItemTapped,
+      type: BottomNavigationBarType.fixed,
+      selectedItemColor: Colors.blue.shade600,
+      unselectedItemColor: Colors.grey.shade600,
+      selectedLabelStyle: const TextStyle(fontSize: 12),
+      unselectedLabelStyle: const TextStyle(fontSize: 12),
+      items: const [
+        BottomNavigationBarItem(
+          icon: Icon(Icons.dashboard_outlined),
+          activeIcon: Icon(Icons.dashboard),
+          label: 'Dashboard',
         ),
-      ),
-      bottomNavigationBar: BottomNavigation(),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.calendar_today_outlined),
+          activeIcon: Icon(Icons.calendar_today),
+          label: 'Schedule',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.notifications_outlined),
+          activeIcon: Icon(Icons.notifications),
+          label: 'Alerts',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.person_outlined),
+          activeIcon: Icon(Icons.person),
+          label: 'Profile',
+        ),
+      ],
     );
   }
 

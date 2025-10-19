@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:markmeapp/presentation/widgets/bottom_navigation.dart';
 
 class ClerkLayout extends StatelessWidget {
   final Widget child;
@@ -13,10 +14,13 @@ class ClerkLayout extends StatelessWidget {
           icon: Icon(Icons.school, color: Colors.white, size: 28),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: const Text('College Clerk'),
+        title: const Text('College Clerks'),
         elevation: 0,
       ),
       body: child,
+
+      // FOOTER - Bottom Navigation
+      bottomNavigationBar: const BottomNavigation(),
     );
   }
 }

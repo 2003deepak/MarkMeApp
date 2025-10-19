@@ -6,6 +6,10 @@ import '../../../providers/auth_provider.dart';
 import 'package:markmeapp/presentation/widgets/build_fancy_radiobutton.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
+// Guest Layout Import 
+import 'package:markmeapp/presentation/layout/guest_layout.dart';
+
+
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
 
@@ -25,10 +29,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   void initState() {
     super.initState();
 
-    // // Load user data when the page initializes
-    // WidgetsBinding.instance.addPostFrameCallback((_) {
-    //   ref.read(authStoreProvider.notifier).loadUserData();
-    // });
   }
 
   @override
@@ -82,28 +82,28 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final errorMessage = ref.watch(authErrorProvider);
 
     // Show error message if any
-    if (errorMessage != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+    ref.listen<String?>(authErrorProvider, (previous, current) {
+      if (current != null && mounted) {
+        // Clear error immediately
+        ref.read(authStoreProvider.notifier).clearError();
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(errorMessage),
+            content: Text(current),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
           ),
         );
-        // Clear error after showing
-        ref.read(authStoreProvider.notifier).clearError();
-      });
-    }
+      }
+    });
 
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     final isDesktop = screenWidth > 600;
 
     return Scaffold(
-      appBar: AppBar(backgroundColor: const Color(0xFF2563EB)),
-      backgroundColor: const Color(0xFFF5F7FA),
-      body: SafeArea(
+      body: GuestLayout(
         child: Center(
           child: Container(
             constraints: BoxConstraints(

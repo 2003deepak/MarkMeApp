@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:markmeapp/presentation/layout/student_layout.dart';
 import 'package:markmeapp/presentation/layout/teacher_layout.dart';
 import 'package:markmeapp/presentation/layout/clerk_layout.dart';
+import 'package:markmeapp/presentation//layout/guest_layout.dart';
 import 'package:markmeapp/providers/auth_provider.dart';
 
 class RoleBasedLayout extends ConsumerWidget {
@@ -25,8 +26,11 @@ class RoleBasedLayout extends ConsumerWidget {
         return ClerkLayout(child: child);
       case 'admin':
         return Scaffold(body: child);
+      case 'null':
+        return GuestLayout(child: child);
+
       default:
-        return Scaffold(body: child);
+        return GuestLayout(child: child);
     }
   }
 }

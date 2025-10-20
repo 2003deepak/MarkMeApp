@@ -3,40 +3,151 @@ import 'package:go_router/go_router.dart';
 
 /// Custom Bottom Navigation Bar for GoRouter-based navigation
 class BottomNavigation extends StatefulWidget {
-  const BottomNavigation({Key? key}) : super(key: key);
+  final String userRole; // 'student', 'clerk', 'teacher', 'admin'
+
+  const BottomNavigation({Key? key, required this.userRole}) : super(key: key);
 
   @override
   State<BottomNavigation> createState() => _BottomNavigationState();
 }
 
 class _BottomNavigationState extends State<BottomNavigation> {
-  /// Navigation items - Updated routes to match your router configuration
-  static const List<NavigationDestination> _destinations = [
-    NavigationDestination(
-      route: '/student',
-      icon: Icons.home_outlined,
-      activeIcon: Icons.home,
-      label: 'Home',
-    ),
-    NavigationDestination(
-      route: '/student/schedule',
-      icon: Icons.calendar_today_outlined,
-      activeIcon: Icons.calendar_today,
-      label: 'Schedule',
-    ),
-    NavigationDestination(
-      route: '/student/notifications',
-      icon: Icons.notifications_outlined,
-      activeIcon: Icons.notifications,
-      label: 'Notifications',
-    ),
-    NavigationDestination(
-      route: '/student/profile',
-      icon: Icons.person_outline,
-      activeIcon: Icons.person,
-      label: 'Profile',
-    ),
-  ];
+  /// Navigation items for different roles
+  List<NavigationDestination> get _destinations {
+    final role = widget.userRole.toLowerCase();
+    final baseRoute = '/$role';
+
+    switch (role) {
+      case 'student':
+        return [
+          NavigationDestination(
+            route: '$baseRoute/dashboard',
+            icon: Icons.home_outlined,
+            activeIcon: Icons.home,
+            label: 'Home',
+          ),
+          NavigationDestination(
+            route: '$baseRoute/schedule',
+            icon: Icons.calendar_today_outlined,
+            activeIcon: Icons.calendar_today,
+            label: 'Schedule',
+          ),
+          NavigationDestination(
+            route: '$baseRoute/notifications',
+            icon: Icons.notifications_outlined,
+            activeIcon: Icons.notifications,
+            label: 'Notifications',
+          ),
+          NavigationDestination(
+            route: '$baseRoute/profile',
+            icon: Icons.person_outline,
+            activeIcon: Icons.person,
+            label: 'Profile',
+          ),
+        ];
+
+      case 'clerk':
+        return [
+          NavigationDestination(
+            route: '$baseRoute/dashboard',
+            icon: Icons.home_outlined,
+            activeIcon: Icons.home,
+            label: 'Home',
+          ),
+          NavigationDestination(
+            route: '$baseRoute/students',
+            icon: Icons.people_outlined,
+            activeIcon: Icons.people,
+            label: 'Students',
+          ),
+          NavigationDestination(
+            route: '$baseRoute/teachers',
+            icon: Icons.person_outline,
+            activeIcon: Icons.person,
+            label: 'Teachers',
+          ),
+          NavigationDestination(
+            route: '$baseRoute/profile',
+            icon: Icons.person_outline,
+            activeIcon: Icons.person,
+            label: 'Profile',
+          ),
+        ];
+
+      case 'teacher':
+        return [
+          NavigationDestination(
+            route: '$baseRoute/dashboard',
+            icon: Icons.home_outlined,
+            activeIcon: Icons.home,
+            label: 'Home',
+          ),
+          NavigationDestination(
+            route: '$baseRoute/schedule',
+            icon: Icons.calendar_today_outlined,
+            activeIcon: Icons.calendar_today,
+            label: 'Schedule',
+          ),
+          NavigationDestination(
+            route: '$baseRoute/classes',
+            icon: Icons.class_outlined,
+            activeIcon: Icons.class_,
+            label: 'Classes',
+          ),
+          NavigationDestination(
+            route: '$baseRoute/profile',
+            icon: Icons.person_outline,
+            activeIcon: Icons.person,
+            label: 'Profile',
+          ),
+        ];
+
+      case 'admin':
+        return [
+          NavigationDestination(
+            route: '$baseRoute/dashboard',
+            icon: Icons.home_outlined,
+            activeIcon: Icons.home,
+            label: 'Home',
+          ),
+          NavigationDestination(
+            route: '$baseRoute/analytics',
+            icon: Icons.analytics_outlined,
+            activeIcon: Icons.analytics,
+            label: 'Analytics',
+          ),
+          NavigationDestination(
+            route: '$baseRoute/management',
+            icon: Icons.settings_outlined,
+            activeIcon: Icons.settings,
+            label: 'Management',
+          ),
+          NavigationDestination(
+            route: '$baseRoute/profile',
+            icon: Icons.person_outline,
+            activeIcon: Icons.person,
+            label: 'Profile',
+          ),
+        ];
+
+      default:
+        // Fallback for unknown roles
+        return [
+          NavigationDestination(
+            route: '/dashboard',
+            icon: Icons.home_outlined,
+            activeIcon: Icons.home,
+            label: 'Home',
+          ),
+          NavigationDestination(
+            route: '/profile',
+            icon: Icons.person_outline,
+            activeIcon: Icons.person,
+            label: 'Profile',
+          ),
+        ];
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -116,7 +227,7 @@ class _BottomNavigationState extends State<BottomNavigation> {
         final currentLocation = GoRouterState.of(context).uri.toString();
 
         print(
-          'BottomNavigation: Navigating to: $route, current: $currentLocation',
+          'BottomNavigation: Navigating to: $route, current: $currentLocation, role: ${widget.userRole}',
         );
 
         if (currentLocation != route) {
@@ -144,7 +255,7 @@ class _BottomNavigationState extends State<BottomNavigation> {
                       : Colors.grey.shade600,
                   size: 24,
                 ),
-                if (destination.route == '/student/notifications')
+                if (destination.route.contains('notifications'))
                   Positioned(
                     right: -2,
                     top: -2,

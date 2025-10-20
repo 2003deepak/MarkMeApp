@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:markmeapp/presentation/widgets/bottom_navigation.dart';
-import 'package:markmeapp/presentation/widgets/dropdown.dart';
+import 'package:markmeapp/presentation/widgets/ui/dropdown.dart';
 
 class AddSubjectPage extends StatefulWidget {
   const AddSubjectPage({Key? key}) : super(key: key);
@@ -10,7 +10,6 @@ class AddSubjectPage extends StatefulWidget {
 }
 
 class _AddSubjectPageState extends State<AddSubjectPage> {
-
   final _formKey = GlobalKey<FormState>();
   final _subjectNameController = TextEditingController();
   final _subjectCodeController = TextEditingController();
@@ -74,53 +73,52 @@ class _AddSubjectPageState extends State<AddSubjectPage> {
                   onChanged: (val) => setState(() => _selectedSemester = val),
                   validator: (val) =>
                       val == null ? "Please select a semester" : null,
-            ),
+                ),
                 const SizedBox(height: 20),
                 CustomDropdown<String>(
-              label: "Semester",
-              hint: "Select Semester",
-              items: _semesters,
-              value: _selectedSemester,
-              onChanged: (val) => setState(() => _selectedSemester = val),
-              validator: (val) =>
-                  val == null ? "Please select a semester" : null,
-            ),
+                  label: "Semester",
+                  hint: "Select Semester",
+                  items: _semesters,
+                  value: _selectedSemester,
+                  onChanged: (val) => setState(() => _selectedSemester = val),
+                  validator: (val) =>
+                      val == null ? "Please select a semester" : null,
+                ),
                 const SizedBox(height: 20),
-                 CustomDropdown<String>(
-              label: "Semester",
-              hint: "Select Semester",
-              items: _semesters,
-              value: _selectedSemester,
-              onChanged: (val) => setState(() => _selectedSemester = val),
-              validator: (val) =>
-                  val == null ? "Please select a semester" : null,
-            ),
+                CustomDropdown<String>(
+                  label: "Semester",
+                  hint: "Select Semester",
+                  items: _semesters,
+                  value: _selectedSemester,
+                  onChanged: (val) => setState(() => _selectedSemester = val),
+                  validator: (val) =>
+                      val == null ? "Please select a semester" : null,
+                ),
                 const SizedBox(height: 20),
-                 CustomDropdown<String>(
-              label: "Semester",
-              hint: "Select Semester",
-              items: _semesters,
-              value: _selectedSemester,
-              onChanged: (val) => setState(() => _selectedSemester = val),
-              validator: (val) =>
-                  val == null ? "Please select a semester" : null,
-            ),
+                CustomDropdown<String>(
+                  label: "Semester",
+                  hint: "Select Semester",
+                  items: _semesters,
+                  value: _selectedSemester,
+                  onChanged: (val) => setState(() => _selectedSemester = val),
+                  validator: (val) =>
+                      val == null ? "Please select a semester" : null,
+                ),
                 const SizedBox(height: 40),
-                 CustomDropdown<String>(
-              label: "Semester",
-              hint: "Select Semester",
-              items: _semesters,
-              value: _selectedSemester,
-              onChanged: (val) => setState(() => _selectedSemester = val),
-              validator: (val) =>
-                  val == null ? "Please select a semester" : null,
-            ),
+                CustomDropdown<String>(
+                  label: "Semester",
+                  hint: "Select Semester",
+                  items: _semesters,
+                  value: _selectedSemester,
+                  onChanged: (val) => setState(() => _selectedSemester = val),
+                  validator: (val) =>
+                      val == null ? "Please select a semester" : null,
+                ),
               ],
             ),
           ),
         ),
       ),
-      bottomNavigationBar: BottomNavigation(pageController: _pageController),
     );
   }
 

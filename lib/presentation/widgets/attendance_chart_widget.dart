@@ -101,10 +101,10 @@ class _AttendanceChartWidgetState extends State<AttendanceChartWidget>
     required Color presentColor,
   }) {
     final bool isDesktop = widget.isDesktop;
-    final double chartSize = isDesktop ? 220 : 200;
+    final double chartSize = isDesktop ? 180 : 160;
 
     // ring thickness target
-    final double ringThickness = isDesktop ? 28 : 24;
+    final double ringThickness = isDesktop ? 20 : 18;
     // choose a center space that leaves room for label
     final double centerSpaceRadius = isDesktop ? 58 : 52;
     // derive base radius from center + thickness
@@ -210,7 +210,7 @@ class _AttendanceChartWidgetState extends State<AttendanceChartWidget>
           Center(
             child: _scaleController == null || _scaleAnimation == null
                 ? SizedBox(
-                    height: isDesktop ? 240 : 220,
+                    height: isDesktop ? 200 : 180,
                     width: isDesktop ? 240 : 220,
                     child: const Center(child: CircularProgressIndicator()),
                   )

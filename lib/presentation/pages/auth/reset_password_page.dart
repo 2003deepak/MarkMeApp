@@ -5,18 +5,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
 import 'package:markmeapp/providers/auth_provider.dart';
 
-// Guest Layout Import 
+// Guest Layout Import
 import 'package:markmeapp/presentation/layout/guest_layout.dart';
 
 class ResetPasswordPage extends ConsumerStatefulWidget {
   final String email;
   final String role;
 
-  const ResetPasswordPage({
-    Key? key,
-    required this.email,
-    required this.role,
-  }) : super(key: key);
+  const ResetPasswordPage({Key? key, required this.email, required this.role})
+    : super(key: key);
 
   @override
   ConsumerState<ResetPasswordPage> createState() => _ResetPasswordPageState();
@@ -106,7 +103,9 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
 
   void _validatePassword() {
     final password = _passwordControllers.map((c) => c.text).join();
-    final confirmPassword = _confirmPasswordControllers.map((c) => c.text).join();
+    final confirmPassword = _confirmPasswordControllers
+        .map((c) => c.text)
+        .join();
 
     setState(() {
       _passwordsMatch = password.isNotEmpty && password == confirmPassword;
@@ -179,9 +178,13 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
 
   Future<void> _resetPassword() async {
     final password = _passwordControllers.map((c) => c.text).join();
-    final confirmPassword = _confirmPasswordControllers.map((c) => c.text).join();
+    final confirmPassword = _confirmPasswordControllers
+        .map((c) => c.text)
+        .join();
 
-    if (password.length == 6 && confirmPassword.length == 6 && _passwordsMatch) {
+    if (password.length == 6 &&
+        confirmPassword.length == 6 &&
+        _passwordsMatch) {
       setState(() {
         _errorMessage = '';
       });
@@ -291,7 +294,11 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
             color: const Color(0xFF4A90E2).withOpacity(0.1),
             shape: BoxShape.circle,
           ),
-          child: const Icon(Icons.lock_reset, color: Color(0xFF4A90E2), size: 40),
+          child: const Icon(
+            Icons.lock_reset,
+            color: Color(0xFF4A90E2),
+            size: 40,
+          ),
         ),
         const SizedBox(height: 32),
         const Text(
@@ -324,7 +331,10 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                 controller: _otpControllers[index],
                 focusNode: _otpFocusNodes[index],
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
                 keyboardType: TextInputType.number,
                 maxLength: 1,
                 decoration: const InputDecoration(
@@ -407,7 +417,11 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
             color: const Color(0xFF4A90E2).withOpacity(0.1),
             shape: BoxShape.circle,
           ),
-          child: const Icon(Icons.lock_outline, color: Color(0xFF4A90E2), size: 40),
+          child: const Icon(
+            Icons.lock_outline,
+            color: Color(0xFF4A90E2),
+            size: 40,
+          ),
         ),
         const SizedBox(height: 32),
         const Text(
@@ -445,7 +459,10 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                 controller: _passwordControllers[index],
                 focusNode: _passwordFocusNodes[index],
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
                 keyboardType: TextInputType.number,
                 maxLength: 1,
                 obscureText: true,
@@ -481,7 +498,10 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                 controller: _confirmPasswordControllers[index],
                 focusNode: _confirmPasswordFocusNodes[index],
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
                 keyboardType: TextInputType.number,
                 maxLength: 1,
                 obscureText: true,
@@ -557,7 +577,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
   Widget build(BuildContext context) {
     // Watch for error messages from auth state
     final errorMessage = ref.watch(authErrorProvider);
-    
+
     // Show error message if any from auth state
     if (errorMessage != null && errorMessage.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -571,58 +591,62 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
       });
     }
 
-    return GuestLayout(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _isOtpStep ? _buildOtpInput() : _buildPasswordReset(),
+    return Scaffold(
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _isOtpStep ? _buildOtpInput() : _buildPasswordReset(),
 
-              if (_errorMessage.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.red.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.red.shade200),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.error_outline, color: Colors.red, size: 20),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          _errorMessage,
-                          style: const TextStyle(color: Colors.red, fontSize: 14),
-                        ),
-                      ),
-                    ],
-                  ),
+            if (_errorMessage.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.red.shade200),
                 ),
-              ],
-
-              const SizedBox(height: 24),
-              Center(
-                child: GestureDetector(
-                  onTap: () => context.go('/login'),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.arrow_back, color: Colors.grey[600], size: 16),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Back to Login page',
-                        style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      color: Colors.red,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _errorMessage,
+                        style: const TextStyle(color: Colors.red, fontSize: 14),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ],
-          ),
+
+            const SizedBox(height: 24),
+            Center(
+              child: GestureDetector(
+                onTap: () => context.go('/login'),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.arrow_back, color: Colors.grey[600], size: 16),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Back to Login page',
+                      style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
-      );
+      ),
+    );
   }
 }

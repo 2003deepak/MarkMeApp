@@ -9,8 +9,7 @@ class SplashPage extends StatefulWidget {
   State<SplashPage> createState() => _SplashPageState();
 }
 
-class _SplashPageState extends State<SplashPage>
-    with TickerProviderStateMixin {
+class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
   late AnimationController _fadeController;
   late AnimationController _scaleController;
   late AnimationController _slideController;
@@ -19,7 +18,7 @@ class _SplashPageState extends State<SplashPage>
   late AnimationController _particleController;
   late AnimationController _textController;
   late AnimationController _logoRotateController;
-  
+
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
   late Animation<Offset> _slideAnimation;
@@ -73,69 +72,38 @@ class _SplashPageState extends State<SplashPage>
       vsync: this,
     );
 
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _fadeController,
-      curve: Curves.easeInOut,
-    ));
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut),
+    );
 
-    _scaleAnimation = Tween<double>(
-      begin: 0.3,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _scaleController,
-      curve: Curves.elasticOut,
-    ));
+    _scaleAnimation = Tween<double>(begin: 0.3, end: 1.0).animate(
+      CurvedAnimation(parent: _scaleController, curve: Curves.elasticOut),
+    );
 
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.5),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _slideController,
-      curve: Curves.easeOutBack,
-    ));
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.5), end: Offset.zero).animate(
+          CurvedAnimation(parent: _slideController, curve: Curves.easeOutBack),
+        );
 
-    _rotationAnimation = Tween<double>(
-      begin: 0.0,
-      end: 2 * math.pi,
-    ).animate(CurvedAnimation(
-      parent: _rotationController,
-      curve: Curves.linear,
-    ));
+    _rotationAnimation = Tween<double>(begin: 0.0, end: 2 * math.pi).animate(
+      CurvedAnimation(parent: _rotationController, curve: Curves.linear),
+    );
 
-    _pulseAnimation = Tween<double>(
-      begin: 1.0,
-      end: 1.2,
-    ).animate(CurvedAnimation(
-      parent: _pulseController,
-      curve: Curves.easeInOut,
-    ));
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
 
-    _particleAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _particleController,
-      curve: Curves.easeInOut,
-    ));
+    _particleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _particleController, curve: Curves.easeInOut),
+    );
 
-    _textAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _textController,
-      curve: Curves.easeOutCubic,
-    ));
+    _textAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _textController, curve: Curves.easeOutCubic),
+    );
 
-    _logoRotateAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _logoRotateController,
-      curve: Curves.elasticOut,
-    ));
+    _logoRotateAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _logoRotateController, curve: Curves.elasticOut),
+    );
 
     _startAnimations();
 
@@ -148,36 +116,41 @@ class _SplashPageState extends State<SplashPage>
   }
 
   void _startAnimations() {
+    if (!mounted) return;
+
     _fadeController.forward();
     _particleController.repeat();
     _rotationController.repeat();
-    
+
     Future.delayed(const Duration(milliseconds: 200), () {
-      _scaleController.forward();
+      if (mounted) _scaleController.forward();
     });
-    
+
     Future.delayed(const Duration(milliseconds: 400), () {
-      _logoRotateController.forward();
+      if (mounted) _logoRotateController.forward();
     });
-    
+
     Future.delayed(const Duration(milliseconds: 600), () {
-      _slideController.forward();
+      if (mounted) _slideController.forward();
     });
-    
+
     Future.delayed(const Duration(milliseconds: 800), () {
-      _textController.forward();
+      if (mounted) _textController.forward();
     });
-    
+
     _pulseController.repeat(reverse: true);
   }
 
+  @override
   @override
   void dispose() {
     _fadeController.dispose();
     _scaleController.dispose();
     _slideController.dispose();
     _rotationController.dispose();
+    _pulseController.stop(); // Stop repeating animation
     _pulseController.dispose();
+    _particleController.stop();
     _particleController.dispose();
     _textController.dispose();
     _logoRotateController.dispose();
@@ -219,7 +192,7 @@ class _SplashPageState extends State<SplashPage>
                 );
               },
             ),
-            
+
             SafeArea(
               child: Column(
                 children: [
@@ -256,7 +229,9 @@ class _SplashPageState extends State<SplashPage>
                                               ],
                                             ),
                                             border: Border.all(
-                                              color: Colors.white.withOpacity(0.3),
+                                              color: Colors.white.withOpacity(
+                                                0.3,
+                                              ),
                                               width: 2,
                                             ),
                                           ),
@@ -268,7 +243,7 @@ class _SplashPageState extends State<SplashPage>
                               );
                             },
                           ),
-                          
+
                           // Pulsing smaller circle
                           AnimatedBuilder(
                             animation: _pulseAnimation,
@@ -353,12 +328,13 @@ class _SplashPageState extends State<SplashPage>
                                       scale: _pulseAnimation.value * 0.1 + 0.9,
                                       child: Center(
                                         child: ShaderMask(
-                                          shaderCallback: (bounds) => LinearGradient(
-                                            colors: [
-                                              Colors.blue.shade600,
-                                              Colors.blue.shade800,
-                                            ],
-                                          ).createShader(bounds),
+                                          shaderCallback: (bounds) =>
+                                              LinearGradient(
+                                                colors: [
+                                                  Colors.blue.shade600,
+                                                  Colors.blue.shade800,
+                                                ],
+                                              ).createShader(bounds),
                                           child: Icon(
                                             Icons.school_rounded,
                                             color: Colors.white,
@@ -382,9 +358,14 @@ class _SplashPageState extends State<SplashPage>
                             animation: _textAnimation,
                             builder: (context, child) {
                               final displayText = "MarkMe";
-                              final visibleLength = (_textAnimation.value * displayText.length).round();
-                              final visibleText = displayText.substring(0, visibleLength);
-                              
+                              final visibleLength =
+                                  (_textAnimation.value * displayText.length)
+                                      .round();
+                              final visibleText = displayText.substring(
+                                0,
+                                visibleLength,
+                              );
+
                               return FadeTransition(
                                 opacity: _fadeAnimation,
                                 child: ShaderMask(
@@ -442,8 +423,13 @@ class _SplashPageState extends State<SplashPage>
                                   return Opacity(
                                     opacity: _fadeAnimation.value * 0.4,
                                     child: CustomPaint(
-                                      size: Size(screenWidth, isDesktop ? 120 : 100),
-                                      painter: EnhancedWavePainter(_particleAnimation.value),
+                                      size: Size(
+                                        screenWidth,
+                                        isDesktop ? 120 : 100,
+                                      ),
+                                      painter: EnhancedWavePainter(
+                                        _particleAnimation.value,
+                                      ),
                                     ),
                                   );
                                 },
@@ -466,7 +452,7 @@ class _SplashPageState extends State<SplashPage>
 
 class ParticlePainter extends CustomPainter {
   final double animationValue;
-  
+
   ParticlePainter(this.animationValue);
 
   @override
@@ -477,18 +463,16 @@ class ParticlePainter extends CustomPainter {
 
     // Create floating particles
     for (int i = 0; i < 20; i++) {
-      final x = (size.width * (i * 0.1 + 0.05)) + 
-                math.sin(animationValue * 2 * math.pi + i) * 30;
-      final y = (size.height * (i * 0.05 + 0.1)) + 
-                math.cos(animationValue * 2 * math.pi + i * 0.5) * 40;
-      
+      final x =
+          (size.width * (i * 0.1 + 0.05)) +
+          math.sin(animationValue * 2 * math.pi + i) * 30;
+      final y =
+          (size.height * (i * 0.05 + 0.1)) +
+          math.cos(animationValue * 2 * math.pi + i * 0.5) * 40;
+
       final radius = 2 + math.sin(animationValue * 4 * math.pi + i) * 2;
-      
-      canvas.drawCircle(
-        Offset(x % size.width, y % size.height),
-        radius,
-        paint,
-      );
+
+      canvas.drawCircle(Offset(x % size.width, y % size.height), radius, paint);
     }
   }
 
@@ -498,7 +482,7 @@ class ParticlePainter extends CustomPainter {
 
 class EnhancedWavePainter extends CustomPainter {
   final double animationValue;
-  
+
   EnhancedWavePainter(this.animationValue);
 
   @override
@@ -517,16 +501,17 @@ class EnhancedWavePainter extends CustomPainter {
 
     final path = Path();
     final waveOffset = animationValue * 2 * math.pi;
-    
+
     path.moveTo(0, size.height * 0.6);
-    
+
     for (double x = 0; x <= size.width; x += 5) {
-      final y = size.height * 0.6 + 
-                math.sin((x / size.width) * 4 * math.pi + waveOffset) * 20 +
-                math.sin((x / size.width) * 2 * math.pi + waveOffset * 0.5) * 10;
+      final y =
+          size.height * 0.6 +
+          math.sin((x / size.width) * 4 * math.pi + waveOffset) * 20 +
+          math.sin((x / size.width) * 2 * math.pi + waveOffset * 0.5) * 10;
       path.lineTo(x, y);
     }
-    
+
     path.lineTo(size.width, size.height);
     path.lineTo(0, size.height);
     path.close();

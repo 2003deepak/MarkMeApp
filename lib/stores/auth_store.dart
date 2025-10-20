@@ -17,53 +17,82 @@ class AuthStore extends StateNotifier<AuthState> {
   /// Load user data from SharedPreferences
   Future<void> loadUserData() async {
     try {
+      print('🟡 [AuthStore] Loading user data from SharedPreferences');
       final prefs = await SharedPreferences.getInstance();
       final stored = prefs.getString('userData');
 
       if (stored != null) {
+        print('🟡 [AuthStore] Found stored user data');
         final decoded = jsonDecode(stored);
         if (decoded is Map<String, dynamic>) {
+          print('🟡 [AuthStore] Setting user as logged in');
           state = state.copyWith(
             user: decoded,
             role: decoded['role'],
+            access_token: decoded['token'],
             isLoggedIn: true,
+            hasLoaded: true,
           );
+          return;
         }
       }
+
+      // No user data found
+      print('🟡 [AuthStore] No stored user data found');
+      state = state.copyWith(hasLoaded: true);
     } catch (e) {
-      print('Error loading user data: $e');
-      await setLogOut();
+      print('🔴 [AuthStore] Error loading user data: $e');
+      // On error, set hasLoaded to true but don't log in
+      state = state.copyWith(hasLoaded: true);
     }
   }
 
   Future<void> setLogIn(Map<String, dynamic> userData) async {
     try {
+      print('🟡 [AuthStore] Setting login state with user data');
+      
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('userData', jsonEncode(userData));
 
       state = state.copyWith(
         user: userData,
         role: userData['role'],
+        access_token: userData['token'] ?? userData['access_token'],
         isLoggedIn: true,
         errorMessage: null,
         isLoading: false,
+        hasLoaded: true,
       );
+      
+      print('🟢 [AuthStore] Login state set successfully. isLoggedIn: true, role: ${userData['role']}');
     } catch (e) {
+      print('🔴 [AuthStore] Error saving login data: $e');
       state = state.copyWith(
         errorMessage: 'Error saving login data: $e',
         isLoading: false,
+        hasLoaded: true,
       );
     }
   }
 
   Future<void> setLogOut() async {
     try {
+      print('🟡 [AuthStore] Starting logout process');
+      
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('userData');
+      print('🟡 [AuthStore] Removed user data from SharedPreferences');
 
-      state = const AuthState();
+      // Reset to initial state - THIS IS THE KEY FIX
+      state = const AuthState(hasLoaded: true);
+      
+      print('🟢 [AuthStore] Logout completed. State reset to: isLoggedIn: false, hasLoaded: true');
     } catch (e) {
-      state = state.copyWith(errorMessage: 'Error during logout: $e');
+      print('🔴 [AuthStore] Error during logout: $e');
+      state = state.copyWith(
+        errorMessage: 'Error during logout: $e',
+        hasLoaded: true,
+      );
     }
   }
 
@@ -72,7 +101,6 @@ class AuthStore extends StateNotifier<AuthState> {
     return Future.value();
   }
 
-  /// Login - CORRECTED METHOD
   Future<void> loginUser(
     User userModel,
     String role,
@@ -81,42 +109,49 @@ class AuthStore extends StateNotifier<AuthState> {
     // Check if already loading
     if (state.isLoading) return;
 
+    print('🟡 [AuthStore] Starting login process for role: $role');
     state = state.copyWith(isLoading: true, errorMessage: null);
 
     try {
       final result = await _authRepo.loginUser(userModel, role);
 
       if (result['success'] == true && result['data'] != null) {
+        print('🟢 [AuthStore] Login successful, setting login state');
         await setLogIn(result['data']);
 
         if (context.mounted) {
           // Navigate based on role
-          switch (role) {
-            case 'teacher':
-              context.go('/teacher');
-              break;
-            case 'admin':
-              context.go('/admin');
-              break;
-            case 'clerk':
-              context.go('/clerk');
-              break;
-            default: // student
-              context.go('/student');
-          }
+          final route = _getRouteForRole(role);
+          print('🟡 [AuthStore] Navigating to: $route');
+          context.go(route);
         }
       } else {
+        final error = result['error'] ?? 'Login failed. Please check your credentials.';
+        print('🔴 [AuthStore] Login failed: $error');
         state = state.copyWith(
-          errorMessage:
-              result['error'] ?? 'Login failed. Please check your credentials.',
+          errorMessage: error,
           isLoading: false,
         );
       }
     } catch (e) {
+      print('🔴 [AuthStore] Login error: $e');
       state = state.copyWith(
         errorMessage: 'Network error: Please check your internet connection',
         isLoading: false,
       );
+    }
+  }
+
+  String _getRouteForRole(String role) {
+    switch (role) {
+      case 'teacher':
+        return '/teacher';
+      case 'admin':
+        return '/admin';
+      case 'clerk':
+        return '/clerk';
+      default: // student
+        return '/student';
     }
   }
 

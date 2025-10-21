@@ -11,6 +11,12 @@ dependencies:
   flutter:
     sdk: flutter
 
+  image_picker: ^1.0.4
+  permission_handler: ^11.0.1
+
+  # Dio
+  dio: ^5.4.0
+
   # Navigation
   go_router: ^14.0.2
 

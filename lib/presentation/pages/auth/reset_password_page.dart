@@ -2,11 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:markmeapp/state/auth_state.dart';
 import 'dart:async';
-import 'package:markmeapp/providers/auth_provider.dart';
-
-// Guest Layout Import
-import 'package:markmeapp/presentation/layout/guest_layout.dart';
 
 class ResetPasswordPage extends ConsumerStatefulWidget {
   final String email;
@@ -164,9 +161,9 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
           _isOtpStep = false;
         });
       } else if (mounted) {
-        final error = ref.read(authErrorProvider);
+        final state = ref.read(authStoreProvider);
         setState(() {
-          _errorMessage = error ?? 'OTP verification failed';
+          _errorMessage = state.errorMessage ?? 'OTP verification failed';
         });
       }
     } else {
@@ -200,9 +197,9 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
       if (success && mounted) {
         _showSuccessDialog();
       } else if (mounted) {
-        final error = ref.read(authErrorProvider);
+        final state = ref.read(authStoreProvider);
         setState(() {
-          _errorMessage = error ?? 'Password reset failed';
+          _errorMessage = state.errorMessage ?? 'Password reset failed';
         });
       }
     } else {
@@ -282,7 +279,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
   }
 
   Widget _buildOtpInput() {
-    final isLoading = ref.watch(authLoadingProvider);
+    final isLoading = ref.watch(authStoreProvider).isLoading;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -405,7 +402,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
   }
 
   Widget _buildPasswordReset() {
-    final isLoading = ref.watch(authLoadingProvider);
+    final isLoading = ref.watch(authStoreProvider).isLoading;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -523,7 +520,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: isLoading ? null : _resetPassword,
+            onPressed: (_passwordsMatch && !isLoading) ? _resetPassword : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF4A90E2),
               padding: const EdgeInsets.symmetric(vertical: 16),
@@ -575,22 +572,6 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Watch for error messages from auth state
-    final errorMessage = ref.watch(authErrorProvider);
-
-    // Show error message if any from auth state
-    if (errorMessage != null && errorMessage.isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          setState(() {
-            _errorMessage = errorMessage;
-          });
-          // Clear error after showing
-          ref.read(authStoreProvider.notifier).clearError();
-        }
-      });
-    }
-
     return Scaffold(
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),

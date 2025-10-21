@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:markmeapp/data/models/user_model.dart';
-import '../../../providers/auth_provider.dart';
 import 'package:markmeapp/presentation/widgets/build_fancy_radiobutton.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-// Guest Layout Import
-import 'package:markmeapp/presentation/layout/guest_layout.dart';
+import 'package:markmeapp/state/auth_state.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -75,26 +73,25 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Watch provider — rebuilds when state changes
+    final auth = ref.watch(authStoreProvider);
+
     // Watch auth state for loading and errors
-    final isLoading = ref.watch(authLoadingProvider);
-    final errorMessage = ref.watch(authErrorProvider);
+    final isLoading = auth.isLoading;
+    final errorMessage = auth.errorMessage;
 
-    // Show error message if any
-    ref.listen<String?>(authErrorProvider, (previous, current) {
-      if (current != null && mounted) {
-        // Clear error immediately
-        ref.read(authStoreProvider.notifier).clearError();
+    if (errorMessage != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage ?? 'An unknown error occurred'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
+        ),
+      );
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(current),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 4),
-          ),
-        );
-      }
-    });
+      ref.read(authStoreProvider.notifier).clearError();
+    }
 
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
@@ -323,7 +320,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                 icon: Icons.school,
                                 groupValue: _selectedRole,
                                 onChanged: (value) =>
-                                    setState(() => _selectedRole = value!),
+                                    setState(() => _selectedRole = value),
                               ),
                               buildFancyRadioButton(
                                 value: 'clerk',
@@ -331,7 +328,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                 icon: Icons.assignment_ind,
                                 groupValue: _selectedRole,
                                 onChanged: (value) =>
-                                    setState(() => _selectedRole = value!),
+                                    setState(() => _selectedRole = value),
                               ),
                               buildFancyRadioButton(
                                 value: 'admin',
@@ -339,7 +336,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                 icon: Icons.admin_panel_settings,
                                 groupValue: _selectedRole,
                                 onChanged: (value) =>
-                                    setState(() => _selectedRole = value!),
+                                    setState(() => _selectedRole = value),
                               ),
                             ],
                           ),

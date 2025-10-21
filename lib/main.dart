@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:markmeapp/state/auth_state.dart';
 
 import 'core/theme/app_theme.dart';
 import 'core/routing/app_router.dart';
-import 'providers/auth_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,7 +25,6 @@ class MyApp extends ConsumerStatefulWidget {
 
   @override
   ConsumerState<MyApp> createState() => _MyAppState();
-  
 }
 
 class _MyAppState extends ConsumerState<MyApp> {
@@ -57,7 +56,6 @@ class _MyAppState extends ConsumerState<MyApp> {
       // darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.light,
       routerConfig: router,
-      // Important for ShellRouter to work properly
       builder: (context, child) {
         return child ?? const SizedBox.shrink();
       },

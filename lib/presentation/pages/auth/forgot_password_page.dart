@@ -1,18 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:markmeapp/data/repositories/auth_repository.dart';
+import 'package:markmeapp/state/auth_state.dart';
 
-// Guest Layout Import
-import 'package:markmeapp/presentation/layout/guest_layout.dart';
-
-class ForgotPasswordPage extends StatefulWidget {
+class ForgotPasswordPage extends ConsumerStatefulWidget {
   const ForgotPasswordPage({Key? key}) : super(key: key);
 
   @override
-  State<ForgotPasswordPage> createState() => _ForgotPasswordPageState();
+  ConsumerState<ForgotPasswordPage> createState() => _ForgotPasswordPageState();
 }
 
-class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
+class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   String _selectedRole = 'Student';
@@ -21,7 +19,6 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   bool _isLoading = false;
 
   final List<String> _roles = ['Student', 'Clerk', 'Admin', 'Teacher'];
-  final AuthRepository _authRepository = AuthRepository();
 
   @override
   void dispose() {
@@ -37,17 +34,19 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       });
 
       try {
-        final response = await _authRepository.forgotPassword(
-          _emailController.text,
-          _selectedRole,
+        final authStore = ref.read(authStoreProvider.notifier);
+        final response = await authStore.forgotPassword(
+          _emailController.text.trim(),
+          _selectedRole.toLowerCase(),
+          context,
         );
 
         setState(() {
           _isLoading = false;
-          _isSuccess = response['success'] ?? false;
-          _message =
-              response['message'] ??
-              (response['error'] ?? 'An unexpected error occurred');
+          _isSuccess = response;
+          _message = _isSuccess
+              ? 'OTP sent successfully'
+              : 'Failed to send OTP';
         });
 
         if (_isSuccess) {
@@ -55,7 +54,10 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             if (mounted) {
               context.go(
                 '/reset-password',
-                extra: {'email': _emailController.text, 'role': _selectedRole},
+                extra: {
+                  'email': _emailController.text.trim(),
+                  'role': _selectedRole.toLowerCase(),
+                },
               );
             }
           });
@@ -89,6 +91,13 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Forgot Password'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/login'),
+        ),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Form(

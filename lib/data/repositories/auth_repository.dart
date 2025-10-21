@@ -1,39 +1,34 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:markmeapp/core/network/api_client.dart';
 import '../models/user_model.dart';
 
 class AuthRepository {
-  final String baseUrl;
+  final Dio _dio;
 
-  AuthRepository()
-    : baseUrl =
-          dotenv.env['BASE_URL'] ?? 'http://localhost:3000'; // Fallback URL
+  AuthRepository(this._dio);
 
   Future<Map<String, dynamic>> registerUser(User user) async {
     print('🔵 [AuthRepository] registerUser called with email: ${user.email}');
 
     try {
-      final url = '$baseUrl/student/register';
+      final url = '/student/register';
       print('🔵 [AuthRepository] Making POST request to: $url');
 
-      final response = await http
-          .post(
-            Uri.parse(url),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({
-              'first_name': user.firstName,
-              'last_name': user.lastName,
-              'email': user.email,
-              'password': user.password,
-            }),
-          )
-          .timeout(const Duration(seconds: 30));
+      final response = await _dio.post(
+        url,
+        data: {
+          'first_name': user.firstName,
+          'last_name': user.lastName,
+          'email': user.email,
+          'password': user.password,
+        },
+      );
 
       print('🔵 [AuthRepository] HTTP Status Code: ${response.statusCode}');
-      print('🔵 [AuthRepository] Response Body: ${response.body}');
+      print('🔵 [AuthRepository] Response Body: ${response.data}');
 
-      final responseBody = jsonDecode(response.body);
+      final responseBody = response.data;
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         if (responseBody['status'] == 'success') {
@@ -52,6 +47,13 @@ class AuthRepository {
               responseBody['message'] ?? 'Server error: ${response.statusCode}',
         };
       }
+    } on DioException catch (e) {
+      print('🔴 [AuthRepository] DioException caught: $e');
+      print('🔴 [AuthRepository] Error response: ${e.response?.data}');
+
+      final errorMessage =
+          e.response?.data?['message'] ?? e.message ?? 'Network error occurred';
+      return {'success': false, 'error': errorMessage};
     } catch (e) {
       print('🔴 [AuthRepository] Exception caught: $e');
       return {'success': false, 'error': e.toString()};
@@ -64,28 +66,18 @@ class AuthRepository {
     );
 
     try {
-      final url = '$baseUrl/auth/login';
+      final url = '/auth/login';
       print('🔵 [AuthRepository] Making POST request to: $url');
 
-      final response = await http
-          .post(
-            Uri.parse(url),
-            headers: {
-              'accept': 'application/json',
-              'Content-Type': 'application/json',
-            },
-            body: jsonEncode({
-              'email': user.email,
-              'password': user.password,
-              'role': role,
-            }),
-          )
-          .timeout(const Duration(seconds: 30));
+      final response = await _dio.post(
+        url,
+        data: {'email': user.email, 'password': user.password, 'role': role},
+      );
 
       print('🔵 [AuthRepository] HTTP Status Code: ${response.statusCode}');
-      print('🔵 [AuthRepository] Response Body: ${response.body}');
+      print('🔵 [AuthRepository] Response Body: ${response.data}');
 
-      final responseBody = jsonDecode(response.body);
+      final responseBody = response.data;
 
       if (response.statusCode == 200) {
         print('🟢 [AuthRepository] Login successful');
@@ -102,6 +94,13 @@ class AuthRepository {
           'error': responseBody['message'] ?? 'Login failed',
         };
       }
+    } on DioException catch (e) {
+      print('🔴 [AuthRepository] DioException caught: $e');
+      print('🔴 [AuthRepository] Error response: ${e.response?.data}');
+
+      final errorMessage =
+          e.response?.data?['message'] ?? e.message ?? 'Network error occurred';
+      return {'success': false, 'error': errorMessage};
     } catch (e) {
       print('🔴 [AuthRepository] Exception caught: $e');
       return {'success': false, 'error': e.toString()};
@@ -110,16 +109,13 @@ class AuthRepository {
 
   Future<Map<String, dynamic>> forgotPassword(String email, String role) async {
     try {
-      final url = '$baseUrl/auth/forgot-password';
-      final response = await http
-          .post(
-            Uri.parse(url),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'email': email, 'role': role}),
-          )
-          .timeout(const Duration(seconds: 30));
+      final url = '/auth/forgot-password';
+      final response = await _dio.post(
+        url,
+        data: {'email': email, 'role': role},
+      );
 
-      final responseBody = jsonDecode(response.body);
+      final responseBody = response.data;
 
       if (response.statusCode == 200) {
         if (responseBody['status'] == 'success') {
@@ -136,6 +132,10 @@ class AuthRepository {
           'error': responseBody['message'] ?? 'Server error',
         };
       }
+    } on DioException catch (e) {
+      final errorMessage =
+          e.response?.data?['message'] ?? e.message ?? 'Network error occurred';
+      return {'success': false, 'error': errorMessage};
     } catch (e) {
       return {'success': false, 'error': e.toString()};
     }
@@ -147,16 +147,13 @@ class AuthRepository {
     String otp,
   ) async {
     try {
-      final url = '$baseUrl/auth/verify-otp';
-      final response = await http
-          .post(
-            Uri.parse(url),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'email': email, 'role': role, 'otp': otp}),
-          )
-          .timeout(const Duration(seconds: 30));
+      final url = '/auth/verify-otp';
+      final response = await _dio.post(
+        url,
+        data: {'email': email, 'role': role, 'otp': otp},
+      );
 
-      final responseBody = jsonDecode(response.body);
+      final responseBody = response.data;
 
       if (response.statusCode == 200) {
         if (responseBody['status'] == 'success') {
@@ -173,6 +170,10 @@ class AuthRepository {
           'error': responseBody['message'] ?? 'Server error',
         };
       }
+    } on DioException catch (e) {
+      final errorMessage =
+          e.response?.data?['message'] ?? e.message ?? 'Network error occurred';
+      return {'success': false, 'error': errorMessage};
     } catch (e) {
       return {'success': false, 'error': e.toString()};
     }
@@ -184,20 +185,13 @@ class AuthRepository {
     String newPassword,
   ) async {
     try {
-      final url = '$baseUrl/auth/reset-password';
-      final response = await http
-          .post(
-            Uri.parse(url),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({
-              'email': email,
-              'role': role,
-              'new_password': newPassword,
-            }),
-          )
-          .timeout(const Duration(seconds: 30));
+      final url = '/auth/reset-password';
+      final response = await _dio.post(
+        url,
+        data: {'email': email, 'role': role, 'new_password': newPassword},
+      );
 
-      final responseBody = jsonDecode(response.body);
+      final responseBody = response.data;
 
       if (response.statusCode == 200) {
         if (responseBody['status'] == 'success') {
@@ -214,8 +208,52 @@ class AuthRepository {
           'error': responseBody['message'] ?? 'Server error',
         };
       }
+    } on DioException catch (e) {
+      final errorMessage =
+          e.response?.data?['message'] ?? e.message ?? 'Network error occurred';
+      return {'success': false, 'error': errorMessage};
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> refreshToken(String refreshToken) async {
+    try {
+      final url = '/auth/refresh-token';
+      final response = await _dio.post(
+        url,
+        data: {'refresh_token': refreshToken},
+      );
+
+      final responseBody = response.data;
+
+      if (response.statusCode == 200) {
+        if (responseBody['status'] == 'success') {
+          return {'success': true, 'data': responseBody['data']};
+        } else {
+          return {
+            'success': false,
+            'error': responseBody['message'] ?? 'Token refresh failed',
+          };
+        }
+      } else {
+        return {
+          'success': false,
+          'error': responseBody['message'] ?? 'Server error',
+        };
+      }
+    } on DioException catch (e) {
+      final errorMessage =
+          e.response?.data?['message'] ?? e.message ?? 'Network error occurred';
+      return {'success': false, 'error': errorMessage};
     } catch (e) {
       return {'success': false, 'error': e.toString()};
     }
   }
 }
+
+// Auth Repository Provider - FIXED: Now properly provides Dio instance
+final authRepositoryProvider = Provider<AuthRepository>((ref) {
+  final dio = ref.watch(dioProvider);
+  return AuthRepository(dio);
+});

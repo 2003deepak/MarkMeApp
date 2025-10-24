@@ -12,7 +12,7 @@ class AuthRepository {
     print('🔵 [AuthRepository] registerUser called with email: ${user.email}');
 
     try {
-      final url = '/student/register';
+      final url = '/student/';
       print('🔵 [AuthRepository] Making POST request to: $url');
 
       final response = await _dio.post(
@@ -31,19 +31,19 @@ class AuthRepository {
       final responseBody = response.data;
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        if (responseBody['status'] == 'success') {
+        if (responseBody['success'] == true) {
           print('🟢 [AuthRepository] Registration successful');
           return {'success': true, 'data': responseBody['data']};
         } else {
           return {
             'success': false,
-            'error': responseBody['message'] ?? 'Registration failed',
+            'message': responseBody['message'] ?? 'Registration failed',
           };
         }
       } else {
         return {
           'success': false,
-          'error':
+          'message':
               responseBody['message'] ?? 'Server error: ${response.statusCode}',
         };
       }
@@ -53,10 +53,10 @@ class AuthRepository {
 
       final errorMessage =
           e.response?.data?['message'] ?? e.message ?? 'Network error occurred';
-      return {'success': false, 'error': errorMessage};
+      return {'success': false, 'message': errorMessage};
     } catch (e) {
       print('🔴 [AuthRepository] Exception caught: $e');
-      return {'success': false, 'error': e.toString()};
+      return {'success': false, 'message': e.toString()};
     }
   }
 
@@ -91,7 +91,7 @@ class AuthRepository {
         print(responseBody);
         return {
           'success': false,
-          'error': responseBody['message'] ?? 'Login failed',
+          'message': responseBody['message'] ?? 'Login failed',
         };
       }
     } on DioException catch (e) {
@@ -100,10 +100,10 @@ class AuthRepository {
 
       final errorMessage =
           e.response?.data?['message'] ?? e.message ?? 'Network error occurred';
-      return {'success': false, 'error': errorMessage};
+      return {'success': false, 'message': errorMessage};
     } catch (e) {
       print('🔴 [AuthRepository] Exception caught: $e');
-      return {'success': false, 'error': e.toString()};
+      return {'success': false, 'message': e.toString()};
     }
   }
 

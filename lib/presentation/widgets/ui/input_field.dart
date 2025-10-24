@@ -109,6 +109,10 @@ class _InputFieldState extends State<InputField> {
           onFieldSubmitted: widget.onFieldSubmitted,
           decoration: InputDecoration(
             hintText: widget.hintText,
+            hintStyle: const TextStyle(
+              color: Color(0xFF9CA3AF), // soft gray (you can tweak this)
+              fontSize: 14,
+            ),
             counterText: widget.showCounter ? null : '',
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),

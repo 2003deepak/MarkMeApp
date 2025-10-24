@@ -9,6 +9,8 @@ class Calendar extends StatefulWidget {
   final DateTime? firstDate;
   final DateTime? lastDate;
   final bool isRequired;
+  final String? hintText;
+  final Function(DateTime?)? onDateSelected;
 
   const Calendar({
     Key? key,
@@ -19,6 +21,8 @@ class Calendar extends StatefulWidget {
     this.firstDate,
     this.lastDate,
     this.isRequired = false,
+    this.hintText,
+    this.onDateSelected,
   }) : super(key: key);
 
   @override
@@ -66,6 +70,16 @@ class _CalendarState extends State<Calendar> {
         _selectedDate = picked;
         widget.controller.text = _formatDate(picked);
       });
+
+      // Call the callback function if provided
+      if (widget.onDateSelected != null) {
+        widget.onDateSelected!(picked);
+      }
+    } else if (picked == null && mounted) {
+      // Call the callback with null if date selection was cancelled
+      if (widget.onDateSelected != null) {
+        widget.onDateSelected!(null);
+      }
     }
   }
 
@@ -82,6 +96,7 @@ class _CalendarState extends State<Calendar> {
       onTap: _pickDate,
       validator: widget.validator,
       isRequired: widget.isRequired,
+      hintText: widget.hintText ?? 'Select date',
       suffixIcon: Container(
         padding: const EdgeInsets.all(12),
         child: const Icon(

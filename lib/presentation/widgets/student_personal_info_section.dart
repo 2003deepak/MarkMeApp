@@ -12,6 +12,11 @@ class StudentPersonalInfoSection extends StatelessWidget {
   final TextEditingController dobCtrl;
   final DateTime? dob;
   final BoxDecoration cardDecoration;
+  final Function(DateTime?)? onDobChanged;
+  final String? Function(String?)? validateFirstName;
+  final String? Function(String?)? validateLastName;
+  final String? Function(String?)? validateEmail;
+  final String? Function(String?)? validatePhone;
 
   const StudentPersonalInfoSection({
     Key? key,
@@ -23,6 +28,11 @@ class StudentPersonalInfoSection extends StatelessWidget {
     required this.dobCtrl,
     required this.dob,
     required this.cardDecoration,
+    this.onDobChanged,
+    this.validateFirstName,
+    this.validateLastName,
+    this.validateEmail,
+    this.validatePhone,
   }) : super(key: key);
 
   @override
@@ -39,8 +49,11 @@ class StudentPersonalInfoSection extends StatelessWidget {
                   label: 'First name',
                   controller: firstNameCtrl,
                   isRequired: true,
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'Required' : null,
+                  hintText: 'Enter your first name',
+                  validator:
+                      validateFirstName ??
+                      (v) =>
+                          (v == null || v.trim().isEmpty) ? 'Required' : null,
                 ),
               ),
               const SizedBox(width: 12),
@@ -48,7 +61,7 @@ class StudentPersonalInfoSection extends StatelessWidget {
                 child: InputField(
                   label: 'Middle name',
                   controller: middleNameCtrl,
-                  hintText: 'Optional',
+                  hintText: 'Optional - enter middle name',
                 ),
               ),
             ],
@@ -58,14 +71,17 @@ class StudentPersonalInfoSection extends StatelessWidget {
             label: 'Last name',
             controller: lastNameCtrl,
             isRequired: true,
-            validator: (v) =>
-                (v == null || v.trim().isEmpty) ? 'Required' : null,
+            hintText: 'Enter your last name',
+            validator:
+                validateLastName ??
+                (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
           ),
           const SizedBox(height: 16),
           InputField(
             label: 'Email',
             controller: emailCtrl,
             readOnly: true,
+            hintText: 'Your email address',
             suffixIcon: Container(
               padding: const EdgeInsets.all(12),
               child: const Icon(
@@ -74,24 +90,29 @@ class StudentPersonalInfoSection extends StatelessWidget {
                 size: 20,
               ),
             ),
+            validator: validateEmail,
           ),
           const SizedBox(height: 16),
           InputField(
             label: 'Phone',
             controller: phoneCtrl,
             isRequired: true,
+            hintText: 'Enter your 10-digit phone number',
             keyboardType: TextInputType.phone,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            validator: (v) =>
-                (v == null || v.trim().isEmpty) ? 'Required' : null,
+            validator:
+                validatePhone ??
+                (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
           ),
           const SizedBox(height: 16),
-          // Calendar(
-          //   controller: dobCtrl,
-          //   label: 'Date of Birth',
-          //   isRequired: true,
-          //   validator: (_) => dob == null ? 'Select a date' : null,
-          // ),
+          Calendar(
+            controller: dobCtrl,
+            label: 'Date of Birth',
+            isRequired: true,
+            hintText: 'Select your date of birth',
+            validator: (_) => dob == null ? 'Select a date' : null,
+            onDateSelected: onDobChanged,
+          ),
         ],
       ),
     );

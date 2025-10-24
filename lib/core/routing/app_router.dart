@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 // Layouts
 import 'package:markmeapp/presentation/layout/role_based_layout.dart';
 import 'package:markmeapp/presentation/layout/guest_layout.dart';
+import 'package:markmeapp/presentation/pages/clerk/add_teacher_page.dart';
 
 // Pages
 import 'package:markmeapp/presentation/pages/splash/splash_page.dart';
@@ -76,7 +77,7 @@ class AppRouter {
       // ROUTES
       // ==========================
       routes: [
-        // --- Public Routes (wrapped with GuestLayout) ---
+        // --- Public Routes (no layout or guest layout) ---
         GoRoute(
           path: '/',
           name: 'splash',
@@ -111,11 +112,11 @@ class AppRouter {
           },
         ),
 
-        // --- Private Routes (wrapped by RoleBasedLayout using ShellRoute) ---
+        // --- 🧾 Clerk, Teacher, Student Layout Routes ---
         ShellRoute(
           builder: (context, state, child) => RoleBasedLayout(child: child),
           routes: [
-            // 🧑‍🎓 Student Routes
+            // 🧑‍🎓 Student Routes (inside layout)
             GoRoute(
               path: '/student',
               name: 'student_dashboard',
@@ -124,13 +125,7 @@ class AppRouter {
             GoRoute(
               path: '/student/profile',
               name: 'student_profile',
-              builder: (context, state) =>
-                  StudentProfile.ProfilePage(), // remove const if it has parameters
-            ),
-            GoRoute(
-              path: '/student/edit-profile',
-              name: 'edit_profile',
-              builder: (context, state) => const EditProfilePage(),
+              builder: (context, state) => StudentProfile.ProfilePage(),
             ),
 
             // 👨‍🏫 Teacher Routes
@@ -155,8 +150,13 @@ class AppRouter {
             ),
             GoRoute(
               path: '/clerk/profile',
-              name: 'clerk_profile', // ✅ fixed duplicate name
+              name: 'clerk_profile',
               builder: (context, state) => ClerkProfile.ProfilePage(),
+            ),
+            GoRoute(
+              path: '/clerk/add-teacher',
+              name: 'clerk_add_teacher',
+              builder: (context, state) => const AddTeacherPage(),
             ),
 
             // 🛡️ Admin Routes
@@ -168,6 +168,13 @@ class AppRouter {
               ),
             ),
           ],
+        ),
+
+        // --- 📝 Edit Profile (OUTSIDE layout) ---
+        GoRoute(
+          path: '/student/edit-profile',
+          name: 'edit_profile',
+          builder: (context, state) => const EditProfilePage(),
         ),
       ],
     );

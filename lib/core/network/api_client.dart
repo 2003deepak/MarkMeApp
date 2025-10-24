@@ -14,7 +14,7 @@ final Provider<Dio> dioProvider = Provider<Dio>((ref) {
   );
 
   bool isRefreshing = false;
-  Completer<String?>? refreshCompleter;
+  Completer<Map<String, dynamic>>? refreshCompleter;
 
   dio.interceptors.add(
     InterceptorsWrapper(
@@ -24,11 +24,17 @@ final Provider<Dio> dioProvider = Provider<Dio>((ref) {
         final authStore = ref.read(authStoreProvider.notifier);
         final token = authStore.accessToken;
 
-        // Skip auth for certain endpoints
-        if (options.path.contains("/send-otp") ||
-            options.path.contains("/verify-otp") ||
-            options.path.contains("/refresh-token") ||
-            options.path.contains("/resend-otp")) {
+        // Skip auth for specific endpoints
+        const authExcludedPaths = [
+          '/auth/login',
+          '/auth/forgot-password',
+          '/auth/verify-otp',
+          '/auth/reset-password',
+          '/auth/refresh-token',
+          '/student/',
+        ];
+
+        if (authExcludedPaths.any((path) => options.path.endsWith(path))) {
           return handler.next(options);
         }
 
@@ -57,11 +63,14 @@ final Provider<Dio> dioProvider = Provider<Dio>((ref) {
         // If a refresh is already in progress, wait for it
         if (isRefreshing) {
           try {
-            final newToken = await refreshCompleter!.future;
-            if (newToken != null) {
+            final refreshResult = await refreshCompleter!.future;
+            if (refreshResult['status'] == 'success') {
+              final newToken = refreshResult['data']['access_token'];
               requestOptions.headers["Authorization"] = "Bearer $newToken";
               final clonedResponse = await dio.fetch(requestOptions);
               return handler.resolve(clonedResponse);
+            } else {
+              throw Exception('Token refresh failed');
             }
           } catch (e) {
             return handler.reject(error);
@@ -70,22 +79,26 @@ final Provider<Dio> dioProvider = Provider<Dio>((ref) {
 
         // Start refresh process
         isRefreshing = true;
-        refreshCompleter = Completer<String?>();
+        refreshCompleter = Completer<Map<String, dynamic>>();
 
         try {
-          final newAccessToken = await authStore.refreshAccessToken();
+          final refreshResult = await authStore.refreshAccessToken();
 
-          if (newAccessToken == null) {
-            throw Exception('Failed to refresh token');
+          if (refreshResult['status'] == 'success') {
+            final newAccessToken = refreshResult['data']['access_token'];
+
+            // Complete the refresh completer so others waiting get the token
+            refreshCompleter!.complete(refreshResult);
+
+            // Retry the failed request with new token
+            requestOptions.headers["Authorization"] = "Bearer $newAccessToken";
+            final retryResponse = await dio.fetch(requestOptions);
+            handler.resolve(retryResponse);
+          } else {
+            throw Exception(
+              refreshResult['message'] ?? 'Failed to refresh token',
+            );
           }
-
-          // Complete the refresh completer so others waiting get the token
-          refreshCompleter!.complete(newAccessToken);
-
-          // Retry the failed request with new token
-          requestOptions.headers["Authorization"] = "Bearer $newAccessToken";
-          final retryResponse = await dio.fetch(requestOptions);
-          handler.resolve(retryResponse);
         } catch (refreshError) {
           print("🚨 Token refresh failed: $refreshError");
           refreshCompleter!.completeError(refreshError);

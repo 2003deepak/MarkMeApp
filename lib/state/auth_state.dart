@@ -16,7 +16,6 @@ class AuthState {
   final String? accessToken;
   final String? role;
   final Map<String, dynamic>? user;
-  final String? errorMessage;
 
   const AuthState({
     this.isLoggedIn = false,
@@ -25,7 +24,6 @@ class AuthState {
     this.accessToken,
     this.role,
     this.user,
-    this.errorMessage,
   });
 
   AuthState copyWith({
@@ -35,7 +33,6 @@ class AuthState {
     String? accessToken,
     String? role,
     Map<String, dynamic>? user,
-    String? errorMessage,
   }) {
     return AuthState(
       isLoggedIn: isLoggedIn ?? this.isLoggedIn,
@@ -44,13 +41,12 @@ class AuthState {
       accessToken: accessToken ?? this.accessToken,
       role: role ?? this.role,
       user: user ?? this.user,
-      errorMessage: errorMessage ?? this.errorMessage,
     );
   }
 
   @override
   String toString() {
-    return 'AuthState(isLoggedIn: $isLoggedIn, isLoading: $isLoading, hasLoaded: $hasLoaded, role: $role, errorMessage: $errorMessage)';
+    return 'AuthState(isLoggedIn: $isLoggedIn, isLoading: $isLoading, hasLoaded: $hasLoaded, role: $role)';
   }
 }
 
@@ -64,14 +60,13 @@ class AuthStore extends StateNotifier<AuthState> {
   bool get isLoggedIn => state.isLoggedIn;
   String? get role => state.role;
   bool get isLoading => state.isLoading;
-  String? get errorMessage => state.errorMessage;
 
   /// Load user data from SharedPreferences
   Future<void> loadUserData() async {
     try {
       debugPrint('🟡 [AuthStore] Loading user data from SharedPreferences');
       final prefs = await SharedPreferences.getInstance();
-      final stored = prefs.getString('userData');
+      final stored = prefs.getString('refreshToken');
 
       if (stored != null) {
         debugPrint('🟡 [AuthStore] Found stored user data');
@@ -115,7 +110,6 @@ class AuthStore extends StateNotifier<AuthState> {
         role: userData['role'],
         accessToken: userData['token'] ?? userData['access_token'],
         isLoggedIn: true,
-        errorMessage: null,
         isLoading: false,
         hasLoaded: true,
       );
@@ -125,11 +119,7 @@ class AuthStore extends StateNotifier<AuthState> {
       );
     } catch (e) {
       debugPrint('🔴 [AuthStore] Error saving login data: $e');
-      state = state.copyWith(
-        errorMessage: 'Error saving login data: $e',
-        isLoading: false,
-        hasLoaded: true,
-      );
+      state = state.copyWith(isLoading: false, hasLoaded: true);
     }
   }
 
@@ -148,58 +138,57 @@ class AuthStore extends StateNotifier<AuthState> {
       );
     } catch (e) {
       debugPrint('🔴 [AuthStore] Error during logout: $e');
-      state = state.copyWith(
-        errorMessage: 'Error during logout: $e',
-        hasLoaded: true,
-      );
+      state = state.copyWith(hasLoaded: true);
     }
   }
 
-  /// Clear error message
-  void clearError() {
-    state = state.copyWith(errorMessage: null);
-  }
-
   /// Login User
-  Future<void> loginUser(
+  Future<Map<String, dynamic>> loginUser(
     User userModel,
     String role,
     BuildContext context,
   ) async {
-    if (state.isLoading) return;
+    if (state.isLoading) {
+      return {'success': false, 'message': 'Operation already in progress'};
+    }
 
     debugPrint('🟡 [AuthStore] Starting login process for role: $role');
-    state = state.copyWith(isLoading: true, errorMessage: null);
+    state = state.copyWith(isLoading: true);
 
     try {
       final result = await _authRepo.loginUser(userModel, role);
 
-      if (result['success'] == true && result['data'] != null) {
+      // ✅ Safely read message from repository result
+      final bool success = result['success'] == true;
+      final String message = result['message'] ?? '';
+
+      if (success) {
         debugPrint('🟢 [AuthStore] Login successful, setting login state');
         await setLogIn(result['data']);
-
-        if (context.mounted) {
-          final route = _getRouteForRole(role);
-          debugPrint('🟡 [AuthStore] Navigating to: $route');
-          context.go(route);
-        }
+        state = state.copyWith(isLoading: false);
+        return {
+          'success': true,
+          'message': message.isNotEmpty ? message : 'Login successful',
+        };
       } else {
-        final error =
-            result['error'] ?? 'Login failed. Please check your credentials.';
-        debugPrint('🔴 [AuthStore] Login failed: $error');
-        state = state.copyWith(errorMessage: error, isLoading: false);
+        debugPrint('🔴 [AuthStore] Login failed: $message');
+        state = state.copyWith(isLoading: false);
+        return {
+          'success': false,
+          'message': message.isNotEmpty ? message : 'Login failed',
+        };
       }
     } catch (e) {
       debugPrint('🔴 [AuthStore] Login error: $e');
-      state = state.copyWith(
-        errorMessage: 'Network error: Please check your internet connection',
-        isLoading: false,
-      );
+      final errorMessage =
+          'Network error: Please check your internet connection';
+      state = state.copyWith(isLoading: false);
+      return {'success': false, 'message': errorMessage};
     }
   }
 
   /// Get route based on user role
-  String _getRouteForRole(String role) {
+  String getRouteForRole(String role) {
     switch (role) {
       case 'teacher':
         return '/teacher';
@@ -213,136 +202,146 @@ class AuthStore extends StateNotifier<AuthState> {
   }
 
   /// Register User
-  Future<void> registerUser(User userModel, BuildContext context) async {
-    if (state.isLoading) return;
-
-    state = state.copyWith(isLoading: true, errorMessage: null);
-
+  Future<Map<String, dynamic>> registerUser(User userModel) async {
     try {
-      final result = await _authRepo.registerUser(userModel);
+      final response = await _authRepo.registerUser(userModel);
 
-      if (result['success'] == true) {
-        state = state.copyWith(isLoading: false);
+      print("Message from state = $response");
 
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Registration successful! Please login.'),
-              backgroundColor: Colors.green,
-            ),
-          );
-          context.go('/login');
-        }
+      if (response['success'] == true) {
+        return {
+          'success': true,
+          'data': response['data'],
+          'message': response['message'] ?? 'Registration successful',
+        };
       } else {
-        state = state.copyWith(
-          errorMessage:
-              result['error'] ?? 'Registration failed. Please try again.',
-          isLoading: false,
-        );
+        return {
+          'success': 'fail',
+          'message': response['message'] ?? 'Registration failed',
+        };
       }
+    } on DioException catch (e) {
+      debugPrint('🔴 [AuthRepository] Error response: ${e.response?.data}');
+      return {
+        'status': 'fail',
+        // ✅ Preserve backend message here
+        'message':
+            e.response?.data['message'] ??
+            'Registration failed. Please try again.',
+      };
     } catch (e) {
-      state = state.copyWith(
-        errorMessage: 'Registration error: Please try again later',
-        isLoading: false,
-      );
+      debugPrint('🔴 [AuthRepository] Unexpected error: $e');
+      return {
+        'status': 'fail',
+        'message': 'Unexpected error occurred. Please try again.',
+      };
     }
   }
 
   /// Forgot Password
-  Future<bool> forgotPassword(
+  Future<Map<String, dynamic>> forgotPassword(
     String email,
     String role,
     BuildContext context,
   ) async {
-    if (state.isLoading) return false;
+    if (state.isLoading) {
+      return {'status': 'fail', 'message': 'Operation already in progress'};
+    }
 
-    state = state.copyWith(isLoading: true, errorMessage: null);
+    state = state.copyWith(isLoading: true);
 
     try {
       final result = await _authRepo.forgotPassword(email, role);
 
-      if (result['success'] == true) {
+      // Check if status is "success" (not true/false)
+      if (result['status'] == 'success') {
         state = state.copyWith(isLoading: false);
-
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result['message'] ?? 'OTP sent to your email.'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-        return true;
+        return {
+          'status': 'success',
+          'message': result['message'] ?? 'OTP sent to your email.',
+        };
       } else {
-        state = state.copyWith(errorMessage: result['error'], isLoading: false);
-        return false;
+        final error = result['message'] ?? 'Failed to send OTP';
+        state = state.copyWith(isLoading: false);
+        return {'status': 'fail', 'message': error};
       }
     } catch (e) {
-      state = state.copyWith(
-        errorMessage: 'Failed to send OTP. Please try again.',
-        isLoading: false,
-      );
-      return false;
+      debugPrint('🔴 [AuthStore] Forgot password error: $e');
+      final errorMessage = 'Failed to send OTP. Please try again.';
+      state = state.copyWith(isLoading: false);
+      return {'status': 'fail', 'message': errorMessage};
     }
   }
 
   /// Verify OTP
-  Future<bool> verifyOtp(
+  Future<Map<String, dynamic>> verifyOtp(
     String email,
     String role,
     String otp,
     BuildContext context,
   ) async {
-    if (state.isLoading) return false;
+    if (state.isLoading) {
+      return {'status': 'fail', 'message': 'Operation already in progress'};
+    }
 
-    state = state.copyWith(isLoading: true, errorMessage: null);
+    state = state.copyWith(isLoading: true);
 
     try {
       final result = await _authRepo.verifyOtp(email, role, otp);
 
-      if (result['success'] == true) {
+      // Check if status is "success" (not true/false)
+      if (result['status'] == 'success') {
         state = state.copyWith(isLoading: false);
-        return true;
+        return {
+          'status': 'success',
+          'message': result['message'] ?? 'OTP verified successfully.',
+        };
       } else {
-        state = state.copyWith(errorMessage: result['error'], isLoading: false);
-        return false;
+        final error = result['message'] ?? 'OTP verification failed';
+        state = state.copyWith(isLoading: false);
+        return {'status': 'fail', 'message': error};
       }
     } catch (e) {
-      state = state.copyWith(
-        errorMessage: 'OTP verification failed. Please try again.',
-        isLoading: false,
-      );
-      return false;
+      debugPrint('🔴 [AuthStore] OTP verification error: $e');
+      final errorMessage = 'OTP verification failed. Please try again.';
+      state = state.copyWith(isLoading: false);
+      return {'status': 'fail', 'message': errorMessage};
     }
   }
 
   /// Reset Password
-  Future<bool> resetPassword(
+  Future<Map<String, dynamic>> resetPassword(
     String email,
     String role,
     String newPassword,
     BuildContext context,
   ) async {
-    if (state.isLoading) return false;
+    if (state.isLoading) {
+      return {'status': 'fail', 'message': 'Operation already in progress'};
+    }
 
-    state = state.copyWith(isLoading: true, errorMessage: null);
+    state = state.copyWith(isLoading: true);
 
     try {
       final result = await _authRepo.resetPassword(email, role, newPassword);
 
-      if (result['success'] == true) {
+      // Check if status is "success" (not true/false)
+      if (result['status'] == 'success') {
         state = state.copyWith(isLoading: false);
-        return true;
+        return {
+          'status': 'success',
+          'message': result['message'] ?? 'Password reset successfully.',
+        };
       } else {
-        state = state.copyWith(errorMessage: result['error'], isLoading: false);
-        return false;
+        final error = result['message'] ?? 'Password reset failed';
+        state = state.copyWith(isLoading: false);
+        return {'status': 'fail', 'message': error};
       }
     } catch (e) {
-      state = state.copyWith(
-        errorMessage: 'Password reset failed. Please try again.',
-        isLoading: false,
-      );
-      return false;
+      debugPrint('🔴 [AuthStore] Reset password error: $e');
+      final errorMessage = 'Password reset failed. Please try again.';
+      state = state.copyWith(isLoading: false);
+      return {'status': 'fail', 'message': errorMessage};
     }
   }
 
@@ -353,38 +352,39 @@ class AuthStore extends StateNotifier<AuthState> {
   }
 
   /// Refresh access token
-  Future<String?> refreshAccessToken() async {
+  Future<Map<String, dynamic>> refreshAccessToken() async {
     try {
       final refreshToken = await getRefreshToken();
       if (refreshToken == null) {
         debugPrint('🔴 [AuthStore] No refresh token available');
-        return null;
+        return {'status': 'fail', 'message': 'No refresh token available'};
       }
 
       debugPrint('🟡 [AuthStore] Refreshing access token');
 
-      final response = await Dio().post(
-        '${dotenv.env['BASE_URL']}/auth/refresh-token',
-        options: Options(headers: {'x-internal-token': 'Bearer $refreshToken'}),
-      );
+      final result = await _authRepo.refreshToken(refreshToken);
 
-      if (response.statusCode == 200 &&
-          response.data['data'] != null &&
-          response.data['data']['access_token'] != null) {
-        final newToken = response.data['data']['access_token'];
+      // Check if status is "success" (not true/false)
+      if (result['status'] == 'success' && result['data'] != null) {
+        final newToken = result['data']['access_token'];
         debugPrint('🟢 [AuthStore] Access token refreshed successfully');
 
         // Update the state properly
         state = state.copyWith(accessToken: newToken);
 
-        return newToken;
+        return {
+          'status': 'success',
+          'data': result['data'],
+          'message': 'Token refreshed successfully',
+        };
       } else {
-        debugPrint('🔴 [AuthStore] Token refresh failed: ${response.data}');
-        throw Exception('Failed to refresh token');
+        final error = result['message'] ?? 'Token refresh failed';
+        debugPrint('🔴 [AuthStore] Token refresh failed: $error');
+        return {'status': 'fail', 'message': error};
       }
     } catch (e) {
       debugPrint("🔴 [AuthStore] Token refresh error: $e");
-      return null;
+      return {'status': 'fail', 'message': 'Token refresh failed'};
     }
   }
 }

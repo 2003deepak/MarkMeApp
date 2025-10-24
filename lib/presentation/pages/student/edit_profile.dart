@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
+import 'package:go_router/go_router.dart';
 import 'package:markmeapp/core/theme/app_theme.dart';
 import 'package:markmeapp/data/repositories/student_repository.dart';
 import 'package:markmeapp/presentation/skeleton/student_edit_profile_skeleton.dart';
@@ -11,6 +12,7 @@ import 'package:markmeapp/presentation/widgets/student_gallery_section.dart';
 import 'package:markmeapp/presentation/widgets/student_personal_info_section.dart';
 import 'package:markmeapp/presentation/widgets/ui/profile_picture.dart';
 import 'package:markmeapp/state/student_state.dart';
+import 'package:collection/collection.dart';
 
 class EditProfilePage extends ConsumerStatefulWidget {
   const EditProfilePage({super.key});
@@ -22,71 +24,63 @@ class EditProfilePage extends ConsumerStatefulWidget {
 class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   final _formKey = GlobalKey<FormState>();
   bool _isFormDirty = false;
+  bool _isUpdating = false;
 
-  late final TextEditingController _firstNameCtrl;
-  late final TextEditingController _middleNameCtrl;
-  late final TextEditingController _lastNameCtrl;
-  late final TextEditingController _emailCtrl;
-  late final TextEditingController _phoneCtrl;
-  late final TextEditingController _dobCtrl;
-  late final TextEditingController _rollCtrl;
-  late final TextEditingController _batchYearCtrl;
-  late final TextEditingController _semesterCtrl;
-
+  // Form data
   DateTime? _dob;
   String _program = 'MCA';
   String _department = 'BTECH';
   int _semester = 1;
   String? _profilePicture;
   final List<String?> _gallery = List<String?>.filled(4, null);
+  bool _isEmbeddings = false;
 
   bool _initialDataLoaded = false;
   Map<String, dynamic>? _initialData;
 
-  late final StudentRepository studentRepository;
+  // Initialize controllers directly instead of using late final
+  final TextEditingController _firstNameCtrl = TextEditingController();
+  final TextEditingController _middleNameCtrl = TextEditingController();
+  final TextEditingController _lastNameCtrl = TextEditingController();
+  final TextEditingController _emailCtrl = TextEditingController();
+  final TextEditingController _phoneCtrl = TextEditingController();
+  final TextEditingController _dobCtrl = TextEditingController();
+  final TextEditingController _rollCtrl = TextEditingController();
+  final TextEditingController _batchYearCtrl = TextEditingController();
+  final TextEditingController _semesterCtrl = TextEditingController();
+
+  // List of controllers that should trigger form dirty check
+  List<TextEditingController> get _listenableControllers => [
+    _firstNameCtrl,
+    _middleNameCtrl,
+    _lastNameCtrl,
+    _emailCtrl,
+    _phoneCtrl,
+    _rollCtrl,
+    _batchYearCtrl,
+    _semesterCtrl,
+  ];
 
   @override
   void initState() {
     super.initState();
-    studentRepository = ref.read(studentRepositoryProvider);
-    _initializeControllers();
     _setupListeners();
     WidgetsBinding.instance.addPostFrameCallback((_) => _fetchProfileData());
   }
 
-  void _initializeControllers() {
-    _firstNameCtrl = TextEditingController();
-    _middleNameCtrl = TextEditingController();
-    _lastNameCtrl = TextEditingController();
-    _emailCtrl = TextEditingController();
-    _phoneCtrl = TextEditingController();
-    _dobCtrl = TextEditingController();
-    _rollCtrl = TextEditingController();
-    _batchYearCtrl = TextEditingController();
-    _semesterCtrl = TextEditingController();
-  }
-
   void _setupListeners() {
-    _firstNameCtrl.addListener(_checkFormDirty);
-    _middleNameCtrl.addListener(_checkFormDirty);
-    _lastNameCtrl.addListener(_checkFormDirty);
-    _emailCtrl.addListener(_checkFormDirty);
-    _phoneCtrl.addListener(_checkFormDirty);
-    _rollCtrl.addListener(_checkFormDirty);
-    _batchYearCtrl.addListener(_checkFormDirty);
-    _semesterCtrl.addListener(_checkFormDirty);
+    for (final controller in _listenableControllers) {
+      controller.addListener(_checkFormDirty);
+    }
   }
 
   void _checkFormDirty() {
     if (!_initialDataLoaded) return;
 
-    final currentData = _getCurrentFormData();
-    final hasChanges = !_areMapsEqual(_initialData!, currentData);
+    final hasChanges = !_areMapsEqual(_initialData, _getCurrentFormData());
 
     if (hasChanges != _isFormDirty) {
-      setState(() {
-        _isFormDirty = hasChanges;
-      });
+      setState(() => _isFormDirty = hasChanges);
     }
   }
 
@@ -100,7 +94,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       'last_name': _nullIfEmpty(_lastNameCtrl.text),
       'email': _nullIfEmpty(_emailCtrl.text),
       'phone': _nullIfEmpty(_phoneCtrl.text),
-      'dob': _dob?.toIso8601String().split('T').first, // YYYY-MM-DD format
+      'dob': _dob?.toIso8601String().split('T').first,
       'roll_number': _nullIfEmpty(_rollCtrl.text),
       'program': _program,
       'department': _department,
@@ -108,6 +102,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       'batch_year': _nullIfEmpty(_batchYearCtrl.text),
       'profile_picture': _profilePicture,
       'gallery': _gallery.whereType<String>().toList(),
+      'is_embeddings': _isEmbeddings,
     };
   }
 
@@ -119,16 +114,18 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       if (key == 'gallery') {
         final list1 = map1[key] as List?;
         final list2 = map2[key] as List?;
-        if (list1 == null && list2 == null) continue;
-        if (list1 == null || list2 == null) return false;
-        if (list1.length != list2.length) return false;
-        for (int i = 0; i < list1.length; i++) {
-          if (list1[i] != list2[i]) return false;
-        }
+        if (!const ListEquality().equals(list1, list2)) return false;
       } else if (map1[key] != map2[key]) {
         return false;
       }
     }
+    return true;
+  }
+
+  bool get _isSaveEnabled {
+    if (!_isFormDirty || _isUpdating) return false;
+    if (!_isEmbeddings && _gallery.whereType<String>().length != 4)
+      return false;
     return true;
   }
 
@@ -138,134 +135,109 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   }
 
   Future<void> _updateProfile() async {
-    if (_formKey.currentState?.validate() ?? false) {
-      try {
-        // Show loading state
-        // ref.read(studentStoreProvider.notifier).setUpdating(true);
+    if (!_initialDataLoaded || _isUpdating) return;
 
-        final formData = FormData();
+    final changedData = _getChangedData();
+    if (changedData.isEmpty) {
+      _showSnackBar("No changes to save.", Colors.orange);
+      return;
+    }
 
-        // Add text fields (all optional as per backend)
-        final data = _getCurrentFormData();
+    setState(() => _isUpdating = true);
 
-        // Add non-file fields according to backend expectations
-        if (data['first_name'] != null) {
-          formData.fields.add(MapEntry('first_name', data['first_name']!));
-        }
-        if (data['middle_name'] != null) {
-          formData.fields.add(MapEntry('middle_name', data['middle_name']!));
-        }
-        if (data['last_name'] != null) {
-          formData.fields.add(MapEntry('last_name', data['last_name']!));
-        }
-        if (data['email'] != null) {
-          formData.fields.add(MapEntry('email', data['email']!));
-        }
-        if (data['phone'] != null) {
-          formData.fields.add(MapEntry('phone', data['phone']!));
-        }
-        if (data['dob'] != null) {
-          formData.fields.add(MapEntry('dob', data['dob']!));
-        }
-        if (data['roll_number'] != null) {
-          formData.fields.add(MapEntry('roll_number', data['roll_number']!));
-        }
-        if (data['program'] != null) {
-          formData.fields.add(MapEntry('program', data['program']!));
-        }
-        if (data['department'] != null) {
-          formData.fields.add(MapEntry('department', data['department']!));
-        }
-        if (data['semester'] != null) {
-          formData.fields.add(
-            MapEntry('semester', data['semester'].toString()),
-          );
-        }
-        if (data['batch_year'] != null) {
-          formData.fields.add(MapEntry('batch_year', data['batch_year']!));
-        }
+    try {
+      final formData = await _buildFormData(changedData);
+      final studentStore = ref.read(studentStoreProvider.notifier);
+      final result = await studentStore.updateProfile(formData);
 
-        // Add profile picture file if changed
-        if (_profilePicture != null &&
-            _profilePicture!.isNotEmpty &&
-            File(_profilePicture!).existsSync()) {
+      if (result['success'] == true) {
+        await _handleUpdateSuccess();
+      } else {
+        _showSnackBar(
+          result['message'] ?? 'Failed to update profile',
+          Colors.red,
+        );
+      }
+    } catch (e) {
+      _showSnackBar('An error occurred: ${e.toString()}', Colors.red);
+    } finally {
+      if (mounted) setState(() => _isUpdating = false);
+    }
+  }
+
+  Map<String, dynamic> _getChangedData() {
+    final currentData = _getCurrentFormData();
+    final changedData = <String, dynamic>{};
+
+    currentData.forEach((key, value) {
+      final initialValue = _initialData?[key];
+      if (key == 'gallery') {
+        final initialGallery = (initialValue ?? []) as List;
+        final currentGallery = (value ?? []) as List;
+        if (!const ListEquality().equals(initialGallery, currentGallery)) {
+          changedData[key] = currentGallery;
+        }
+      } else if (value != initialValue) {
+        changedData[key] = value;
+      }
+    });
+
+    return changedData;
+  }
+
+  Future<FormData> _buildFormData(Map<String, dynamic> changedData) async {
+    final formData = FormData();
+
+    for (final entry in changedData.entries) {
+      if (entry.key == 'profile_picture') {
+        if (entry.value != null && File(entry.value).existsSync()) {
           final file = await MultipartFile.fromFile(
-            _profilePicture!,
-            filename: 'profile_${DateTime.now().millisecondsSinceEpoch}.jpg',
+            entry.value,
+            filename: "profile.jpg",
           );
           formData.files.add(MapEntry('profile_picture', file));
         }
-
-        // Add gallery images (multiple files with same field name 'images')
-        for (int i = 0; i < _gallery.length; i++) {
-          final path = _gallery[i];
-          if (path != null && path.isNotEmpty && File(path).existsSync()) {
-            final file = await MultipartFile.fromFile(
-              path,
-              filename:
-                  'gallery_${DateTime.now().millisecondsSinceEpoch}_$i.jpg',
-            );
-            formData.files.add(MapEntry('images', file));
-          }
-        }
-
-        // Call the repository to update profile
-        final result = await studentRepository.updateProfile(formData);
-
-        if (result['status'] == 'success') {
-          // Update the local state with the new profile data
-          final studentStore = ref.read(studentStoreProvider.notifier);
-          await studentStore.loadProfile();
-
-          // Reset form state after successful save
-          setState(() {
-            _isFormDirty = false;
-            _initialData = _getCurrentFormData();
-          });
-
-          // Show success message
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  result['message'] ?? 'Profile updated successfully',
-                ),
-                backgroundColor: Colors.green,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-
-            Navigator.of(context).pop();
-          }
-        } else {
-          // Show error message from backend
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(result['message'] ?? 'Failed to update profile'),
-                backgroundColor: Colors.red,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
-        }
-      } catch (e) {
-        // Show generic error message
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('An error occurred: ${e.toString()}'),
-              backgroundColor: Colors.red,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      } finally {
-        // // Hide loading state
-        // if (mounted) {
-        //   ref.read(studentStoreProvider.notifier).setUpdating(false);
-        // }
+      } else if (entry.key == 'gallery' && !_isEmbeddings) {
+        await _addGalleryImages(formData, entry.value as List<String>);
+      } else if (entry.value != null) {
+        formData.fields.add(MapEntry(entry.key, entry.value.toString()));
       }
+    }
+
+    return formData;
+  }
+
+  Future<void> _addGalleryImages(
+    FormData formData,
+    List<String> galleryPaths,
+  ) async {
+    for (int i = 0; i < galleryPaths.length; i++) {
+      final path = galleryPaths[i];
+      if (path.isNotEmpty && File(path).existsSync()) {
+        final file = await MultipartFile.fromFile(
+          path,
+          filename: 'gallery_${DateTime.now().millisecondsSinceEpoch}_$i.jpg',
+        );
+        formData.files.add(MapEntry('images', file));
+      }
+    }
+  }
+
+  Future<void> _handleUpdateSuccess() async {
+    _initialData = _getCurrentFormData();
+    await _fetchProfileData();
+
+    if (mounted) {
+      setState(() => _isFormDirty = false);
+      _showSnackBar('Profile updated successfully', Colors.green);
+    }
+  }
+
+  void _showSnackBar(String message, Color backgroundColor) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), backgroundColor: backgroundColor),
+      );
     }
   }
 
@@ -279,6 +251,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         _middleNameCtrl.text = profile['middle_name'] ?? '';
         _lastNameCtrl.text = profile['last_name'] ?? '';
         _emailCtrl.text = profile['email'] ?? '';
+        _dobCtrl.text = profile['dob'] ?? '';
         _phoneCtrl.text = profile['phone'] ?? '';
         _rollCtrl.text = profile['roll_number']?.toString() ?? '';
         _batchYearCtrl.text = profile['batch_year']?.toString() ?? '';
@@ -287,23 +260,10 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         _department = profile['department'] ?? 'BTECH';
         _semester = profile['semester'] ?? 1;
         _profilePicture = profile['profile_picture'];
+        _isEmbeddings = profile['is_embeddings'] ?? false;
 
-        // Populate gallery if available
-        if (profile['gallery'] != null && profile['gallery'] is List) {
-          final galleryList = profile['gallery'] as List;
-          for (int i = 0; i < _gallery.length && i < galleryList.length; i++) {
-            _gallery[i] = galleryList[i];
-          }
-        }
-
-        // Parse and set DOB
-        final dobString = profile['dob'];
-        if (dobString != null) {
-          _dob = DateTime.tryParse(dobString);
-          if (_dob != null) {
-            _dobCtrl.text = _formatDateForDisplay(_dob!);
-          }
-        }
+        _populateGallery(profile);
+        _populateDob(profile);
 
         _initialDataLoaded = true;
         _initialData = _getCurrentFormData();
@@ -311,6 +271,28 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     }
   }
 
+  void _populateGallery(Map<String, dynamic> profile) {
+    if (!_isEmbeddings &&
+        profile['gallery'] != null &&
+        profile['gallery'] is List) {
+      final galleryList = profile['gallery'] as List;
+      for (int i = 0; i < _gallery.length && i < galleryList.length; i++) {
+        _gallery[i] = galleryList[i];
+      }
+    }
+  }
+
+  void _populateDob(Map<String, dynamic> profile) {
+    final dobString = profile['dob'];
+    if (dobString != null) {
+      _dob = DateTime.tryParse(dobString);
+      if (_dob != null) {
+        _dobCtrl.text = _formatDateForDisplay(_dob!);
+      }
+    }
+  }
+
+  // Event handlers
   void _handleProfilePictureChanged(String? imagePath) {
     setState(() {
       _profilePicture = imagePath;
@@ -328,29 +310,38 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   void _handleDobChanged(DateTime? newDob) {
     setState(() {
       _dob = newDob;
-      if (newDob != null) {
-        _dobCtrl.text = _formatDateForDisplay(newDob);
-      } else {
-        _dobCtrl.clear();
-      }
+      _dobCtrl.text = newDob != null ? _formatDateForDisplay(newDob) : '';
       _checkFormDirty();
     });
   }
 
-  // Validation methods (optional since backend validates)
-  String? _validateFirstName(String? value) {
-    if (value != null && value.trim().isNotEmpty && value.trim().length < 2) {
-      return 'First name must be at least 2 characters';
-    }
-    return null;
+  void _handleProgramChanged(String? value) {
+    if (value != null) _updateValue(() => _program = value);
   }
 
-  String? _validateLastName(String? value) {
-    if (value != null && value.trim().isNotEmpty && value.trim().length < 2) {
-      return 'Last name must be at least 2 characters';
-    }
-    return null;
+  void _handleDepartmentChanged(String? value) {
+    if (value != null) _updateValue(() => _department = value);
   }
+
+  void _handleSemesterChanged(int? value) {
+    if (value != null) {
+      _updateValue(() {
+        _semester = value;
+        _semesterCtrl.text = value.toString();
+      });
+    }
+  }
+
+  void _updateValue(VoidCallback updateCallback) {
+    setState(updateCallback);
+    _checkFormDirty();
+  }
+
+  // Validation methods
+  String? _validateFirstName(String? value) =>
+      _validateMinLength(value, 2, 'First name');
+  String? _validateLastName(String? value) =>
+      _validateMinLength(value, 2, 'Last name');
 
   String? _validateEmail(String? value) {
     if (value != null && value.trim().isNotEmpty) {
@@ -367,9 +358,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   String? _validatePhone(String? value) {
     if (value != null && value.trim().isNotEmpty) {
       final cleaned = value.trim().replaceAll(RegExp(r'[^\d]'), '');
-      if (cleaned.length != 10) {
-        return 'Phone number must be 10 digits';
-      }
+      if (cleaned.length != 10) return 'Phone number must be 10 digits';
       if (!RegExp(r'^[6-9]\d{9}$').hasMatch(cleaned)) {
         return 'Please enter a valid phone number';
       }
@@ -377,24 +366,32 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     return null;
   }
 
-  String? _validateRollNumber(String? value) {
-    if (value != null && value.trim().isNotEmpty) {
-      if (value.trim().length < 3) {
-        return 'Roll number must be at least 3 characters';
-      }
-      if (int.tryParse(value.trim()) == null) {
-        return 'Roll number must be a number';
-      }
+  String? _validateRollNumber(String? value) =>
+      _validateNumeric(value, 'Roll number');
+  String? _validateBatchYear(String? value) => _validateYear(value);
+  String? _validateSemester(String? value) => _validateSemesterValue(value);
+
+  String? _validateMinLength(String? value, int min, String field) {
+    if (value != null && value.trim().isNotEmpty && value.trim().length < min) {
+      return '$field must be at least $min characters';
     }
     return null;
   }
 
-  String? _validateBatchYear(String? value) {
+  String? _validateNumeric(String? value, String field) {
+    if (value != null && value.trim().isNotEmpty) {
+      if (value.trim().length < 3) {
+        return '$field must be at least 3 characters';
+      }
+      if (int.tryParse(value.trim()) == null) return '$field must be a number';
+    }
+    return null;
+  }
+
+  String? _validateYear(String? value) {
     if (value != null && value.trim().isNotEmpty) {
       final year = int.tryParse(value.trim());
-      if (year == null) {
-        return 'Please enter a valid year';
-      }
+      if (year == null) return 'Please enter a valid year';
       final currentYear = DateTime.now().year;
       if (year < 2000 || year > currentYear + 1) {
         return 'Please enter a valid batch year';
@@ -403,12 +400,10 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     return null;
   }
 
-  String? _validateSemester(String? value) {
+  String? _validateSemesterValue(String? value) {
     if (value != null && value.trim().isNotEmpty) {
       final semester = int.tryParse(value.trim());
-      if (semester == null) {
-        return 'Please enter a valid semester';
-      }
+      if (semester == null) return 'Please enter a valid semester';
       if (semester < 1 || semester > 12) {
         return 'Semester must be between 1 and 12';
       }
@@ -416,45 +411,13 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     return null;
   }
 
-  void _handleProgramChanged(String? value) {
-    if (value != null) {
-      setState(() {
-        _program = value;
-        _checkFormDirty();
-      });
-    }
-  }
-
-  void _handleDepartmentChanged(String? value) {
-    if (value != null) {
-      setState(() {
-        _department = value;
-        _checkFormDirty();
-      });
-    }
-  }
-
-  void _handleSemesterChanged(int? value) {
-    if (value != null) {
-      setState(() {
-        _semester = value;
-        _semesterCtrl.text = value.toString();
-        _checkFormDirty();
-      });
-    }
-  }
-
   @override
   void dispose() {
-    _firstNameCtrl.removeListener(_checkFormDirty);
-    _middleNameCtrl.removeListener(_checkFormDirty);
-    _lastNameCtrl.removeListener(_checkFormDirty);
-    _emailCtrl.removeListener(_checkFormDirty);
-    _phoneCtrl.removeListener(_checkFormDirty);
-    _rollCtrl.removeListener(_checkFormDirty);
-    _batchYearCtrl.removeListener(_checkFormDirty);
-    _semesterCtrl.removeListener(_checkFormDirty);
+    for (final controller in _listenableControllers) {
+      controller.removeListener(_checkFormDirty);
+    }
 
+    // Dispose all controllers
     _firstNameCtrl.dispose();
     _middleNameCtrl.dispose();
     _lastNameCtrl.dispose();
@@ -464,18 +427,16 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     _rollCtrl.dispose();
     _batchYearCtrl.dispose();
     _semesterCtrl.dispose();
+
     super.dispose();
   }
 
-  BoxDecoration get _cardDecoration => BoxDecoration(
+  // UI Constants
+  final _cardDecoration = BoxDecoration(
     color: Colors.white,
     borderRadius: BorderRadius.circular(16),
-    boxShadow: [
-      BoxShadow(
-        color: Colors.black.withOpacity(0.05),
-        blurRadius: 20,
-        offset: const Offset(0, 4),
-      ),
+    boxShadow: const [
+      BoxShadow(color: Color(0x14000000), blurRadius: 20, offset: Offset(0, 4)),
     ],
   );
 
@@ -502,9 +463,8 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       _populateFormFromState();
     }
 
-    if (studentState.isLoading &&
-        studentState.profile == null &&
-        !_initialDataLoaded) {
+    if (_isUpdating) return _buildLoadingOverlay();
+    if (studentState.profile == null && !_initialDataLoaded) {
       return const StudentEditProfileSkeleton();
     }
 
@@ -525,9 +485,50 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     );
   }
 
+  Widget _buildLoadingOverlay() {
+    return Theme(
+      data: AppTheme.theme,
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
+        appBar: _buildAppBar(),
+        body: Stack(
+          children: [
+            ListView(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              children: _buildFormContent(ref.read(studentStoreProvider)),
+            ),
+            Container(
+              color: Colors.black.withOpacity(0.3),
+              child: const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      strokeWidth: 3,
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      'Updating Profile...',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   AppBar _buildAppBar() {
     return AppBar(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFF2563EB),
       elevation: 0,
       leading: IconButton(
         icon: Container(
@@ -543,76 +544,86 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
             color: Color(0xFF475569),
           ),
         ),
-        onPressed: () {
-          if (_isFormDirty) {
-            _showUnsavedChangesDialog();
-          } else {
-            Navigator.of(context).pop();
-          }
-        },
+        onPressed: _isUpdating ? null : _handleBackPressed,
       ),
       title: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
           const Text(
             'Edit Profile',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF111827),
+              color: Colors.white,
             ),
           ),
           if (_isFormDirty)
-            Container(
-              margin: const EdgeInsets.only(left: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: const Color(0xFFEF4444),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Text(
-                'Unsaved',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
+            ..._buildStatusBadge('Unsaved', const Color(0xFFEF4444)),
+          if (_isUpdating)
+            ..._buildStatusBadge('Saving...', const Color(0xFF3B82F6)),
         ],
       ),
-      centerTitle: false,
+      centerTitle: true,
     );
+  }
+
+  List<Widget> _buildStatusBadge(String text, Color color) {
+    return [
+      const SizedBox(width: 8),
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          text,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 10,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
+    ];
+  }
+
+  void _handleBackPressed() {
+    if (_isFormDirty) {
+      _showUnsavedChangesDialog();
+    } else {
+      context.go("/student/profile");
+    }
   }
 
   void _showUnsavedChangesDialog() {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Unsaved Changes'),
-          content: const Text(
-            'You have unsaved changes. Are you sure you want to leave?',
+      builder: (BuildContext context) => AlertDialog(
+        title: const Text('Unsaved Changes'),
+        content: const Text(
+          'You have unsaved changes. Are you sure you want to leave?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                Navigator.of(context).pop();
-              },
-              child: const Text('Leave', style: TextStyle(color: Colors.red)),
-            ),
-          ],
-        );
-      },
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              context.go("/student/profile");
+            },
+            child: const Text('Leave', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
     );
   }
 
   List<Widget> _buildFormContent(StudentState studentState) {
+    final galleryImageCount = _gallery.whereType<String>().length;
+
     return [
       ProfilePicture(
         profilePicture: _profilePicture,
@@ -633,18 +644,17 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         dobCtrl: _dobCtrl,
         dob: _dob,
         cardDecoration: _cardDecoration,
-        // onDobChanged: _handleDobChanged,
-        // validateFirstName: _validateFirstName,
-        // validateLastName: _validateLastName,
-        // validateEmail: _validateEmail,
-        // validatePhone: _validatePhone,
+        onDobChanged: _handleDobChanged,
+        validateFirstName: _validateFirstName,
+        validateLastName: _validateLastName,
+        validateEmail: _validateEmail,
+        validatePhone: _validatePhone,
       ),
       const SizedBox(height: 24),
       _sectionHeader('ACADEMIC INFORMATION'),
       AcademicInfoSection(
         rollCtrl: _rollCtrl,
         batchYearCtrl: _batchYearCtrl,
-        // semesterCtrl: _semesterCtrl,
         program: _program,
         department: _department,
         semester: _semester,
@@ -652,10 +662,23 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         onDepartmentChanged: _handleDepartmentChanged,
         onSemesterChanged: _handleSemesterChanged,
         cardDecoration: _cardDecoration,
-        // validateRollNumber: _validateRollNumber,
-        // validateBatchYear: _validateBatchYear,
-        // validateSemester: _validateSemester,
+        validateRollNumber: _validateRollNumber,
+        validateBatchYear: _validateBatchYear,
+        validateSemester: _validateSemester,
       ),
+      if (!_isEmbeddings) ..._buildGallerySection(galleryImageCount),
+      const SizedBox(height: 32),
+      SaveButtonSection(
+        onSave: _updateProfile,
+        isSaveEnabled: _isSaveEnabled,
+        isLoading: _isUpdating,
+      ),
+      const SizedBox(height: 16),
+    ];
+  }
+
+  List<Widget> _buildGallerySection(int galleryImageCount) {
+    return [
       const SizedBox(height: 24),
       _sectionHeader('GALLERY'),
       StudentGallerySection(
@@ -663,16 +686,17 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         onPickGalleryImage: _handleGalleryImagePicked,
         cardDecoration: _cardDecoration,
       ),
-      const SizedBox(height: 32),
-      SaveButtonSection(
-        errorMessage: studentState.errorMessage,
-        isUpdating: studentState.isUpdating,
-        onSave: _updateProfile,
-        onClearError: () =>
-            ref.read(studentStoreProvider.notifier).clearError(),
-        // isFormDirty: _isFormDirty,
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        child: Text(
+          'All 4 photos must be uploaded to save changes ($galleryImageCount/4)',
+          style: TextStyle(
+            fontSize: 12,
+            color: galleryImageCount == 4 ? Colors.green : Colors.orange,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
       ),
-      const SizedBox(height: 16),
     ];
   }
 

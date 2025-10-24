@@ -14,8 +14,6 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   String _selectedRole = 'Student';
-  String _message = '';
-  bool _isSuccess = false;
   bool _isLoading = false;
 
   final List<String> _roles = ['Student', 'Clerk', 'Admin', 'Teacher'];
@@ -26,11 +24,22 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
     super.dispose();
   }
 
+  void _showSnackBar(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red.shade600 : Colors.green.shade600,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
   Future<void> _sendResetLink() async {
     if (_formKey.currentState!.validate()) {
       setState(() {
         _isLoading = true;
-        _message = '';
       });
 
       try {
@@ -41,15 +50,12 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
           context,
         );
 
-        setState(() {
-          _isLoading = false;
-          _isSuccess = response;
-          _message = _isSuccess
-              ? 'OTP sent successfully'
-              : 'Failed to send OTP';
-        });
+        if (response['status'] == 'success') {
+          _showSnackBar(
+            response['message'] ?? 'OTP sent successfully to your email',
+          );
 
-        if (_isSuccess) {
+          // Navigate to reset password page after a short delay
           Future.delayed(const Duration(milliseconds: 1500), () {
             if (mounted) {
               context.go(
@@ -62,28 +68,19 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
             }
           });
         } else {
-          Future.delayed(const Duration(seconds: 3), () {
-            if (mounted) {
-              setState(() {
-                _message = '';
-              });
-            }
-          });
+          _showSnackBar(
+            response['message'] ?? 'Failed to send OTP',
+            isError: true,
+          );
         }
       } catch (e) {
-        setState(() {
-          _isLoading = false;
-          _isSuccess = false;
-          _message = 'An error occurred: $e';
-        });
-
-        Future.delayed(const Duration(seconds: 3), () {
-          if (mounted) {
-            setState(() {
-              _message = '';
-            });
-          }
-        });
+        _showSnackBar('An error occurred. Please try again.', isError: true);
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
       }
     }
   }
@@ -220,39 +217,18 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
                         child: Text(role),
                       );
                     }).toList(),
-                    onChanged: (String? newValue) {
-                      setState(() {
-                        _selectedRole = newValue!;
-                      });
-                    },
+                    onChanged: _isLoading
+                        ? null
+                        : (String? newValue) {
+                            setState(() {
+                              _selectedRole = newValue!;
+                            });
+                          },
                   ),
                 ],
               ),
 
               const SizedBox(height: 32),
-
-              if (_message.isNotEmpty)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: _isSuccess ? Colors.green[50] : Colors.red[50],
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: _isSuccess ? Colors.green : Colors.red,
-                      width: 1,
-                    ),
-                  ),
-                  child: Text(
-                    _message,
-                    style: TextStyle(
-                      color: _isSuccess ? Colors.green[700] : Colors.red[700],
-                      fontWeight: FontWeight.w500,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
 
               SizedBox(
                 width: double.infinity,
@@ -296,7 +272,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
               const SizedBox(height: 24),
 
               TextButton(
-                onPressed: () => context.go('/login'),
+                onPressed: _isLoading ? null : () => context.go('/login'),
                 child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [

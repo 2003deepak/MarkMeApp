@@ -4,7 +4,7 @@ import 'package:markmeapp/presentation/layout/student_layout.dart';
 import 'package:markmeapp/presentation/layout/teacher_layout.dart';
 import 'package:markmeapp/presentation/layout/clerk_layout.dart';
 import 'package:markmeapp/presentation//layout/guest_layout.dart';
-import 'package:markmeapp/providers/auth_provider.dart';
+import 'package:markmeapp/state/auth_state.dart';
 
 class RoleBasedLayout extends ConsumerWidget {
   final Widget child;

@@ -5,9 +5,7 @@ import 'package:go_router/go_router.dart';
 // Layouts
 import 'package:markmeapp/presentation/layout/role_based_layout.dart';
 import 'package:markmeapp/presentation/layout/guest_layout.dart';
-
-// Providers
-import 'package:markmeapp/providers/auth_provider.dart';
+import 'package:markmeapp/presentation/pages/clerk/add_teacher_page.dart';
 
 // Pages
 import 'package:markmeapp/presentation/pages/splash/splash_page.dart';
@@ -16,10 +14,14 @@ import 'package:markmeapp/presentation/pages/auth/signup_page.dart';
 import 'package:markmeapp/presentation/pages/auth/forgot_password_page.dart';
 import 'package:markmeapp/presentation/pages/auth/reset_password_page.dart';
 import 'package:markmeapp/presentation/pages/student/student_dashboard.dart';
-import 'package:markmeapp/presentation/pages/student/profile_page.dart';
+import 'package:markmeapp/presentation/pages/student/profile_page.dart'
+    as StudentProfile;
+import 'package:markmeapp/presentation/pages/clerk/profile_page.dart'
+    as ClerkProfile;
 import 'package:markmeapp/presentation/pages/student/edit_profile.dart';
 import 'package:markmeapp/presentation/pages/teacher/teacher_dashboard_page.dart';
-import 'package:markmeapp/presentation/pages/clerk/clerk_dashboard_page.dart';
+import 'package:markmeapp/presentation/pages/clerk/dashboard_page.dart';
+import 'package:markmeapp/state/auth_state.dart';
 
 class AppRouter {
   static final routerProvider = Provider<GoRouter>((ref) {
@@ -75,7 +77,7 @@ class AppRouter {
       // ROUTES
       // ==========================
       routes: [
-        // --- Public Routes (wrapped with GuestLayout) ---
+        // --- Public Routes (no layout or guest layout) ---
         GoRoute(
           path: '/',
           name: 'splash',
@@ -110,11 +112,11 @@ class AppRouter {
           },
         ),
 
-        // --- Private Routes (wrapped by RoleBasedLayout using ShellRoute) ---
+        // --- 🧾 Clerk, Teacher, Student Layout Routes ---
         ShellRoute(
           builder: (context, state, child) => RoleBasedLayout(child: child),
           routes: [
-            // 🧑‍🎓 Student Routes
+            // 🧑‍🎓 Student Routes (inside layout)
             GoRoute(
               path: '/student',
               name: 'student_dashboard',
@@ -123,12 +125,7 @@ class AppRouter {
             GoRoute(
               path: '/student/profile',
               name: 'student_profile',
-              builder: (context, state) => const ProfilePage(),
-            ),
-            GoRoute(
-              path: '/student/edit-profile',
-              name: 'edit_profile',
-              builder: (context, state) => const EditProfilePage(),
+              builder: (context, state) => StudentProfile.ProfilePage(),
             ),
 
             // 👨‍🏫 Teacher Routes
@@ -151,6 +148,16 @@ class AppRouter {
               name: 'clerk_dashboard',
               builder: (context, state) => const ClerkDashboardPage(),
             ),
+            GoRoute(
+              path: '/clerk/profile',
+              name: 'clerk_profile',
+              builder: (context, state) => ClerkProfile.ProfilePage(),
+            ),
+            GoRoute(
+              path: '/clerk/add-teacher',
+              name: 'clerk_add_teacher',
+              builder: (context, state) => const AddTeacherPage(),
+            ),
 
             // 🛡️ Admin Routes
             GoRoute(
@@ -161,6 +168,13 @@ class AppRouter {
               ),
             ),
           ],
+        ),
+
+        // --- 📝 Edit Profile (OUTSIDE layout) ---
+        GoRoute(
+          path: '/student/edit-profile',
+          name: 'edit_profile',
+          builder: (context, state) => const EditProfilePage(),
         ),
       ],
     );

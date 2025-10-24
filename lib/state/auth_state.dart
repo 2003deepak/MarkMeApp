@@ -1,49 +1,396 @@
-import 'package:flutter/foundation.dart';
+import 'dart:convert';
+import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:markmeapp/data/repositories/auth_repository.dart';
+import 'package:markmeapp/data/models/user_model.dart';
 
-@immutable
+/// AuthState - Simple state container
 class AuthState {
   final bool isLoggedIn;
-  final String? role;
-  final String? access_token; 
-  final Map<String, dynamic>? user;
   final bool isLoading;
-  final String? errorMessage;
-  final bool hasLoaded; 
+  final bool hasLoaded;
+  final String? accessToken;
+  final String? role;
+  final Map<String, dynamic>? user;
 
   const AuthState({
     this.isLoggedIn = false,
-    this.role,
-    this.access_token,
-    this.user,
     this.isLoading = false,
-    this.errorMessage,
-    this.hasLoaded = false, 
+    this.hasLoaded = false,
+    this.accessToken,
+    this.role,
+    this.user,
   });
-
-  String? get token => access_token;
 
   AuthState copyWith({
     bool? isLoggedIn,
-    String? role,
-    String? access_token,
-    Map<String, dynamic>? user,
     bool? isLoading,
-    String? errorMessage,
-    bool? hasLoaded, 
+    bool? hasLoaded,
+    String? accessToken,
+    String? role,
+    Map<String, dynamic>? user,
   }) {
     return AuthState(
       isLoggedIn: isLoggedIn ?? this.isLoggedIn,
-      role: role ?? this.role,
-      access_token: access_token ?? this.access_token,
-      user: user ?? this.user,
       isLoading: isLoading ?? this.isLoading,
-      errorMessage: errorMessage ?? this.errorMessage,
-      hasLoaded: hasLoaded ?? this.hasLoaded, 
+      hasLoaded: hasLoaded ?? this.hasLoaded,
+      accessToken: accessToken ?? this.accessToken,
+      role: role ?? this.role,
+      user: user ?? this.user,
     );
   }
 
   @override
   String toString() {
-    return 'AuthState(isLoggedIn: $isLoggedIn, role: $role, hasLoaded: $hasLoaded, isLoading: $isLoading, errorMessage: $errorMessage)';
+    return 'AuthState(isLoggedIn: $isLoggedIn, isLoading: $isLoading, hasLoaded: $hasLoaded, role: $role)';
   }
 }
+
+/// AuthStore - Combined state management and repository interactions
+class AuthStore extends StateNotifier<AuthState> {
+  final AuthRepository _authRepo;
+
+  AuthStore(this._authRepo) : super(const AuthState());
+
+  String? get accessToken => state.accessToken;
+  bool get isLoggedIn => state.isLoggedIn;
+  String? get role => state.role;
+  bool get isLoading => state.isLoading;
+
+  /// Load user data from SharedPreferences
+  Future<void> loadUserData() async {
+    try {
+      debugPrint('🟡 [AuthStore] Loading user data from SharedPreferences');
+      final prefs = await SharedPreferences.getInstance();
+      final stored = prefs.getString('refreshToken');
+
+      if (stored != null) {
+        debugPrint('🟡 [AuthStore] Found stored user data');
+        final decoded = jsonDecode(stored);
+        if (decoded is Map<String, dynamic>) {
+          debugPrint('🟡 [AuthStore] Setting user as logged in');
+          state = state.copyWith(
+            user: decoded,
+            role: decoded['role'],
+            accessToken: decoded['token'] ?? decoded['access_token'],
+            isLoggedIn: true,
+            hasLoaded: true,
+          );
+          return;
+        }
+      }
+
+      // No user data found
+      debugPrint('🟡 [AuthStore] No stored user data found');
+      state = state.copyWith(hasLoaded: true);
+    } catch (e) {
+      debugPrint('🔴 [AuthStore] Error loading user data: $e');
+      state = state.copyWith(hasLoaded: true);
+    }
+  }
+
+  /// Set login state and save to SharedPreferences
+  Future<void> setLogIn(Map<String, dynamic> userData) async {
+    try {
+      debugPrint('🟡 [AuthStore] Setting login state with user data');
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('userData', jsonEncode(userData));
+
+      // Save refresh token if available
+      if (userData['refresh_token'] != null) {
+        await prefs.setString('refreshToken', userData['refresh_token']);
+      }
+
+      state = state.copyWith(
+        user: userData,
+        role: userData['role'],
+        accessToken: userData['token'] ?? userData['access_token'],
+        isLoggedIn: true,
+        isLoading: false,
+        hasLoaded: true,
+      );
+
+      debugPrint(
+        '🟢 [AuthStore] Login state set successfully. isLoggedIn: true, role: ${userData['role']}',
+      );
+    } catch (e) {
+      debugPrint('🔴 [AuthStore] Error saving login data: $e');
+      state = state.copyWith(isLoading: false, hasLoaded: true);
+    }
+  }
+
+  /// Logout - Clear all data
+  Future<void> setLogOut() async {
+    try {
+      debugPrint('🟡 [AuthStore] Starting logout process');
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('userData');
+      debugPrint('🟡 [AuthStore] Removed user data from SharedPreferences');
+
+      state = const AuthState(hasLoaded: true);
+
+      debugPrint(
+        '🟢 [AuthStore] Logout completed. State reset to: isLoggedIn: false, hasLoaded: true',
+      );
+    } catch (e) {
+      debugPrint('🔴 [AuthStore] Error during logout: $e');
+      state = state.copyWith(hasLoaded: true);
+    }
+  }
+
+  /// Login User
+  Future<Map<String, dynamic>> loginUser(
+    User userModel,
+    String role,
+    BuildContext context,
+  ) async {
+    if (state.isLoading) {
+      return {'success': false, 'message': 'Operation already in progress'};
+    }
+
+    debugPrint('🟡 [AuthStore] Starting login process for role: $role');
+    state = state.copyWith(isLoading: true);
+
+    try {
+      final result = await _authRepo.loginUser(userModel, role);
+
+      // ✅ Safely read message from repository result
+      final bool success = result['success'] == true;
+      final String message = result['message'] ?? '';
+
+      if (success) {
+        debugPrint('🟢 [AuthStore] Login successful, setting login state');
+        await setLogIn(result['data']);
+        state = state.copyWith(isLoading: false);
+        return {
+          'success': true,
+          'message': message.isNotEmpty ? message : 'Login successful',
+        };
+      } else {
+        debugPrint('🔴 [AuthStore] Login failed: $message');
+        state = state.copyWith(isLoading: false);
+        return {
+          'success': false,
+          'message': message.isNotEmpty ? message : 'Login failed',
+        };
+      }
+    } catch (e) {
+      debugPrint('🔴 [AuthStore] Login error: $e');
+      final errorMessage =
+          'Network error: Please check your internet connection';
+      state = state.copyWith(isLoading: false);
+      return {'success': false, 'message': errorMessage};
+    }
+  }
+
+  /// Get route based on user role
+  String getRouteForRole(String role) {
+    switch (role) {
+      case 'teacher':
+        return '/teacher';
+      case 'admin':
+        return '/admin';
+      case 'clerk':
+        return '/clerk';
+      default:
+        return '/student';
+    }
+  }
+
+  /// Register User
+  Future<Map<String, dynamic>> registerUser(User userModel) async {
+    try {
+      final response = await _authRepo.registerUser(userModel);
+
+      print("Message from state = $response");
+
+      if (response['success'] == true) {
+        return {
+          'success': true,
+          'data': response['data'],
+          'message': response['message'] ?? 'Registration successful',
+        };
+      } else {
+        return {
+          'success': 'fail',
+          'message': response['message'] ?? 'Registration failed',
+        };
+      }
+    } on DioException catch (e) {
+      debugPrint('🔴 [AuthRepository] Error response: ${e.response?.data}');
+      return {
+        'status': 'fail',
+        // ✅ Preserve backend message here
+        'message':
+            e.response?.data['message'] ??
+            'Registration failed. Please try again.',
+      };
+    } catch (e) {
+      debugPrint('🔴 [AuthRepository] Unexpected error: $e');
+      return {
+        'status': 'fail',
+        'message': 'Unexpected error occurred. Please try again.',
+      };
+    }
+  }
+
+  /// Forgot Password
+  Future<Map<String, dynamic>> forgotPassword(
+    String email,
+    String role,
+    BuildContext context,
+  ) async {
+    if (state.isLoading) {
+      return {'status': 'fail', 'message': 'Operation already in progress'};
+    }
+
+    state = state.copyWith(isLoading: true);
+
+    try {
+      final result = await _authRepo.forgotPassword(email, role);
+
+      // Check if status is "success" (not true/false)
+      if (result['status'] == 'success') {
+        state = state.copyWith(isLoading: false);
+        return {
+          'status': 'success',
+          'message': result['message'] ?? 'OTP sent to your email.',
+        };
+      } else {
+        final error = result['message'] ?? 'Failed to send OTP';
+        state = state.copyWith(isLoading: false);
+        return {'status': 'fail', 'message': error};
+      }
+    } catch (e) {
+      debugPrint('🔴 [AuthStore] Forgot password error: $e');
+      final errorMessage = 'Failed to send OTP. Please try again.';
+      state = state.copyWith(isLoading: false);
+      return {'status': 'fail', 'message': errorMessage};
+    }
+  }
+
+  /// Verify OTP
+  Future<Map<String, dynamic>> verifyOtp(
+    String email,
+    String role,
+    String otp,
+    BuildContext context,
+  ) async {
+    if (state.isLoading) {
+      return {'status': 'fail', 'message': 'Operation already in progress'};
+    }
+
+    state = state.copyWith(isLoading: true);
+
+    try {
+      final result = await _authRepo.verifyOtp(email, role, otp);
+
+      // Check if status is "success" (not true/false)
+      if (result['status'] == 'success') {
+        state = state.copyWith(isLoading: false);
+        return {
+          'status': 'success',
+          'message': result['message'] ?? 'OTP verified successfully.',
+        };
+      } else {
+        final error = result['message'] ?? 'OTP verification failed';
+        state = state.copyWith(isLoading: false);
+        return {'status': 'fail', 'message': error};
+      }
+    } catch (e) {
+      debugPrint('🔴 [AuthStore] OTP verification error: $e');
+      final errorMessage = 'OTP verification failed. Please try again.';
+      state = state.copyWith(isLoading: false);
+      return {'status': 'fail', 'message': errorMessage};
+    }
+  }
+
+  /// Reset Password
+  Future<Map<String, dynamic>> resetPassword(
+    String email,
+    String role,
+    String newPassword,
+    BuildContext context,
+  ) async {
+    if (state.isLoading) {
+      return {'status': 'fail', 'message': 'Operation already in progress'};
+    }
+
+    state = state.copyWith(isLoading: true);
+
+    try {
+      final result = await _authRepo.resetPassword(email, role, newPassword);
+
+      // Check if status is "success" (not true/false)
+      if (result['status'] == 'success') {
+        state = state.copyWith(isLoading: false);
+        return {
+          'status': 'success',
+          'message': result['message'] ?? 'Password reset successfully.',
+        };
+      } else {
+        final error = result['message'] ?? 'Password reset failed';
+        state = state.copyWith(isLoading: false);
+        return {'status': 'fail', 'message': error};
+      }
+    } catch (e) {
+      debugPrint('🔴 [AuthStore] Reset password error: $e');
+      final errorMessage = 'Password reset failed. Please try again.';
+      state = state.copyWith(isLoading: false);
+      return {'status': 'fail', 'message': errorMessage};
+    }
+  }
+
+  /// Get refresh token from SharedPreferences
+  Future<String?> getRefreshToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('refreshToken');
+  }
+
+  /// Refresh access token
+  Future<Map<String, dynamic>> refreshAccessToken() async {
+    try {
+      final refreshToken = await getRefreshToken();
+      if (refreshToken == null) {
+        debugPrint('🔴 [AuthStore] No refresh token available');
+        return {'status': 'fail', 'message': 'No refresh token available'};
+      }
+
+      debugPrint('🟡 [AuthStore] Refreshing access token');
+
+      final result = await _authRepo.refreshToken(refreshToken);
+
+      // Check if status is "success" (not true/false)
+      if (result['status'] == 'success' && result['data'] != null) {
+        final newToken = result['data']['access_token'];
+        debugPrint('🟢 [AuthStore] Access token refreshed successfully');
+
+        // Update the state properly
+        state = state.copyWith(accessToken: newToken);
+
+        return {
+          'status': 'success',
+          'data': result['data'],
+          'message': 'Token refreshed successfully',
+        };
+      } else {
+        final error = result['message'] ?? 'Token refresh failed';
+        debugPrint('🔴 [AuthStore] Token refresh failed: $error');
+        return {'status': 'fail', 'message': error};
+      }
+    } catch (e) {
+      debugPrint("🔴 [AuthStore] Token refresh error: $e");
+      return {'status': 'fail', 'message': 'Token refresh failed'};
+    }
+  }
+}
+
+// Provider for AuthStore
+final authStoreProvider = StateNotifierProvider<AuthStore, AuthState>((ref) {
+  final authRepo = ref.watch(authRepositoryProvider);
+  return AuthStore(authRepo);
+});

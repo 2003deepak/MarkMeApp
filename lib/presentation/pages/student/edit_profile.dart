@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import 'package:go_router/go_router.dart';
 import 'package:markmeapp/core/theme/app_theme.dart';
-import 'package:markmeapp/data/repositories/student_repository.dart';
 import 'package:markmeapp/presentation/skeleton/student_edit_profile_skeleton.dart';
 import 'package:markmeapp/presentation/widgets/academic_info_section.dart';
 import 'package:markmeapp/presentation/widgets/save_button_section.dart';

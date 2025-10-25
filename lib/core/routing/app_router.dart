@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 // Layouts
 import 'package:markmeapp/presentation/layout/role_based_layout.dart';
 import 'package:markmeapp/presentation/layout/guest_layout.dart';
+import 'package:markmeapp/presentation/pages/clerk/add_subject_page.dart';
 import 'package:markmeapp/presentation/pages/clerk/add_teacher_page.dart';
 
 // Pages
@@ -153,12 +154,6 @@ class AppRouter {
               name: 'clerk_profile',
               builder: (context, state) => ClerkProfile.ProfilePage(),
             ),
-            GoRoute(
-              path: '/clerk/add-teacher',
-              name: 'clerk_add_teacher',
-              builder: (context, state) => const AddTeacherPage(),
-            ),
-
             // 🛡️ Admin Routes
             GoRoute(
               path: '/admin',
@@ -175,6 +170,18 @@ class AppRouter {
           path: '/student/edit-profile',
           name: 'edit_profile',
           builder: (context, state) => const EditProfilePage(),
+        ),
+
+        GoRoute(
+          path: '/clerk/add-teacher',
+          name: 'clerk_add_teacher',
+          builder: (context, state) => const AddTeacherPage(),
+        ),
+
+        GoRoute(
+          path: '/clerk/add-subject',
+          name: 'clerk_add_subject',
+          builder: (context, state) => const AddSubjectPage(),
         ),
       ],
     );

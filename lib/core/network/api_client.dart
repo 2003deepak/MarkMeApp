@@ -64,7 +64,7 @@ final Provider<Dio> dioProvider = Provider<Dio>((ref) {
         if (isRefreshing) {
           try {
             final refreshResult = await refreshCompleter!.future;
-            if (refreshResult['status'] == 'success') {
+            if (refreshResult['success']) {
               final newToken = refreshResult['data']['access_token'];
               requestOptions.headers["Authorization"] = "Bearer $newToken";
               final clonedResponse = await dio.fetch(requestOptions);
@@ -84,7 +84,7 @@ final Provider<Dio> dioProvider = Provider<Dio>((ref) {
         try {
           final refreshResult = await authStore.refreshAccessToken();
 
-          if (refreshResult['status'] == 'success') {
+          if (refreshResult['success']) {
             final newAccessToken = refreshResult['data']['access_token'];
 
             // Complete the refresh completer so others waiting get the token

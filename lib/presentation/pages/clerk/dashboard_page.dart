@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import 'package:markmeapp/presentation/layout/clerk_layout.dart';
 import 'package:markmeapp/presentation/widgets/recent_activity.dart';
 
 class ClerkDashboardPage extends StatefulWidget {
@@ -148,13 +147,13 @@ class _ClerkDashboardPageState extends State<ClerkDashboardPage> {
           icon: Icons.person_add_alt_outlined,
           label: 'Add Teacher',
           color: const Color(0xFF81C784),
-          redirect: '/clerk/new-teacher',
+          redirect: '/clerk/add-teacher',
         ),
         _buildActionButton(
           icon: Icons.assignment_outlined,
           label: 'Add Subject',
           color: const Color(0xFFBA68C8),
-          redirect: '/clerk/new-subject',
+          redirect: '/clerk/add-subject',
         ),
         _buildActionButton(
           icon: Icons.calendar_month_outlined,

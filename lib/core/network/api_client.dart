@@ -64,7 +64,7 @@ final Provider<Dio> dioProvider = Provider<Dio>((ref) {
         if (isRefreshing) {
           try {
             final refreshResult = await refreshCompleter!.future;
-            if (refreshResult['success']) {
+            if (refreshResult['success'] == true) {
               final newToken = refreshResult['data']['access_token'];
               requestOptions.headers["Authorization"] = "Bearer $newToken";
               final clonedResponse = await dio.fetch(requestOptions);
@@ -84,13 +84,15 @@ final Provider<Dio> dioProvider = Provider<Dio>((ref) {
         try {
           final refreshResult = await authStore.refreshAccessToken();
 
-          if (refreshResult['success']) {
+          if (refreshResult['success'] == true) {
             final newAccessToken = refreshResult['data']['access_token'];
 
-            // Complete the refresh completer so others waiting get the token
+            print("🟢 [Dio] Using refreshed access token → $newAccessToken");
+
+            // Complete waiting calls
             refreshCompleter!.complete(refreshResult);
 
-            // Retry the failed request with new token
+            // Retry failed request with new token
             requestOptions.headers["Authorization"] = "Bearer $newAccessToken";
             final retryResponse = await dio.fetch(requestOptions);
             handler.resolve(retryResponse);
@@ -106,7 +108,7 @@ final Provider<Dio> dioProvider = Provider<Dio>((ref) {
           handler.reject(error);
         } finally {
           isRefreshing = false;
-          refreshCompleter = null; // reset completer
+          refreshCompleter = null;
         }
       },
     ),

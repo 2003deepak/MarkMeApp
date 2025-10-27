@@ -1,8 +1,6 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:markmeapp/data/repositories/auth_repository.dart';
@@ -108,7 +106,7 @@ class AuthStore extends StateNotifier<AuthState> {
       state = state.copyWith(
         user: userData,
         role: userData['role'],
-        accessToken: userData['token'] ?? userData['access_token'],
+        accessToken: userData['access_token'],
         isLoggedIn: true,
         isLoading: false,
         hasLoaded: true,
@@ -357,34 +355,39 @@ class AuthStore extends StateNotifier<AuthState> {
       final refreshToken = await getRefreshToken();
       if (refreshToken == null) {
         debugPrint('🔴 [AuthStore] No refresh token available');
-        return {'status': 'fail', 'message': 'No refresh token available'};
+        return {'success': false, 'message': 'No refresh token available'};
       }
 
       debugPrint('🟡 [AuthStore] Refreshing access token');
-
       final result = await _authRepo.refreshToken(refreshToken);
+      print("🟢 [AuthStore] Repo result → $result");
 
-      // Check if status is "success" (not true/false)
-      if (result['status'] == 'success' && result['data'] != null) {
-        final newToken = result['data']['access_token'];
+      if (result['success'] == true && result['data'] != null) {
+        final data = result['data'] as Map<String, dynamic>;
+        final newAccessToken = data['access_token'];
+
+        if (newAccessToken == null || newAccessToken.isEmpty) {
+          throw Exception('Access token missing in response');
+        }
+
+        // ✅ Update the store state
+        state = state.copyWith(accessToken: newAccessToken);
+
         debugPrint('🟢 [AuthStore] Access token refreshed successfully');
 
-        // Update the state properly
-        state = state.copyWith(accessToken: newToken);
-
         return {
-          'status': 'success',
-          'data': result['data'],
-          'message': 'Token refreshed successfully',
+          'success': true,
+          'data': {'access_token': newAccessToken},
+          'message': result['message'] ?? 'Token refreshed successfully',
         };
       } else {
-        final error = result['message'] ?? 'Token refresh failed';
+        final error = result['error'] ?? 'Token refresh failed';
         debugPrint('🔴 [AuthStore] Token refresh failed: $error');
-        return {'status': 'fail', 'message': error};
+        return {'success': false, 'message': error};
       }
     } catch (e) {
       debugPrint("🔴 [AuthStore] Token refresh error: $e");
-      return {'status': 'fail', 'message': 'Token refresh failed'};
+      return {'success': false, 'message': 'Token refresh failed'};
     }
   }
 }

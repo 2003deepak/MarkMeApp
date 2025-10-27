@@ -222,14 +222,20 @@ class AuthRepository {
       final url = '/auth/refresh-token';
       final response = await _dio.post(
         url,
-        data: {'refresh_token': refreshToken},
+        options: Options(headers: {'x-internal-token': 'Bearer $refreshToken'}),
       );
 
       final responseBody = response.data;
+      print("🔵 [AuthRepo] refresh-token response → $responseBody");
 
       if (response.statusCode == 200) {
-        if (responseBody['status'] == 'success') {
-          return {'success': true, 'data': responseBody['data']};
+        if (responseBody['success'] == true) {
+          return {
+            'success': true,
+            'data': responseBody['data'],
+            'message':
+                responseBody['message'] ?? 'Token refreshed successfully',
+          };
         } else {
           return {
             'success': false,

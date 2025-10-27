@@ -4,7 +4,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:markmeapp/core/theme/app_theme.dart';
 import 'package:markmeapp/state/auth_state.dart';
-import 'edit_profile.dart';
 
 /// Professional Profile Page for attendance management system
 class ProfilePage extends ConsumerStatefulWidget {

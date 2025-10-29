@@ -14,6 +14,7 @@ final Provider<Dio> dioProvider = Provider<Dio>((ref) {
   );
 
   bool isRefreshing = false;
+  int refreshAttemptCount = 0;
   Completer<Map<String, dynamic>>? refreshCompleter;
 
   dio.interceptors.add(
@@ -44,6 +45,7 @@ final Provider<Dio> dioProvider = Provider<Dio>((ref) {
 
         handler.next(options);
       },
+
       onError: (DioException error, handler) async {
         final requestOptions = error.requestOptions;
 
@@ -60,54 +62,77 @@ final Provider<Dio> dioProvider = Provider<Dio>((ref) {
           return handler.reject(error);
         }
 
-        // If a refresh is already in progress, wait for it
+        // Prevent parallel refreshes
         if (isRefreshing) {
           try {
             final refreshResult = await refreshCompleter!.future;
-            if (refreshResult['success']) {
+            if (refreshResult['success'] == true) {
               final newToken = refreshResult['data']['access_token'];
               requestOptions.headers["Authorization"] = "Bearer $newToken";
               final clonedResponse = await dio.fetch(requestOptions);
               return handler.resolve(clonedResponse);
             } else {
-              throw Exception('Token refresh failed');
+              throw Exception('Token refresh failed while waiting');
             }
           } catch (e) {
+            print("🚨 Waiting request failed to refresh: $e");
             return handler.reject(error);
           }
         }
 
-        // Start refresh process
+        // Begin refresh flow
         isRefreshing = true;
         refreshCompleter = Completer<Map<String, dynamic>>();
+        refreshAttemptCount = 0;
 
-        try {
-          final refreshResult = await authStore.refreshAccessToken();
+        while (refreshAttemptCount < 2) {
+          refreshAttemptCount++;
+          print("🔁 Attempt #$refreshAttemptCount to refresh token...");
 
-          if (refreshResult['success']) {
-            final newAccessToken = refreshResult['data']['access_token'];
+          try {
+            final refreshResult = await authStore.refreshAccessToken();
 
-            // Complete the refresh completer so others waiting get the token
-            refreshCompleter!.complete(refreshResult);
+            if (refreshResult['success'] == true) {
+              final newAccessToken = refreshResult['data']['access_token'];
+              print(
+                "✅ Token refresh succeeded on attempt #$refreshAttemptCount",
+              );
 
-            // Retry the failed request with new token
-            requestOptions.headers["Authorization"] = "Bearer $newAccessToken";
-            final retryResponse = await dio.fetch(requestOptions);
-            handler.resolve(retryResponse);
-          } else {
-            throw Exception(
-              refreshResult['message'] ?? 'Failed to refresh token',
+              refreshCompleter!.complete(refreshResult);
+              requestOptions.headers["Authorization"] =
+                  "Bearer $newAccessToken";
+              final retryResponse = await dio.fetch(requestOptions);
+              handler.resolve(retryResponse);
+              break; // ✅ Exit loop after success
+            } else {
+              print(
+                "⚠️ Token refresh attempt #$refreshAttemptCount failed: ${refreshResult['message']}",
+              );
+            }
+          } catch (refreshError) {
+            print(
+              "🚨 Exception during token refresh (attempt #$refreshAttemptCount): $refreshError",
             );
           }
-        } catch (refreshError) {
-          print("🚨 Token refresh failed: $refreshError");
-          refreshCompleter!.completeError(refreshError);
+
+          // Wait small delay before retry (optional)
+          await Future.delayed(const Duration(milliseconds: 500));
+        }
+
+        // If both attempts failed
+        if (!refreshCompleter!.isCompleted) {
+          print(
+            "❌ Both token refresh attempts failed → logging out & rejecting request",
+          );
+          refreshCompleter!.completeError(
+            'Token refresh failed after 2 attempts',
+          );
           await authStore.setLogOut();
           handler.reject(error);
-        } finally {
-          isRefreshing = false;
-          refreshCompleter = null; // reset completer
         }
+
+        isRefreshing = false;
+        refreshCompleter = null;
       },
     ),
   );

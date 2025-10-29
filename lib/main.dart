@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:markmeapp/state/auth_state.dart';
-
-import 'core/theme/app_theme.dart';
 import 'core/routing/app_router.dart';
+// ✅ Needed for context.go()
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -31,6 +30,8 @@ class _MyAppState extends ConsumerState<MyApp> {
   @override
   void initState() {
     super.initState();
+
+    // ✅ Load saved user session
     Future.microtask(() {
       final authStore = ref.read(authStoreProvider.notifier);
       authStore.loadUserData();
@@ -52,8 +53,6 @@ class _MyAppState extends ConsumerState<MyApp> {
     return MaterialApp.router(
       title: 'Mark Me',
       debugShowCheckedModeBanner: false,
-      // theme: AppTheme.lightTheme,
-      // darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.light,
       routerConfig: router,
       builder: (context, child) {

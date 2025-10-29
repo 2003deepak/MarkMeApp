@@ -3,36 +3,50 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 // Layouts
-import 'package:markmeapp/presentation/layout/role_based_layout.dart';
 import 'package:markmeapp/presentation/layout/guest_layout.dart';
-import 'package:markmeapp/presentation/pages/clerk/add_subject_page.dart';
-import 'package:markmeapp/presentation/pages/clerk/add_teacher_page.dart';
+import 'package:markmeapp/presentation/layout/role_based_layout.dart';
+import 'package:markmeapp/presentation/layout/protected_layout.dart';
 
-// Pages
+// Auth Pages
 import 'package:markmeapp/presentation/pages/splash/splash_page.dart';
 import 'package:markmeapp/presentation/pages/auth/login_page.dart';
 import 'package:markmeapp/presentation/pages/auth/signup_page.dart';
 import 'package:markmeapp/presentation/pages/auth/forgot_password_page.dart';
 import 'package:markmeapp/presentation/pages/auth/reset_password_page.dart';
+import 'package:markmeapp/presentation/pages/student/change_password.dart';
+
+// Student Pages
 import 'package:markmeapp/presentation/pages/student/student_dashboard.dart';
 import 'package:markmeapp/presentation/pages/student/profile_page.dart'
     as StudentProfile;
+import 'package:markmeapp/presentation/pages/student/edit_profile.dart';
+import 'package:markmeapp/presentation/pages/student/timetable.dart';
+
+// Clerk Pages
+import 'package:markmeapp/presentation/pages/clerk/dashboard_page.dart';
 import 'package:markmeapp/presentation/pages/clerk/profile_page.dart'
     as ClerkProfile;
-import 'package:markmeapp/presentation/pages/student/edit_profile.dart';
+import 'package:markmeapp/presentation/pages/clerk/add_subject_page.dart';
+import 'package:markmeapp/presentation/pages/clerk/add_teacher_page.dart';
+
+// Teacher & Admin Pages
 import 'package:markmeapp/presentation/pages/teacher/teacher_dashboard_page.dart';
-import 'package:markmeapp/presentation/pages/clerk/dashboard_page.dart';
+
+// State
 import 'package:markmeapp/state/auth_state.dart';
 
+/// =============================================================
+/// 🚀 APP ROUTER
+/// =============================================================
 class AppRouter {
   static final routerProvider = Provider<GoRouter>((ref) {
     return GoRouter(
       debugLogDiagnostics: true,
       initialLocation: '/',
 
-      // ==========================
-      // REDIRECT LOGIC
-      // ==========================
+      // =========================================================
+      // 🔁 GLOBAL REDIRECT LOGIC (auth-aware)
+      // =========================================================
       redirect: (context, state) {
         final auth = ref.read(authStoreProvider);
 
@@ -44,21 +58,21 @@ class AppRouter {
           '/reset-password',
         ];
 
-        final currentLocation = state.uri.toString();
-        final goingToPublicRoute = publicRoutes.contains(currentLocation);
+        final current = state.uri.toString();
+        final isPublic = publicRoutes.contains(current);
 
-        // 1️⃣ Splash Page — only show before auth loads
+        // 1️⃣ Splash screen before auth load
         if (!auth.hasLoaded) {
-          return currentLocation == '/' ? null : '/';
+          return current == '/' ? null : '/';
         }
 
-        // 2️⃣ If not logged in, block private routes
-        if (!auth.isLoggedIn && !goingToPublicRoute) {
+        // 2️⃣ Block access if not logged in
+        if (!auth.isLoggedIn && !isPublic) {
           return '/login';
         }
 
-        // 3️⃣ If logged in, avoid public routes
-        if (auth.isLoggedIn && goingToPublicRoute) {
+        // 3️⃣ Prevent logged-in users from accessing public routes
+        if (auth.isLoggedIn && isPublic) {
           switch (auth.role) {
             case 'teacher':
               return '/teacher';
@@ -74,11 +88,13 @@ class AppRouter {
         return null;
       },
 
-      // ==========================
-      // ROUTES
-      // ==========================
+      // =========================================================
+      // 🗺️ ROUTE DEFINITIONS
+      // =========================================================
       routes: [
-        // --- Public Routes (no layout or guest layout) ---
+        // --------------------------------------------------------
+        // 🧭 PUBLIC ROUTES
+        // --------------------------------------------------------
         GoRoute(
           path: '/',
           name: 'splash',
@@ -113,15 +129,25 @@ class AppRouter {
           },
         ),
 
-        // --- 🧾 Clerk, Teacher, Student Layout Routes ---
+        // --------------------------------------------------------
+        // 🧱 PROTECTED ROUTES (with ProtectedLayout)
+        // --------------------------------------------------------
         ShellRoute(
-          builder: (context, state, child) => RoleBasedLayout(child: child),
+          builder: (context, state, child) =>
+              ProtectedLayout(child: RoleBasedLayout(child: child)),
           routes: [
-            // 🧑‍🎓 Student Routes (inside layout)
+            // =======================
+            // 🧑‍🎓 STUDENT ROUTES
+            // =======================
             GoRoute(
               path: '/student',
               name: 'student_dashboard',
               builder: (context, state) => const StudentDashboard(),
+            ),
+            GoRoute(
+              path: '/student/timetable',
+              name: 'student_timetable',
+              builder: (context, state) => const TimeTablePage(),
             ),
             GoRoute(
               path: '/student/profile',
@@ -129,7 +155,9 @@ class AppRouter {
               builder: (context, state) => StudentProfile.ProfilePage(),
             ),
 
-            // 👨‍🏫 Teacher Routes
+            // =======================
+            // 👨‍🏫 TEACHER ROUTES
+            // =======================
             GoRoute(
               path: '/teacher',
               name: 'teacher_dashboard',
@@ -143,7 +171,9 @@ class AppRouter {
               ),
             ),
 
-            // 🧾 Clerk Routes
+            // =======================
+            // 🧾 CLERK ROUTES
+            // =======================
             GoRoute(
               path: '/clerk',
               name: 'clerk_dashboard',
@@ -154,7 +184,10 @@ class AppRouter {
               name: 'clerk_profile',
               builder: (context, state) => ClerkProfile.ProfilePage(),
             ),
-            // 🛡️ Admin Routes
+
+            // =======================
+            // 🛡️ ADMIN ROUTES
+            // =======================
             GoRoute(
               path: '/admin',
               name: 'admin_dashboard',
@@ -165,22 +198,27 @@ class AppRouter {
           ],
         ),
 
-        // --- 📝 Edit Profile (OUTSIDE layout) ---
+        // --------------------------------------------------------
+        // ✏️ OUTSIDE-PROTECTED ROUTES (single-purpose pages)
+        // --------------------------------------------------------
         GoRoute(
           path: '/student/edit-profile',
           name: 'edit_profile',
           builder: (context, state) => const EditProfilePage(),
         ),
-
+        GoRoute(
+          path: '/student/change-password',
+          name: 'change_password',
+          builder: (context, state) => const ChangePasswordPage(),
+        ),
         GoRoute(
           path: '/clerk/add-teacher',
-          name: 'clerk_add_teacher',
+          name: 'add_teacher',
           builder: (context, state) => const AddTeacherPage(),
         ),
-
         GoRoute(
           path: '/clerk/add-subject',
-          name: 'clerk_add_subject',
+          name: 'add_subject',
           builder: (context, state) => const AddSubjectPage(),
         ),
       ],

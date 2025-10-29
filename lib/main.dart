@@ -3,8 +3,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:markmeapp/state/auth_state.dart';
 import 'core/routing/app_router.dart';
-import 'core/theme/app_theme.dart';
-import 'package:go_router/go_router.dart'; // ✅ Needed for context.go()
+// ✅ Needed for context.go()
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

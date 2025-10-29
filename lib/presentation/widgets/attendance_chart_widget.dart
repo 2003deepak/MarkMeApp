@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 
 class AttendanceChartWidget extends StatefulWidget {
-  final Map<String, Map<String, dynamic>> subjectData;
+  final Map<String, dynamic>? selectedData;
   final String? selectedSubject;
   final bool isDesktop;
 
   const AttendanceChartWidget({
     super.key,
-    required this.subjectData,
+    required this.selectedData,
     required this.selectedSubject,
     required this.isDesktop,
   });
@@ -24,11 +24,9 @@ class _AttendanceChartWidgetState extends State<AttendanceChartWidget>
 
   int touchedIndex = -1;
 
-  // <CHANGE> soft palette + UI tokens
   static const Color _bgStart = Color(0xFFF8FAFF);
   static const Color _bgEnd = Color(0xFFFFFFFF);
   static const Color _cardBorder = Color(0xFFE5E7EB);
-  static const Color _iconTint = Color(0xFFE0EAFF);
   static const Color _absentColor = Color(0xFFE5E7EB);
 
   @override
@@ -48,52 +46,41 @@ class _AttendanceChartWidgetState extends State<AttendanceChartWidget>
     );
   }
 
-  // <CHANGE> refined color mapping for attendance
   Color _getAttendanceColor(double percentage) {
-    if (percentage >= 75) return const Color(0xFF10B981); // emerald
+    if (percentage >= 75) return const Color(0xFF10B981); // green
     if (percentage >= 60) return const Color(0xFFF59E0B); // amber
     if (percentage >= 45) return const Color(0xFFFB923C); // orange
     return const Color(0xFFEF4444); // red
   }
 
-  // <CHANGE> helper to compute current stats once
   ({int attended, int total, int missed, double percentage, Color color})
   _currentStats() {
-    if (widget.selectedSubject != null) {
-      final data = widget.subjectData[widget.selectedSubject]!;
-      final attended = data['attendedLectures'] as int;
-      final total = data['totalLectures'] as int;
-      final missed = (total - attended).clamp(0, total);
-      final percentage = total == 0 ? 0.0 : (attended / total) * 100.0;
+    final data = widget.selectedData;
+
+    if (data == null) {
       return (
-        attended: attended,
-        total: total,
-        missed: missed,
-        percentage: percentage,
-        color: _getAttendanceColor(percentage),
-      );
-    } else {
-      int totalLectures = 0;
-      int totalAttended = 0;
-      for (var subject in widget.subjectData.values) {
-        totalLectures += subject['totalLectures'] as int;
-        totalAttended += subject['attendedLectures'] as int;
-      }
-      final missed = (totalLectures - totalAttended).clamp(0, totalLectures);
-      final overallPercentage = totalLectures == 0
-          ? 0.0
-          : (totalAttended / totalLectures) * 100.0;
-      return (
-        attended: totalAttended,
-        total: totalLectures,
-        missed: missed,
-        percentage: overallPercentage,
-        color: _getAttendanceColor(overallPercentage),
+        attended: 0,
+        total: 0,
+        missed: 0,
+        percentage: 0.0,
+        color: _getAttendanceColor(0.0),
       );
     }
+
+    final attended = data['attendedLectures'] as int? ?? 0;
+    final total = data['totalLectures'] as int? ?? 0;
+    final missed = (total - attended).clamp(0, total);
+    final percentage = data['percentage'] as double? ?? 0.0;
+
+    return (
+      attended: attended,
+      total: total,
+      missed: missed,
+      percentage: percentage,
+      color: _getAttendanceColor(percentage),
+    );
   }
 
-  // <CHANGE> consistent ring sizing: base radius is always larger than center
   List<PieChartSectionData> _getPieChartSections({
     required double percentage,
     required int attended,
@@ -101,17 +88,11 @@ class _AttendanceChartWidgetState extends State<AttendanceChartWidget>
     required Color presentColor,
   }) {
     final bool isDesktop = widget.isDesktop;
-    final double chartSize = isDesktop ? 180 : 160;
-
-    // ring thickness target
     final double ringThickness = isDesktop ? 20 : 18;
-    // choose a center space that leaves room for label
-    final double centerSpaceRadius = isDesktop ? 58 : 52;
-    // derive base radius from center + thickness
+    final double centerSpaceRadius = isDesktop ? 45 : 40;
     final double baseRadius = centerSpaceRadius + ringThickness;
-    final double touchedRadius = baseRadius + (isDesktop ? 6 : 5);
+    final double touchedRadius = baseRadius + (isDesktop ? 5 : 4);
 
-    // titles kept empty for a cleaner donut, we show the main % in the center
     return [
       PieChartSectionData(
         color: presentColor,
@@ -172,7 +153,6 @@ class _AttendanceChartWidgetState extends State<AttendanceChartWidget>
 
   @override
   Widget build(BuildContext context) {
-    // Initialize animations if they haven't been initialized yet
     if (_scaleController == null) {
       _initializeAnimations();
     }
@@ -180,13 +160,12 @@ class _AttendanceChartWidgetState extends State<AttendanceChartWidget>
     final stats = _currentStats();
 
     final bool isDesktop = widget.isDesktop;
-    final double centerSpaceRadius = isDesktop ? 58 : 52;
-    final double sectionsSpace = isDesktop ? 6 : 5;
+    final double centerSpaceRadius = isDesktop ? 52 : 46;
+    final double sectionsSpace = isDesktop ? 5 : 4;
 
     return Container(
       padding: EdgeInsets.all(isDesktop ? 24 : 20),
       decoration: BoxDecoration(
-        // <CHANGE> soft gradient + thin border + subtle shadow
         gradient: const LinearGradient(
           colors: [_bgStart, _bgEnd],
           begin: Alignment.topLeft,
@@ -205,12 +184,12 @@ class _AttendanceChartWidgetState extends State<AttendanceChartWidget>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
 
           Center(
             child: _scaleController == null || _scaleAnimation == null
                 ? SizedBox(
-                    height: isDesktop ? 200 : 180,
+                    height: isDesktop ? 240 : 220,
                     width: isDesktop ? 240 : 220,
                     child: const Center(child: CircularProgressIndicator()),
                   )
@@ -220,8 +199,8 @@ class _AttendanceChartWidgetState extends State<AttendanceChartWidget>
                       return Transform.scale(
                         scale: _scaleAnimation!.value,
                         child: SizedBox(
-                          height: isDesktop ? 240 : 220,
-                          width: isDesktop ? 240 : 220,
+                          height: isDesktop ? 240 : 200, // ✅ Reduced height
+                          width: isDesktop ? 240 : 200, // ✅ Reduced width
                           child: Stack(
                             alignment: Alignment.center,
                             children: [
@@ -249,9 +228,7 @@ class _AttendanceChartWidgetState extends State<AttendanceChartWidget>
                                         },
                                   ),
                                   borderData: FlBorderData(show: false),
-                                  // <CHANGE> wider spacing for a crisp separation
                                   sectionsSpace: sectionsSpace,
-                                  // <CHANGE> consistent center space; sections radii are derived above
                                   centerSpaceRadius: centerSpaceRadius,
                                   sections: _getPieChartSections(
                                     percentage: stats.percentage,
@@ -261,14 +238,13 @@ class _AttendanceChartWidgetState extends State<AttendanceChartWidget>
                                   ),
                                 ),
                               ),
-                              // <CHANGE> Center content (main percentage)
                               Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Text(
                                     '${stats.percentage.toStringAsFixed(1)}%',
                                     style: TextStyle(
-                                      fontSize: isDesktop ? 28 : 24,
+                                      fontSize: isDesktop ? 26 : 22,
                                       fontWeight: FontWeight.w800,
                                       color: stats.color,
                                     ),
@@ -291,9 +267,8 @@ class _AttendanceChartWidgetState extends State<AttendanceChartWidget>
                   ),
           ),
 
-          const SizedBox(height: 30),
+          const SizedBox(height: 40),
 
-          // <CHANGE> Better legend with counts
           _buildLegend(
             attended: stats.attended,
             missed: stats.missed,

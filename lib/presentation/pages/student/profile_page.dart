@@ -37,9 +37,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   }
 
   void _onUpdatePassword() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Navigate to Update Password')),
-    );
+    context.push('/student/change-password');
   }
 
   void _openEditProfile() {

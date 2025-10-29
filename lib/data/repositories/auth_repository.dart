@@ -217,6 +217,35 @@ class AuthRepository {
     }
   }
 
+  Future<Map<String, dynamic>> changePassword(
+    String currPassword,
+    String newPassword,
+  ) async {
+    try {
+      final response = await _dio.patch(
+        '/auth/change-password',
+        data: {'current_password': currPassword, 'new_password': newPassword},
+      );
+
+      final responseBody = response.data;
+
+      if (responseBody['success'] == true) {
+        return {'success': true, 'message': responseBody['message']};
+      } else {
+        return {
+          'success': false,
+          'message': responseBody['message'] ?? 'Password reset failed',
+        };
+      }
+    } on DioException catch (e) {
+      final errorMessage =
+          e.response?.data?['message'] ?? e.message ?? 'Network error occurred';
+      return {'success': false, 'error': errorMessage};
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
   Future<Map<String, dynamic>> refreshToken(String refreshToken) async {
     try {
       final url = '/auth/refresh-token';

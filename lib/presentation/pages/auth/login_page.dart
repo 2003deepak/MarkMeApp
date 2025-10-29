@@ -382,29 +382,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         fieldHeight: isDesktop ? 65 : 60,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      if (_enteredPassword.isNotEmpty &&
-                          _enteredPassword.length == 6)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8.0),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.check_circle,
-                                color: Colors.green.shade600,
-                                size: 16,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                'Password entered successfully',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.green.shade600,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
                     ],
                   ),
                   const SizedBox(height: 16),

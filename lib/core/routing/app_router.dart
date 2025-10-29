@@ -13,6 +13,7 @@ import 'package:markmeapp/presentation/pages/auth/login_page.dart';
 import 'package:markmeapp/presentation/pages/auth/signup_page.dart';
 import 'package:markmeapp/presentation/pages/auth/forgot_password_page.dart';
 import 'package:markmeapp/presentation/pages/auth/reset_password_page.dart';
+import 'package:markmeapp/presentation/pages/student/change_password.dart';
 
 // Student Pages
 import 'package:markmeapp/presentation/pages/student/student_dashboard.dart';
@@ -204,6 +205,11 @@ class AppRouter {
           path: '/student/edit-profile',
           name: 'edit_profile',
           builder: (context, state) => const EditProfilePage(),
+        ),
+        GoRoute(
+          path: '/student/change-password',
+          name: 'change_password',
+          builder: (context, state) => const ChangePasswordPage(),
         ),
         GoRoute(
           path: '/clerk/add-teacher',

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class AttendanceStatsWidget extends StatelessWidget {
-  final Map<String, Map<String, dynamic>> subjectData;
+  final Map<String, dynamic>? subjectData;
   final String? selectedSubject;
   final bool isDesktop;
 
@@ -12,29 +12,16 @@ class AttendanceStatsWidget extends StatelessWidget {
     required this.isDesktop,
   });
 
-  Map<String, dynamic> _getStats() {
-    if (selectedSubject != null) {
-      return subjectData[selectedSubject]!;
-    } else {
-      int totalLectures = 0;
-      int totalAttended = 0;
-
-      for (var subject in subjectData.values) {
-        totalLectures += subject['totalLectures'] as int;
-        totalAttended += subject['attendedLectures'] as int;
-      }
-
-      return {
-        'totalLectures': totalLectures,
-        'attendedLectures': totalAttended,
-        'percentage': (totalAttended / totalLectures) * 100,
-      };
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final stats = _getStats();
+    // Use safe defaults
+    final data =
+        subjectData ??
+        {'totalLectures': 0, 'attendedLectures': 0, 'percentage': 0.0};
+
+    final totalLectures = data['totalLectures'] ?? 0;
+    final attendedLectures = data['attendedLectures'] ?? 0;
+    final percentage = data['percentage'] ?? 0.0;
 
     return Container(
       padding: EdgeInsets.all(isDesktop ? 24 : 20),
@@ -58,23 +45,23 @@ class AttendanceStatsWidget extends StatelessWidget {
           Expanded(
             child: _buildStatItem(
               'Total Lectures',
-              stats['totalLectures'].toString(),
+              totalLectures.toString(),
               Icons.school,
             ),
           ),
-          Container(width: 1, height: 50, color: Colors.white.withOpacity(0.3)),
+          _divider(),
           Expanded(
             child: _buildStatItem(
               'Attended',
-              stats['attendedLectures'].toString(),
+              attendedLectures.toString(),
               Icons.check_circle,
             ),
           ),
-          Container(width: 1, height: 50, color: Colors.white.withOpacity(0.3)),
+          _divider(),
           Expanded(
             child: _buildStatItem(
               'Percentage',
-              '${stats['percentage'].toStringAsFixed(1)}%',
+              '${percentage.toStringAsFixed(1)}%',
               Icons.trending_up,
             ),
           ),
@@ -82,6 +69,9 @@ class AttendanceStatsWidget extends StatelessWidget {
       ),
     );
   }
+
+  Widget _divider() =>
+      Container(width: 1, height: 50, color: Colors.white.withOpacity(0.3));
 
   Widget _buildStatItem(String label, String value, IconData icon) {
     return Column(

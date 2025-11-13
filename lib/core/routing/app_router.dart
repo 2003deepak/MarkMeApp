@@ -31,6 +31,10 @@ import 'package:markmeapp/presentation/pages/clerk/add_teacher_page.dart';
 
 // Teacher & Admin Pages
 import 'package:markmeapp/presentation/pages/teacher/teacher_dashboard_page.dart';
+import 'package:markmeapp/presentation/pages/teacher/profile_page.dart'
+    as TeacherProfile;
+import 'package:markmeapp/presentation/pages/teacher/timetable.dart'
+    as TeacherTimeTable;
 
 // State
 import 'package:markmeapp/state/auth_state.dart';
@@ -161,14 +165,18 @@ class AppRouter {
             GoRoute(
               path: '/teacher',
               name: 'teacher_dashboard',
-              builder: (context, state) => const TeacherDashboardPage(),
+              builder: (context, state) => const TeacherDashboard(),
             ),
             GoRoute(
               path: '/teacher/profile',
               name: 'teacher_profile',
-              builder: (context, state) => const Scaffold(
-                body: Center(child: Text('Teacher Profile Page')),
-              ),
+              builder: (context, state) => const TeacherProfile.ProfilePage(),
+            ),
+            GoRoute(
+              path: '/teacher/timetable',
+              name: 'teacher_timetable',
+              builder: (context, state) =>
+                  const TeacherTimeTable.TimeTablePage(),
             ),
 
             // =======================

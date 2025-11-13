@@ -41,18 +41,24 @@ class StudentStore extends StateNotifier<StudentState> {
   Map<String, dynamic>? get profile => state.profile;
 
   /// Load student profile from API
-  Future<void> loadProfile() async {
+  Future<Map<String, dynamic>> loadProfile() async {
     try {
       final result = await _studentRepo.fetchProfile();
-
       print("The result in state is $result");
 
       if (result['success'] == true) {
         state = state.copyWith(profile: result['data']);
+        return {"success": true, "message": result["message"]};
+      } else {
+        // Handle API returning success: false
+        return {
+          "success": false,
+          "message": result["message"] ?? "Failed to fetch profile",
+        };
       }
     } catch (e) {
-      // Handle error silently or rethrow if needed
       print("Error loading profile: $e");
+      return {"success": false, "message": "Error loading profile: $e"};
     }
   }
 

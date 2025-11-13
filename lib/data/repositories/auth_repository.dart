@@ -71,7 +71,13 @@ class AuthRepository {
 
       final response = await _dio.post(
         url,
-        data: {'email': user.email, 'password': user.password, 'role': role},
+        data: {
+          'email': user.email,
+          'password': user.password,
+          'role': role,
+          'fcm_token': user.fcmToken,
+          'device_type': user.deviceType,
+        },
       );
 
       print('🔵 [AuthRepository] HTTP Status Code: ${response.statusCode}');

@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:markmeapp/state/student_state.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:markmeapp/data/repositories/auth_repository.dart';
@@ -60,34 +62,69 @@ class AuthStore extends StateNotifier<AuthState> {
   bool get isLoading => state.isLoading;
 
   /// Load user data from SharedPreferences
-  Future<void> loadUserData() async {
+  Future<void> loadUserData(WidgetRef ref, BuildContext context) async {
     try {
       debugPrint('🟡 [AuthStore] Loading user data from SharedPreferences');
       final prefs = await SharedPreferences.getInstance();
-      final stored = prefs.getString('refreshToken');
+      final storedRefreshToken = prefs.getString('refreshToken');
 
-      if (stored != null) {
-        debugPrint('🟡 [AuthStore] Found stored user data');
-        final decoded = jsonDecode(stored);
-        if (decoded is Map<String, dynamic>) {
-          debugPrint('🟡 [AuthStore] Setting user as logged in');
-          state = state.copyWith(
-            user: decoded,
-            role: decoded['role'],
-            accessToken: decoded['token'] ?? decoded['access_token'],
-            isLoggedIn: true,
-            hasLoaded: true,
-          );
-          return;
-        }
+      if (storedRefreshToken == null) {
+        debugPrint('🟡 [AuthStore] No stored refresh token found');
+        state = state.copyWith(hasLoaded: true, isLoggedIn: false);
+        return;
       }
 
-      // No user data found
-      debugPrint('🟡 [AuthStore] No stored user data found');
-      state = state.copyWith(hasLoaded: true);
+      // Try refreshing access token
+      final refreshResult = await refreshAccessToken();
+
+      if (refreshResult['success'] == true) {
+        debugPrint('🟢 [AuthStore] Access token refresh successful');
+
+        // ✅ Fetch user profile (based on role, here student example)
+        final studentStore = ref.read(studentStoreProvider.notifier);
+        final profileResult = await studentStore.loadProfile();
+
+        if (profileResult['success'] == true) {
+          // Extract role from profile or token payload
+          final role = profileResult['data']?['role'] ?? 'student';
+
+          // ✅ Update AuthState
+          state = state.copyWith(
+            isLoggedIn: true,
+            hasLoaded: true,
+            isLoading: false,
+            role: role,
+          );
+
+          debugPrint(
+            '🟢 [AuthStore] User auto-login completed, navigating to $role dashboard',
+          );
+        } else {
+          debugPrint('🔴 [AuthStore] Profile fetch failed');
+          await prefs.remove('refreshToken');
+          state = const AuthState(hasLoaded: true, isLoggedIn: false);
+        }
+      } else {
+        debugPrint(
+          '🔴 [AuthStore] Token refresh failed: ${refreshResult['message']}',
+        );
+
+        // ❌ Clear invalid token
+        await prefs.remove('refreshToken');
+        state = const AuthState(hasLoaded: true, isLoggedIn: false);
+
+        if (context.mounted) {
+          context.go('/login');
+        }
+      }
     } catch (e) {
-      debugPrint('🔴 [AuthStore] Error loading user data: $e');
-      state = state.copyWith(hasLoaded: true);
+      debugPrint('🔴 [AuthStore] Error during auto-login: $e');
+      state = state.copyWith(hasLoaded: true, isLoggedIn: false);
+
+      // Optional fallback navigation
+      if (context.mounted) {
+        context.go('/login');
+      }
     }
   }
 
@@ -96,8 +133,6 @@ class AuthStore extends StateNotifier<AuthState> {
     try {
       debugPrint('🟡 [AuthStore] Setting login state with user data');
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('userData', jsonEncode(userData));
-
       // Save refresh token if available
       if (userData['refresh_token'] != null) {
         await prefs.setString('refreshToken', userData['refresh_token']);
@@ -126,8 +161,9 @@ class AuthStore extends StateNotifier<AuthState> {
     try {
       debugPrint('🟡 [AuthStore] Starting logout process');
       final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('userData');
-      debugPrint('🟡 [AuthStore] Removed user data from SharedPreferences');
+
+      await prefs.remove('refreshToken');
+      debugPrint('🟡 [AuthStore] Removed refresh token from SharedPreferences');
 
       state = const AuthState(hasLoaded: true);
 

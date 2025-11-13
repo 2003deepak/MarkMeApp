@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -50,11 +53,16 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         return;
       }
 
+      final fcmToken = await FirebaseMessaging.instance.getToken();
+      final deviceType = Platform.isAndroid ? "android" : "ios";
+
       final user = User(
         firstName: '',
         lastName: '',
         email: _emailController.text.trim(),
         password: _enteredPassword,
+        fcmToken: fcmToken,
+        deviceType: deviceType,
       );
 
       debugPrint(

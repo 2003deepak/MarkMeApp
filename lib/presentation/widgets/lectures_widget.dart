@@ -1,59 +1,76 @@
 import 'package:flutter/material.dart';
 import 'package:markmeapp/presentation/widgets/lecture_card.dart';
-import 'package:markmeapp/presentation/widgets/ui/empty_data.dart';
 import 'package:markmeapp/presentation/widgets/ui/error.dart';
 
-class UpcomingLecturesWidget extends StatelessWidget {
+class LecturesWidget extends StatelessWidget {
   final bool isDesktop;
-  final List<dynamic> upcomingSessions;
+  final String title;
+  final List<dynamic> sessions;
   final bool isLoading;
   final String errorMessage;
   final VoidCallback onRetry;
+  final String entityType;
 
-  const UpcomingLecturesWidget({
+  const LecturesWidget({
     super.key,
+    required this.title,
     required this.isDesktop,
-    required this.upcomingSessions,
+    required this.sessions,
     required this.isLoading,
     required this.errorMessage,
     required this.onRetry,
+    required this.entityType,
   });
 
-  // Helper function to get color based on subject name
+  // 🎨 Get fixed or dynamic color based on component type
+  Color _getComponentColor(String component, String subjectName) {
+    switch (component.toLowerCase()) {
+      case 'lecture':
+        return const Color(0xFF1E3A8A); // Deep Blue
+      case 'lab':
+        return const Color(0xFFE67C00); // Orange
+      default:
+        return _getSubjectColor(subjectName); // Dynamic fallback
+    }
+  }
+
+  // 🎨 Dynamic color fallback for non-lecture/lab subjects
   Color _getSubjectColor(String subjectName) {
     final colors = [
-      Colors.blue,
-      Colors.green,
-      Colors.orange,
-      Colors.purple,
-      Colors.red,
       Colors.teal,
+      Colors.purple,
       Colors.indigo,
       Colors.pink,
+      Colors.blueGrey,
+      Colors.redAccent,
+      Colors.green,
     ];
-
     final index = subjectName.hashCode % colors.length;
     return colors[index];
   }
 
-  // Helper function to format time range
+  // 🕒 Helper function to format time range
   String _formatTimeRange(String startTime, String endTime) {
     return '$startTime - $endTime';
   }
 
   @override
   Widget build(BuildContext context) {
+    debugPrint("📚 $title Sessions: $sessions");
+    debugPrint("🧾 Is Empty: ${sessions.isEmpty}");
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // --- Section Title & Loader ---
         Row(
           children: [
             Text(
-              'Upcoming Lectures',
+              title,
               style: TextStyle(
                 fontSize: isDesktop ? 22 : 18,
                 fontWeight: FontWeight.w700,
-                color: Colors.black87,
+                color: const Color.fromARGB(221, 22, 21, 21),
               ),
             ),
             const SizedBox(width: 8),
@@ -61,36 +78,103 @@ class UpcomingLecturesWidget extends StatelessWidget {
               SizedBox(
                 width: isDesktop ? 20 : 16,
                 height: isDesktop ? 20 : 16,
-                child: CircularProgressIndicator(strokeWidth: 2),
+                child: const CircularProgressIndicator(strokeWidth: 2),
               ),
           ],
         ),
         const SizedBox(height: 16),
 
+        // --- Conditional Rendering ---
         if (isLoading)
           _buildLoadingState()
         else if (errorMessage.isNotEmpty)
           CustomErrorWidget(
             errorMessage: errorMessage,
-            onRetry: () {},
-            isRetryEnabled: false,
+            onRetry: onRetry,
+            isRetryEnabled: true,
             isDesktop: isDesktop,
           )
-        else if (upcomingSessions.isEmpty)
-          // Full width empty state container
-          CustomEmptyStateWidget(
-            icon: Icons.schedule,
-            width: double.infinity,
-            title: 'No upcoming lectures',
-            subtitle: 'Check back later for scheduled sessions.',
-            isDesktop: isDesktop,
-          )
+        else if (sessions.isEmpty)
+          _buildEmptyState()
         else
-          _buildUpcomingSessions(),
+          _buildSessionsList(),
       ],
     );
   }
 
+  // --- Empty State Widget ---
+  Widget _buildEmptyState() {
+    String heading;
+    String subtitle;
+
+    if (title.toLowerCase().contains('current')) {
+      heading = 'No Ongoing Sessions Right Now';
+      subtitle = 'Check again later for active sessions.';
+    } else if (title.toLowerCase().contains('upcoming')) {
+      heading = 'No Upcoming Lectures';
+      subtitle = 'Check back later for scheduled sessions.';
+    } else {
+      heading = 'No Past Sessions Available';
+      subtitle = 'You haven’t conducted any sessions yet.';
+    }
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 8),
+      padding: EdgeInsets.symmetric(
+        vertical: isDesktop ? 48 : 32,
+        horizontal: isDesktop ? 24 : 16,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade300, width: 1),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: isDesktop ? 72 : 56,
+            height: isDesktop ? 72 : 56,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [Color(0xFF6A11CB), Color(0xFF2575FC)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: Icon(
+              Icons.schedule,
+              size: isDesktop ? 40 : 32,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            heading,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: isDesktop ? 20 : 16,
+              fontWeight: FontWeight.w700,
+              color: Colors.grey.shade800,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            subtitle,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: isDesktop ? 16 : 14,
+              color: Colors.grey.shade600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- Loading Skeleton ---
   Widget _buildLoadingState() {
     return Row(
       children: [
@@ -144,17 +228,23 @@ class UpcomingLecturesWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildUpcomingSessions() {
+  // --- Main Sessions List ---
+  Widget _buildSessionsList() {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
-        children: upcomingSessions.map((session) {
+        children: sessions.map((session) {
           final subjectName = session['subject_name'] ?? 'Unknown Subject';
           final startTime = session['start_time'] ?? '';
           final endTime = session['end_time'] ?? '';
           final component = session['component'] ?? 'Lecture';
           final teacherName = session['teacher_name'] ?? '';
           final timeUntilStart = session['time_until_start_display'] ?? '';
+
+          final color = _getComponentColor(
+            component,
+            subjectName,
+          ); // 🎯 fixed color logic
 
           return Container(
             width: isDesktop ? 200 : 160,
@@ -165,8 +255,9 @@ class UpcomingLecturesWidget extends StatelessWidget {
               component: component,
               teacherName: teacherName,
               timeUntilStart: timeUntilStart,
-              color: _getSubjectColor(subjectName),
+              color: color,
               isDesktop: isDesktop,
+              entityType: entityType,
             ),
           );
         }).toList(),

@@ -21,7 +21,7 @@ class ProtectedLayout extends ConsumerWidget {
           if (messenger != null) {
             messenger.showSnackBar(
               const SnackBar(
-                content: Text('Session expired. Please log in again.'),
+                content: Text('Logged out successfully'),
                 backgroundColor: Colors.redAccent,
                 behavior: SnackBarBehavior.floating,
               ),

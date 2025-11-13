@@ -1,16 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-/// Class Selection Page - Beautiful UI for teachers to select specific classes
-/// This page allows teachers to:
-/// - View all available classes
-/// - Select specific classes for notifications
-/// - See class details like degree, semester, section
-/// 
-/// Backend developers: This page will need class API integration
-/// Expected endpoints:
-/// - GET /api/teacher/classes - Get teacher's assigned classes
-/// - GET /api/classes - Get all available classes
 class ClassSelectionPage extends StatefulWidget {
   const ClassSelectionPage({Key? key}) : super(key: key);
 
@@ -111,27 +101,23 @@ class _ClassSelectionPageState extends State<ClassSelectionPage>
   @override
   void initState() {
     super.initState();
-    
+
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
 
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
 
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.2),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOutCubic,
-    ));
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _animationController,
+            curve: Curves.easeOutCubic,
+          ),
+        );
 
     _animationController.forward();
   }
@@ -158,7 +144,7 @@ class _ClassSelectionPageState extends State<ClassSelectionPage>
                   children: [
                     // Custom App Bar
                     _buildCustomAppBar(),
-                    
+
                     // Main Content
                     Expanded(
                       child: SingleChildScrollView(
@@ -168,18 +154,18 @@ class _ClassSelectionPageState extends State<ClassSelectionPage>
                           children: [
                             // Header Section
                             _buildHeaderSection(),
-                            
+
                             const SizedBox(height: 24),
-                            
+
                             // Classes List
                             _buildClassesList(),
-                            
+
                             const SizedBox(height: 24),
                           ],
                         ),
                       ),
                     ),
-                    
+
                     // Bottom Action Button
                     if (_selectedClassId != null) _buildBottomActionButton(),
                   ],
@@ -224,9 +210,9 @@ class _ClassSelectionPageState extends State<ClassSelectionPage>
               ),
             ),
           ),
-          
+
           const SizedBox(width: 16),
-          
+
           const Expanded(
             child: Text(
               'Select Class',
@@ -237,7 +223,7 @@ class _ClassSelectionPageState extends State<ClassSelectionPage>
               ),
             ),
           ),
-          
+
           Container(
             width: 40,
             height: 40,
@@ -297,9 +283,9 @@ class _ClassSelectionPageState extends State<ClassSelectionPage>
                     size: 24,
                   ),
                 ),
-                
+
                 const SizedBox(width: 16),
-                
+
                 const Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -315,10 +301,7 @@ class _ClassSelectionPageState extends State<ClassSelectionPage>
                       SizedBox(height: 4),
                       Text(
                         'Select the class you want to send notifications to',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.white70,
-                        ),
+                        style: TextStyle(fontSize: 14, color: Colors.white70),
                       ),
                     ],
                   ),
@@ -344,13 +327,13 @@ class _ClassSelectionPageState extends State<ClassSelectionPage>
             color: Colors.black87,
           ),
         ),
-        
+
         const SizedBox(height: 16),
-        
+
         ..._classes.asMap().entries.map((entry) {
           final index = entry.key;
           final classData = entry.value;
-          
+
           return TweenAnimationBuilder<double>(
             duration: Duration(milliseconds: 400 + (index * 100)),
             tween: Tween(begin: 0.0, end: 1.0),
@@ -373,7 +356,7 @@ class _ClassSelectionPageState extends State<ClassSelectionPage>
   /// Builds individual class card
   Widget _buildClassCard(Map<String, dynamic> classData) {
     final isSelected = _selectedClassId == classData['id'];
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       child: GestureDetector(
@@ -395,7 +378,7 @@ class _ClassSelectionPageState extends State<ClassSelectionPage>
             ),
             boxShadow: [
               BoxShadow(
-                color: isSelected 
+                color: isSelected
                     ? Colors.blue.withOpacity(0.1)
                     : Colors.black.withOpacity(0.05),
                 blurRadius: isSelected ? 12 : 4,
@@ -422,9 +405,9 @@ class _ClassSelectionPageState extends State<ClassSelectionPage>
                       size: 24,
                     ),
                   ),
-                  
+
                   const SizedBox(width: 16),
-                  
+
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -434,7 +417,9 @@ class _ClassSelectionPageState extends State<ClassSelectionPage>
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
-                            color: isSelected ? Colors.blue.shade600 : Colors.black87,
+                            color: isSelected
+                                ? Colors.blue.shade600
+                                : Colors.black87,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -449,7 +434,7 @@ class _ClassSelectionPageState extends State<ClassSelectionPage>
                       ],
                     ),
                   ),
-                  
+
                   if (isSelected)
                     Container(
                       width: 30,
@@ -466,9 +451,9 @@ class _ClassSelectionPageState extends State<ClassSelectionPage>
                     ),
                 ],
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Details Row
               Row(
                 children: [
@@ -485,9 +470,9 @@ class _ClassSelectionPageState extends State<ClassSelectionPage>
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: 12),
-              
+
               // Location Row
               Row(
                 children: [
@@ -499,10 +484,7 @@ class _ClassSelectionPageState extends State<ClassSelectionPage>
                   const SizedBox(width: 4),
                   Text(
                     '${classData['room']}, ${classData['building']}',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey.shade600,
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
                   ),
                 ],
               ),
@@ -528,11 +510,7 @@ class _ClassSelectionPageState extends State<ClassSelectionPage>
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon,
-            size: 14,
-            color: color,
-          ),
+          Icon(icon, size: 14, color: color),
           const SizedBox(width: 4),
           Text(
             label,
@@ -595,11 +573,7 @@ class _ClassSelectionPageState extends State<ClassSelectionPage>
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                icon: const Icon(
-                  Icons.check,
-                  color: Colors.white,
-                  size: 20,
-                ),
+                icon: const Icon(Icons.check, color: Colors.white, size: 20),
                 label: const Text(
                   'Select This Class',
                   style: TextStyle(
@@ -622,7 +596,7 @@ class _ClassSelectionPageState extends State<ClassSelectionPage>
       final selectedClass = _classes.firstWhere(
         (c) => c['id'] == _selectedClassId,
       );
-      
+
       Navigator.pop(context, {
         'class_id': _selectedClassId,
         'class_name': selectedClass['name'],

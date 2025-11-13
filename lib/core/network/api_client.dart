@@ -25,6 +25,8 @@ final Provider<Dio> dioProvider = Provider<Dio>((ref) {
         final authStore = ref.read(authStoreProvider.notifier);
         final token = authStore.accessToken;
 
+        print("The value of token in dio provider = $token");
+
         // Skip auth for specific endpoints
         const authExcludedPaths = [
           '/auth/login',

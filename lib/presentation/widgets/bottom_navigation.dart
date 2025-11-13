@@ -83,7 +83,7 @@ class _BottomNavigationState extends State<BottomNavigation> {
             label: 'Home',
           ),
           NavigationDestination(
-            route: '$baseRoute/schedule',
+            route: '$baseRoute/timetable',
             icon: Icons.calendar_today_outlined,
             activeIcon: Icons.calendar_today,
             label: 'Schedule',

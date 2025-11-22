@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:markmeapp/data/repositories/teacher_repository.dart';
 import 'package:markmeapp/presentation/skeleton/student_dashboard_skeleton.dart';
+import 'package:markmeapp/presentation/widgets/dashboard_action_card.dart';
 import 'package:markmeapp/presentation/widgets/lectures_widget.dart';
 import 'package:markmeapp/presentation/widgets/recent_activity_widget.dart';
 import 'package:markmeapp/presentation/widgets/ui/error.dart';
@@ -96,10 +98,61 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
     return _buildDashboardWidgets(isDesktop);
   }
 
+  Widget _buildActionButtons() {
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: 2,
+      crossAxisSpacing: 16,
+      mainAxisSpacing: 16,
+      children: [
+        DashboardActionCard(
+          icon: Icons.notifications_active,
+          title: 'Push Notification',
+          onTap: () {
+            context.go('/teacher/push-notification');
+          },
+          color: Colors.blue.shade600,
+          index: 0,
+        ),
+        DashboardActionCard(
+          icon: Icons.assessment_outlined,
+          title: "View Reports",
+          onTap: () {
+            context.go('/clerk/add-teacher');
+          },
+          color: Colors.green.shade600,
+          index: 1,
+        ),
+        DashboardActionCard(
+          icon: Icons.assignment_outlined,
+          title: "Add Subject",
+          onTap: () {
+            context.go('/clerk/add-subject');
+          },
+          color: const Color(0xFFBA68C8),
+          index: 2,
+        ),
+        DashboardActionCard(
+          icon: Icons.calendar_month_outlined,
+          title: "Set Timetable",
+          onTap: () {
+            context.go('/clerk/add-timetable');
+          },
+          color: const Color(0xFFFFB74D),
+          index: 3,
+        ),
+      ],
+    );
+  }
+
   Widget _buildDashboardWidgets(bool isDesktop) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        _buildActionButtons(),
+        const SizedBox(height: 32),
+
         // 🔹 Current Sessions
         LecturesWidget(
           title: "Current Sessions",

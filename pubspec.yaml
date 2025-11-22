@@ -47,6 +47,9 @@ dependencies:
   intl: ^0.20.2
   firebase_core: ^4.2.0
   firebase_messaging: ^16.0.3
+  flutter_local_notifications: ^17.0.0
+  device_info_plus: ^12.2.0
+  debounce_throttle: ^2.0.0
 
 dev_dependencies:
   flutter_test:

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:markmeapp/state/student_state.dart';
@@ -159,17 +160,22 @@ class AuthStore extends StateNotifier<AuthState> {
   /// Logout - Clear all data
   Future<void> setLogOut() async {
     try {
-      debugPrint('🟡 [AuthStore] Starting logout process');
       final prefs = await SharedPreferences.getInstance();
+      final fcmToken = prefs.getString('fcmToken');
+      final result = await _authRepo.logoutUser(fcmToken!);
 
-      await prefs.remove('refreshToken');
-      debugPrint('🟡 [AuthStore] Removed refresh token from SharedPreferences');
+      debugPrint("The result in state = ${result}");
 
-      state = const AuthState(hasLoaded: true);
+      if (result['success']) {
+        debugPrint('🟡 [AuthStore] Starting logout process');
 
-      debugPrint(
-        '🟢 [AuthStore] Logout completed. State reset to: isLoggedIn: false, hasLoaded: true',
-      );
+        await prefs.remove('refreshToken');
+        await prefs.remove('fcmToken');
+
+        state = const AuthState(hasLoaded: true);
+
+        debugPrint('🟢 [AuthStore] Logout completed');
+      }
     } catch (e) {
       debugPrint('🔴 [AuthStore] Error during logout: $e');
       state = state.copyWith(hasLoaded: true);
@@ -190,6 +196,7 @@ class AuthStore extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true);
 
     try {
+      debugPrint("The user is = ${userModel}");
       final result = await _authRepo.loginUser(userModel, role);
 
       // ✅ Safely read message from repository result
@@ -198,6 +205,11 @@ class AuthStore extends StateNotifier<AuthState> {
 
       if (success) {
         debugPrint('🟢 [AuthStore] Login successful, setting login state');
+
+        final prefs = await SharedPreferences.getInstance();
+        final loginFcm = userModel.fcmToken;
+        await prefs.setString('fcmToken', loginFcm!);
+
         await setLogIn(result['data']);
         state = state.copyWith(isLoading: false);
         return {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:markmeapp/presentation/widgets/dashboard_action_card.dart';
 import 'package:markmeapp/presentation/widgets/recent_activity.dart';
 
 class ClerkDashboardPage extends StatefulWidget {
@@ -137,73 +138,43 @@ class _ClerkDashboardPageState extends State<ClerkDashboardPage> {
       crossAxisSpacing: 16,
       mainAxisSpacing: 16,
       children: [
-        _buildActionButton(
+        DashboardActionCard(
           icon: Icons.person_add_alt_1_outlined,
-          label: 'Add Students',
+          title: "Add Student",
+          onTap: () {
+            Navigator.pushNamed(context, '/clerk/new-student');
+          },
           color: const Color(0xFF64B5F6),
-          redirect: '/clerk/new-student',
+          index: 0,
         ),
-        _buildActionButton(
+        DashboardActionCard(
           icon: Icons.person_add_alt_outlined,
-          label: 'Add Teacher',
+          title: "Add Teacher",
+          onTap: () {
+            Navigator.pushNamed(context, '/clerk/add-teacher');
+          },
           color: const Color(0xFF81C784),
-          redirect: '/clerk/add-teacher',
+          index: 1,
         ),
-        _buildActionButton(
+        DashboardActionCard(
           icon: Icons.assignment_outlined,
-          label: 'Add Subject',
+          title: "Add Subject",
+          onTap: () {
+            Navigator.pushNamed(context, '/clerk/add-subject');
+          },
           color: const Color(0xFFBA68C8),
-          redirect: '/clerk/add-subject',
+          index: 2,
         ),
-        _buildActionButton(
+        DashboardActionCard(
           icon: Icons.calendar_month_outlined,
-          label: 'Set Timetable',
+          title: "Set Timetable",
+          onTap: () {
+            Navigator.pushNamed(context, '/clerk/add-timetable');
+          },
           color: const Color(0xFFFFB74D),
-          redirect: '/clerk/add-timetable',
+          index: 3,
         ),
       ],
-    );
-  }
-
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required String redirect,
-  }) {
-    return SizedBox(
-      width: 120,
-      height: 120,
-      child: Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        color: color,
-        child: InkWell(
-          onTap: () {
-            context.go(redirect);
-          },
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, color: Colors.white, size: 40),
-                const SizedBox(height: 8),
-                Text(
-                  label,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 

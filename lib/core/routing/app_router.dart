@@ -28,6 +28,7 @@ import 'package:markmeapp/presentation/pages/clerk/profile_page.dart'
     as ClerkProfile;
 import 'package:markmeapp/presentation/pages/clerk/add_subject_page.dart';
 import 'package:markmeapp/presentation/pages/clerk/add_teacher_page.dart';
+import 'package:markmeapp/presentation/pages/teacher/push_notification_page.dart';
 
 // Teacher & Admin Pages
 import 'package:markmeapp/presentation/pages/teacher/teacher_dashboard_page.dart';
@@ -134,7 +135,7 @@ class AppRouter {
         ),
 
         // --------------------------------------------------------
-        // 🧱 PROTECTED ROUTES (with ProtectedLayout)
+        // 🧱 PROTECTED ROUTES WITH BOTTOM NAVIGATION
         // --------------------------------------------------------
         ShellRoute(
           builder: (context, state, child) =>
@@ -207,27 +208,37 @@ class AppRouter {
         ),
 
         // --------------------------------------------------------
-        // ✏️ OUTSIDE-PROTECTED ROUTES (single-purpose pages)
+        // 🔒 PROTECTED ROUTES WITHOUT BOTTOM NAVIGATION
         // --------------------------------------------------------
-        GoRoute(
-          path: '/student/edit-profile',
-          name: 'edit_profile',
-          builder: (context, state) => const EditProfilePage(),
-        ),
-        GoRoute(
-          path: '/student/change-password',
-          name: 'change_password',
-          builder: (context, state) => const ChangePasswordPage(),
-        ),
-        GoRoute(
-          path: '/clerk/add-teacher',
-          name: 'add_teacher',
-          builder: (context, state) => const AddTeacherPage(),
-        ),
-        GoRoute(
-          path: '/clerk/add-subject',
-          name: 'add_subject',
-          builder: (context, state) => const AddSubjectPage(),
+        ShellRoute(
+          builder: (context, state, child) => ProtectedLayout(child: child),
+          routes: [
+            GoRoute(
+              path: '/student/edit-profile',
+              name: 'edit_profile',
+              builder: (context, state) => const EditProfilePage(),
+            ),
+            GoRoute(
+              path: '/student/change-password',
+              name: 'change_password',
+              builder: (context, state) => const ChangePasswordPage(),
+            ),
+            GoRoute(
+              path: '/clerk/add-teacher',
+              name: 'add_teacher',
+              builder: (context, state) => const AddTeacherPage(),
+            ),
+            GoRoute(
+              path: '/clerk/add-subject',
+              name: 'add_subject',
+              builder: (context, state) => const AddSubjectPage(),
+            ),
+            GoRoute(
+              path: '/teacher/push-notification',
+              name: 'push_notification',
+              builder: (context, state) => const PushNotificationPage(),
+            ),
+          ],
         ),
       ],
     );

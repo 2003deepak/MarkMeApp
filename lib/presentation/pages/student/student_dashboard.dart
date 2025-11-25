@@ -7,7 +7,7 @@ import 'package:markmeapp/presentation/widgets/attendance_chart_widget.dart';
 import 'package:markmeapp/presentation/widgets/subject_selector_widget.dart';
 import 'package:markmeapp/presentation/widgets/attendance_stats_widget.dart';
 import 'package:markmeapp/presentation/widgets/ui/empty_data.dart';
-import 'package:markmeapp/presentation/widgets/upcoming_lectures_widget.dart';
+import 'package:markmeapp/presentation/widgets/lectures_widget.dart';
 import 'package:markmeapp/presentation/widgets/recent_activity_widget.dart';
 import 'package:markmeapp/presentation/widgets/ui/error.dart';
 import 'package:markmeapp/core/utils/student_data_processor.dart';
@@ -188,12 +188,14 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
 
         const SizedBox(height: 24),
 
-        UpcomingLecturesWidget(
-          upcomingSessions: upcomingSessions,
+        LecturesWidget(
+          title: "Upcoming Session",
+          sessions: upcomingSessions,
           isLoading: isLoadingUpcoming,
           errorMessage: upcomingErrorMessage,
           onRetry: _retryUpcomingFetch,
           isDesktop: isDesktop,
+          entityType: 'student',
         ),
 
         const SizedBox(height: 24),

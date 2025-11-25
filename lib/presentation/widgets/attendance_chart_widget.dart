@@ -47,6 +47,7 @@ class _AttendanceChartWidgetState extends State<AttendanceChartWidget>
   }
 
   Color _getAttendanceColor(double percentage) {
+    if (percentage == 0) return _absentColor; // Return absent color for 0%
     if (percentage >= 75) return const Color(0xFF10B981); // green
     if (percentage >= 60) return const Color(0xFFF59E0B); // amber
     if (percentage >= 45) return const Color(0xFFFB923C); // orange
@@ -93,6 +94,31 @@ class _AttendanceChartWidgetState extends State<AttendanceChartWidget>
     final double baseRadius = centerSpaceRadius + ringThickness;
     final double touchedRadius = baseRadius + (isDesktop ? 5 : 4);
 
+    // When attendance is 0%, show only one section for absent
+    if (attended == 0 && missed > 0) {
+      return [
+        PieChartSectionData(
+          color: _absentColor,
+          value: missed.toDouble(),
+          title: '',
+          radius: touchedIndex == 0 ? touchedRadius : baseRadius,
+        ),
+      ];
+    }
+
+    // When both attended and missed are 0, show a single absent section
+    if (attended == 0 && missed == 0) {
+      return [
+        PieChartSectionData(
+          color: _absentColor,
+          value: 1.0, // Use a small value to ensure the circle is drawn
+          title: '',
+          radius: touchedIndex == 0 ? touchedRadius : baseRadius,
+        ),
+      ];
+    }
+
+    // Normal case with both present and absent
     return [
       PieChartSectionData(
         color: presentColor,
@@ -142,6 +168,17 @@ class _AttendanceChartWidgetState extends State<AttendanceChartWidget>
     required int missed,
     required Color presentColor,
   }) {
+    // When attendance is 0%, only show absent in legend
+    if (attended == 0) {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _buildLegendItem('Present', presentColor, sub: '$attended'),
+          _buildLegendItem('Absent', _absentColor, sub: '$missed'),
+        ],
+      );
+    }
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
@@ -199,8 +236,8 @@ class _AttendanceChartWidgetState extends State<AttendanceChartWidget>
                       return Transform.scale(
                         scale: _scaleAnimation!.value,
                         child: SizedBox(
-                          height: isDesktop ? 240 : 200, // ✅ Reduced height
-                          width: isDesktop ? 240 : 200, // ✅ Reduced width
+                          height: isDesktop ? 240 : 200,
+                          width: isDesktop ? 240 : 200,
                           child: Stack(
                             alignment: Alignment.center,
                             children: [
@@ -246,7 +283,9 @@ class _AttendanceChartWidgetState extends State<AttendanceChartWidget>
                                     style: TextStyle(
                                       fontSize: isDesktop ? 26 : 22,
                                       fontWeight: FontWeight.w800,
-                                      color: stats.color,
+                                      color: stats.attended == 0
+                                          ? _absentColor
+                                          : stats.color,
                                     ),
                                   ),
                                   const SizedBox(height: 4),

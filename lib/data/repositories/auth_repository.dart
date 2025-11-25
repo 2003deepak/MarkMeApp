@@ -71,7 +71,14 @@ class AuthRepository {
 
       final response = await _dio.post(
         url,
-        data: {'email': user.email, 'password': user.password, 'role': role},
+        data: {
+          'email': user.email,
+          'password': user.password,
+          'role': role,
+          'fcm_token': user.fcmToken,
+          'device_type': user.deviceType,
+          'device_info': user.deviceInfo,
+        },
       );
 
       print('🔵 [AuthRepository] HTTP Status Code: ${response.statusCode}');
@@ -92,6 +99,38 @@ class AuthRepository {
         return {
           'success': false,
           'message': responseBody['message'] ?? 'Login failed',
+        };
+      }
+    } on DioException catch (e) {
+      print('🔴 [AuthRepository] DioException caught: $e');
+      print('🔴 [AuthRepository] Error response: ${e.response?.data}');
+
+      final errorMessage =
+          e.response?.data?['message'] ?? e.message ?? 'Network error occurred';
+      return {'success': false, 'message': errorMessage};
+    } catch (e) {
+      print('🔴 [AuthRepository] Exception caught: $e');
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> logoutUser(String fcmToken) async {
+    try {
+      final url = '/auth/logout';
+
+      final response = await _dio.post(url, data: {'fcm_token': fcmToken});
+
+      print('🔵 [AuthRepository] HTTP Status Code: ${response.statusCode}');
+
+      final responseBody = response.data;
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': responseBody["message"]};
+      } else {
+        print(responseBody);
+        return {
+          'success': false,
+          'message': responseBody['message'] ?? 'Logout failed',
         };
       }
     } on DioException catch (e) {

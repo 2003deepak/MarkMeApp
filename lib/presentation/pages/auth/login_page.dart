@@ -1,7 +1,11 @@
+import 'dart:io';
+
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:markmeapp/core/utils/get_device_info.dart';
 import 'package:markmeapp/data/models/user_model.dart';
 import 'package:markmeapp/presentation/widgets/ui/input_field.dart';
 import 'package:markmeapp/presentation/widgets/ui/otp_field.dart';
@@ -50,12 +54,21 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         return;
       }
 
+      final fcmToken = await FirebaseMessaging.instance.getToken();
+      final deviceType = Platform.isAndroid ? "android" : "ios";
+      final deviceInfo = await getDeviceInfo();
+
       final user = User(
         firstName: '',
         lastName: '',
         email: _emailController.text.trim(),
         password: _enteredPassword,
+        fcmToken: fcmToken,
+        deviceType: deviceType,
+        deviceInfo: deviceInfo,
       );
+
+  
 
       debugPrint(
         '🔵 [LoginPage] Attempting login with email: ${user.email}, role: $_selectedRole',

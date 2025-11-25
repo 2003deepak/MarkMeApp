@@ -14,21 +14,6 @@ class ProfilePage extends ConsumerStatefulWidget {
 }
 
 class _ProfilePageState extends ConsumerState<ProfilePage> {
-  final _rollCtrl = TextEditingController(text: 'KCBSCIT69');
-  final _dobCtrl = TextEditingController();
-
-  final _firstNameCtrl = TextEditingController();
-  final _middleNameCtrl = TextEditingController();
-  final _lastNameCtrl = TextEditingController();
-  final _emailReadOnlyCtrl = TextEditingController(text: 'student@example.edu');
-  final _phoneNewCtrl = TextEditingController();
-  final _roll3Ctrl = TextEditingController();
-  final _batchYearCtrl = TextEditingController();
-
-  String? _program;
-  String? _dept;
-  int? _semester;
-
   Future<void> _handleLogout() async {
     await ref.read(authStoreProvider.notifier).setLogOut();
     if (mounted) {
@@ -37,13 +22,11 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   }
 
   void _onUpdatePassword() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Navigate to Update Password')),
-    );
+    // context.push('/student/change-password');
   }
 
   void _openEditProfile() {
-    context.push('/clerk/edit-profile');
+    // context.push('/student/edit-profile');
   }
 
   SizedBox gap(double v) => SizedBox(height: v);
@@ -166,15 +149,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
   @override
   void dispose() {
-    _rollCtrl.dispose();
-    _dobCtrl.dispose();
-    _firstNameCtrl.dispose();
-    _middleNameCtrl.dispose();
-    _lastNameCtrl.dispose();
-    _emailReadOnlyCtrl.dispose();
-    _phoneNewCtrl.dispose();
-    _roll3Ctrl.dispose();
-    _batchYearCtrl.dispose();
     super.dispose();
   }
 
@@ -223,7 +197,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '${_firstNameCtrl.text.isEmpty ? 'Clerk Panel' : _firstNameCtrl.text} ${_lastNameCtrl.text.isEmpty ? 'Vishnoi' : _lastNameCtrl.text}',
+                            'Indar Vishnoi',
                             style: GoogleFonts.inter(
                               fontSize: 18,
                               fontWeight: FontWeight.w600,
@@ -232,70 +206,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                             ),
                           ),
                           const SizedBox(height: 4),
-                          Text(
-                            _rollCtrl.text.isEmpty
-                                ? 'FE4590025'
-                                : _rollCtrl.text,
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
-                              color: const Color(0xFF6B7280),
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFEEF2FF),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(
-                                      Icons.school,
-                                      size: 14,
-                                      color: Color(0xFF4F46E5),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      _program ?? 'MCA',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
-                                        color: const Color(0xFF4F46E5),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF0F9FF),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  'Sem ${_semester ?? 1}',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                    color: const Color(0xFF0369A1),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
                         ],
                       ),
                     ),

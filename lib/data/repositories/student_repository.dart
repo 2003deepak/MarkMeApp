@@ -207,7 +207,7 @@ class StudentRepository {
       final response = await _dio.get('/attendance/student/summary');
 
       final responseBody = response.data;
-      // print('🟢 [StudentRepository] API Response: $responseBody');
+      print('🟢 [StudentRepository] API Response: $responseBody');
 
       // ✅ Handle 200 OK response
       if (response.statusCode == 200) {

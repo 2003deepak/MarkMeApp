@@ -1,338 +1,362 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:markmeapp/data/repositories/teacher_repository.dart';
 
-/// Class Selection Page - Beautiful UI for teachers to select specific classes
-/// This page allows teachers to:
-/// - View all available classes
-/// - Select specific classes for notifications
-/// - See class details like degree, semester, section
-/// 
-/// Backend developers: This page will need class API integration
-/// Expected endpoints:
-/// - GET /api/teacher/classes - Get teacher's assigned classes
-/// - GET /api/classes - Get all available classes
-class ClassSelectionPage extends StatefulWidget {
+class ClassSelectionPage extends ConsumerStatefulWidget {
   const ClassSelectionPage({Key? key}) : super(key: key);
 
   @override
-  State<ClassSelectionPage> createState() => _ClassSelectionPageState();
+  ConsumerState<ClassSelectionPage> createState() => _ClassSelectionPageState();
 }
 
-class _ClassSelectionPageState extends State<ClassSelectionPage>
-    with TickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
+class _ClassSelectionPageState extends ConsumerState<ClassSelectionPage> {
+  List<String> _selectedClassIds = [];
+  List<Map<String, dynamic>> _classes = [];
+  bool _isLoading = true;
+  String _errorMessage = '';
 
-  String? _selectedClassId;
+  final Map<String, Color> componentColors = {
+    'Lecture': const Color(0xFF1E3A8A), // Dark Blue
+    'Lab': const Color(0xFFE67C00), // Dark Orange
+    'Practical': const Color(0xFF059669), // Green for Practical
+    'Tutorial': const Color(0xFF7C3AED), // Purple for Tutorial
+  };
 
-  // Mock class data - will be replaced with backend data
-  final List<Map<String, dynamic>> _classes = [
-    {
-      'id': 'class_001',
-      'name': 'Computer Science Engineering',
-      'degree': 'B.Tech',
-      'semester': '6th Semester',
-      'section': 'A',
-      'year': '3rd Year',
-      'students_count': 45,
-      'subject': 'Data Structures & Algorithms',
-      'room': 'Room 101',
-      'building': 'Engineering Block',
-      'color': Colors.blue.shade600,
-    },
-    {
-      'id': 'class_002',
-      'name': 'Computer Science Engineering',
-      'degree': 'B.Tech',
-      'semester': '6th Semester',
-      'section': 'B',
-      'year': '3rd Year',
-      'students_count': 42,
-      'subject': 'Database Management Systems',
-      'room': 'Room 102',
-      'building': 'Engineering Block',
-      'color': Colors.green.shade600,
-    },
-    {
-      'id': 'class_003',
-      'name': 'Information Technology',
-      'degree': 'B.Tech',
-      'semester': '4th Semester',
-      'section': 'A',
-      'year': '2nd Year',
-      'students_count': 38,
-      'subject': 'Web Development',
-      'room': 'Lab C',
-      'building': 'Computer Lab Block',
-      'color': Colors.purple.shade600,
-    },
-    {
-      'id': 'class_004',
-      'name': 'Computer Applications',
-      'degree': 'MCA',
-      'semester': '2nd Semester',
-      'section': 'A',
-      'year': '1st Year',
-      'students_count': 35,
-      'subject': 'Advanced Java Programming',
-      'room': 'Room 201',
-      'building': 'PG Block',
-      'color': Colors.orange.shade600,
-    },
-    {
-      'id': 'class_005',
-      'name': 'Computer Science Engineering',
-      'degree': 'B.Tech',
-      'semester': '8th Semester',
-      'section': 'A',
-      'year': '4th Year',
-      'students_count': 40,
-      'subject': 'Machine Learning',
-      'room': 'Room 401',
-      'building': 'Research Block',
-      'color': Colors.teal.shade600,
-    },
-    {
-      'id': 'class_006',
-      'name': 'Electronics & Communication',
-      'degree': 'B.Tech',
-      'semester': '6th Semester',
-      'section': 'A',
-      'year': '3rd Year',
-      'students_count': 43,
-      'subject': 'Digital Signal Processing',
-      'room': 'Room 301',
-      'building': 'Electronics Block',
-      'color': Colors.indigo.shade600,
-    },
-  ];
+  final Map<String, Color> componentLightColors = {
+    'Lecture': const Color(0xFFDBEAFE), // Light Blue
+    'Lab': const Color(0xFFFFEDD5), // Light Orange
+    'Practical': const Color(0xFFD1FAE5), // Light Green
+    'Tutorial': const Color(0xFFF3E8FF), // Light Purple
+  };
+
+  void _handleBackPressed() {
+    context.pop();
+  }
 
   @override
   void initState() {
     super.initState();
-    
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
-    );
-
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
-
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.2),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOutCubic,
-    ));
-
-    _animationController.forward();
+    _loadClasses();
   }
 
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
+  Future<void> _loadClasses() async {
+    try {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = '';
+      });
+
+      final teacherRepo = ref.read(teacherRepositoryProvider);
+      final response = await teacherRepo.fetchClassForNotification();
+
+      debugPrint("📦 Class Fetch Response: $response");
+
+      if (response['success'] == true) {
+        final apiData = response['data'] as List<dynamic>;
+        _classes = _transformApiData(apiData);
+      } else {
+        setState(() {
+          _errorMessage = response['error'] ?? 'Failed to load classes';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'An error occurred while loading classes: $e';
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  List<Map<String, dynamic>> _transformApiData(List<dynamic> apiData) {
+    final List<Map<String, dynamic>> transformedClasses = [];
+    final List<Color> colorOptions = [
+      Colors.blue.shade600,
+      Colors.blue.shade600, // All blue colors
+      Colors.blue.shade600,
+      Colors.blue.shade600,
+      Colors.blue.shade600,
+      Colors.blue.shade600,
+      Colors.blue.shade600,
+      Colors.blue.shade600,
+    ];
+
+    for (int i = 0; i < apiData.length; i++) {
+      final classData = apiData[i] as Map<String, dynamic>;
+      final subjects = classData['subjects'] as List<dynamic>;
+
+      final firstSubject = subjects.isNotEmpty
+          ? subjects[0] as Map<String, dynamic>
+          : null;
+
+      transformedClasses.add({
+        'id': 'class_${i + 1}',
+        'name': classData['program'] ?? 'Unknown Program',
+        'degree': '${classData['program']} Program',
+        'semester': '${classData['semester']}th Semester',
+        'section': 'A',
+        'year': _getYearFromSemester(classData['semester']),
+        'students_count': classData['student_count'] ?? 0,
+        'subject': firstSubject != null
+            ? '${firstSubject['subject_name']} (${firstSubject['subject_code']})'
+            : 'No Subject',
+        'color': colorOptions[i % colorOptions.length],
+        'api_data': classData,
+      });
+    }
+
+    return transformedClasses;
+  }
+
+  String _getYearFromSemester(dynamic semester) {
+    final sem = semester is int
+        ? semester
+        : int.tryParse(semester.toString()) ?? 1;
+    if (sem <= 2) return '1st Year';
+    if (sem <= 4) return '2nd Year';
+    if (sem <= 6) return '3rd Year';
+    return '4th Year';
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: const Color(0xFFF8FAFC),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF2563EB),
+        leading: IconButton(
+          icon: Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.arrow_back_ios_new_rounded,
+              size: 18,
+              color: Colors.white,
+            ),
+          ),
+          onPressed: _handleBackPressed,
+        ),
+        title: const Text(
+          'Select Class',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        centerTitle: true,
+        elevation: 0,
+        systemOverlayStyle: SystemUiOverlayStyle.light,
+      ),
       body: SafeArea(
-        child: AnimatedBuilder(
-          animation: _animationController,
-          builder: (context, child) {
-            return FadeTransition(
-              opacity: _fadeAnimation,
-              child: SlideTransition(
-                position: _slideAnimation,
-                child: Column(
-                  children: [
-                    // Custom App Bar
-                    _buildCustomAppBar(),
-                    
-                    // Main Content
-                    Expanded(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Header Section
-                            _buildHeaderSection(),
-                            
-                            const SizedBox(height: 24),
-                            
-                            // Classes List
-                            _buildClassesList(),
-                            
-                            const SizedBox(height: 24),
-                          ],
-                        ),
-                      ),
-                    ),
-                    
-                    // Bottom Action Button
-                    if (_selectedClassId != null) _buildBottomActionButton(),
-                  ],
-                ),
-              ),
-            );
-          },
+        child: Column(
+          children: [
+            // Main Content
+            Expanded(child: _buildContent()),
+
+            // Bottom Action Button
+            if (_selectedClassIds.isNotEmpty) _buildBottomActionButton(),
+          ],
         ),
       ),
     );
   }
 
-  /// Builds custom app bar
-  Widget _buildCustomAppBar() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+  Widget _buildContent() {
+    if (_isLoading) {
+      return _buildLoadingState();
+    }
+
+    if (_errorMessage.isNotEmpty) {
+      return _buildErrorState();
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header Section
+          _buildHeaderSection(),
+
+          const SizedBox(height: 24),
+
+          // Classes List
+          _buildClassesList(),
+
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 60,
+            height: 60,
+            child: CircularProgressIndicator(
+              strokeWidth: 3,
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.blue.shade600),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'Loading Classes...',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey.shade600,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
       ),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Container(
-              width: 40,
-              height: 40,
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
               decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(12),
+                color: Colors.red.shade50,
+                shape: BoxShape.circle,
               ),
               child: Icon(
-                Icons.arrow_back_ios_new,
-                color: Colors.grey.shade700,
-                size: 20,
+                Icons.error_outline_rounded,
+                size: 40,
+                color: Colors.red.shade400,
               ),
             ),
-          ),
-          
-          const SizedBox(width: 16),
-          
-          const Expanded(
-            child: Text(
-              'Select Class',
+            const SizedBox(height: 20),
+            Text(
+              'Oops! Something went wrong',
               style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: Colors.black87,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade800,
               ),
             ),
-          ),
-          
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Colors.blue.shade50,
-              borderRadius: BorderRadius.circular(12),
+            const SizedBox(height: 8),
+            Text(
+              _errorMessage,
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+              textAlign: TextAlign.center,
             ),
-            child: Icon(
-              Icons.class_outlined,
-              color: Colors.blue.shade600,
-              size: 20,
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: _loadClasses,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2563EB),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                elevation: 2,
+              ),
+              child: const Text(
+                'Try Again',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   /// Builds header section
   Widget _buildHeaderSection() {
-    return TweenAnimationBuilder<double>(
-      duration: const Duration(milliseconds: 600),
-      tween: Tween(begin: 0.0, end: 1.0),
-      curve: Curves.easeOutBack,
-      builder: (context, animationValue, child) {
-        return Transform.scale(
-          scale: animationValue,
-          child: Container(
-            padding: const EdgeInsets.all(20),
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.blue.shade600, Colors.blue.shade800],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.blue.withOpacity(0.4),
+            blurRadius: 15,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 60,
+            height: 60,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.blue.shade600, Colors.blue.shade700],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.blue.withOpacity(0.3),
-                  blurRadius: 12,
-                  offset: const Offset(0, 6),
-                ),
-              ],
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: Row(
+            child: Icon(Icons.school_rounded, color: Colors.white, size: 28),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.school,
+                Text(
+                  'Choose Your Class',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
                     color: Colors.white,
-                    size: 24,
+                    letterSpacing: -0.5,
                   ),
                 ),
-                
-                const SizedBox(width: 16),
-                
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Choose Your Class',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        'Select the class you want to send notifications to',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.white70,
-                        ),
-                      ),
-                    ],
+                const SizedBox(height: 6),
+                Text(
+                  _classes.isEmpty
+                      ? 'No classes available'
+                      : '${_classes.length} ${_classes.length == 1 ? 'class' : 'classes'} available for selection',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.white.withOpacity(0.9),
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
             ),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 
   /// Builds classes list
   Widget _buildClassesList() {
+    if (_classes.isEmpty) {
+      return _buildEmptyState();
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -340,66 +364,77 @@ class _ClassSelectionPageState extends State<ClassSelectionPage>
           'Available Classes (${_classes.length})',
           style: const TextStyle(
             fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: Colors.black87,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF1E293B),
+            letterSpacing: -0.5,
           ),
         ),
-        
         const SizedBox(height: 16),
-        
-        ..._classes.asMap().entries.map((entry) {
-          final index = entry.key;
-          final classData = entry.value;
-          
-          return TweenAnimationBuilder<double>(
-            duration: Duration(milliseconds: 400 + (index * 100)),
-            tween: Tween(begin: 0.0, end: 1.0),
-            curve: Curves.easeOutBack,
-            builder: (context, animationValue, child) {
-              return Transform.translate(
-                offset: Offset(50 * (1 - animationValue), 0),
-                child: Opacity(
-                  opacity: animationValue,
-                  child: _buildClassCard(classData),
-                ),
-              );
-            },
-          );
-        }).toList(),
+        ..._classes.map((classData) => _buildClassCard(classData)).toList(),
       ],
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Container(
+      padding: const EdgeInsets.all(40),
+      child: Column(
+        children: [
+          Icon(Icons.class_outlined, size: 64, color: Colors.grey.shade400),
+          const SizedBox(height: 16),
+          Text(
+            'No Classes Available',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey.shade600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'There are no classes assigned to you at the moment.',
+            style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     );
   }
 
   /// Builds individual class card
   Widget _buildClassCard(Map<String, dynamic> classData) {
-    final isSelected = _selectedClassId == classData['id'];
-    
+    final isSelected = _selectedClassIds.contains(classData['id']);
+    final cardColor = Colors.blue.shade600; // Always blue
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       child: GestureDetector(
         onTap: () {
           setState(() {
-            _selectedClassId = classData['id'];
+            if (isSelected) {
+              _selectedClassIds.remove(classData['id']);
+            } else {
+              _selectedClassIds.add(classData['id']);
+            }
           });
           HapticFeedback.lightImpact();
         },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
+        child: Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: isSelected ? Colors.blue.shade50 : Colors.white,
+            color: isSelected ? cardColor.withOpacity(0.05) : Colors.white,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: isSelected ? Colors.blue.shade600 : Colors.grey.shade200,
+              color: isSelected ? cardColor : Colors.grey.shade200,
               width: isSelected ? 2 : 1,
             ),
             boxShadow: [
               BoxShadow(
-                color: isSelected 
-                    ? Colors.blue.withOpacity(0.1)
+                color: isSelected
+                    ? cardColor.withOpacity(0.15)
                     : Colors.black.withOpacity(0.05),
-                blurRadius: isSelected ? 12 : 4,
-                offset: const Offset(0, 2),
+                blurRadius: isSelected ? 16 : 8,
+                offset: const Offset(0, 3),
               ),
             ],
           ),
@@ -413,97 +448,101 @@ class _ClassSelectionPageState extends State<ClassSelectionPage>
                     width: 50,
                     height: 50,
                     decoration: BoxDecoration(
-                      color: (classData['color'] as Color).withOpacity(0.1),
+                      gradient: LinearGradient(
+                        colors: [cardColor.withOpacity(0.8), cardColor],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
                       borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: cardColor.withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
                     ),
                     child: Icon(
-                      Icons.class_outlined,
-                      color: classData['color'] as Color,
+                      Icons.class_rounded,
+                      color: Colors.white,
                       size: 24,
                     ),
                   ),
-                  
                   const SizedBox(width: 16),
-                  
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '${classData['degree']} ${classData['name']}',
+                          classData['degree'] ?? 'Unknown Program',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
-                            color: isSelected ? Colors.blue.shade600 : Colors.black87,
+                            color: isSelected ? cardColor : Colors.black87,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          '${classData['year']} • Section ${classData['section']}',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey.shade600,
-                            fontWeight: FontWeight.w500,
-                          ),
+                        Row(
+                          children: [
+                            _buildInfoChip(
+                              '${classData['year']}',
+                              Colors.blue.shade100,
+                              Colors.blue.shade800,
+                            ),
+                            const SizedBox(width: 6),
+                            _buildInfoChip(
+                              classData['semester'],
+                              Colors.blue.shade100, // Changed to blue
+                              Colors.blue.shade800, // Changed to blue
+                            ),
+                          ],
                         ),
                       ],
                     ),
                   ),
-                  
-                  if (isSelected)
-                    Container(
-                      width: 30,
-                      height: 30,
-                      decoration: BoxDecoration(
-                        color: Colors.blue.shade600,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.check,
-                        color: Colors.white,
-                        size: 18,
+                  // Selection Indicator
+                  Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: isSelected ? cardColor : Colors.grey.shade300,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: isSelected ? cardColor : Colors.grey.shade400,
+                        width: 2,
                       ),
                     ),
+                    child: isSelected
+                        ? Icon(
+                            Icons.check_rounded,
+                            color: Colors.white,
+                            size: 16,
+                          )
+                        : null,
+                  ),
                 ],
               ),
-              
               const SizedBox(height: 16),
-              
-              // Details Row
-              Row(
-                children: [
-                  _buildDetailChip(
-                    icon: Icons.book_outlined,
-                    label: classData['subject'],
-                    color: classData['color'] as Color,
-                  ),
-                  const SizedBox(width: 8),
-                  _buildDetailChip(
-                    icon: Icons.people_outline,
-                    label: '${classData['students_count']} Students',
-                    color: Colors.grey.shade600,
-                  ),
-                ],
-              ),
-              
+              // Subjects Information
+              if (classData['api_data']['subjects'] != null)
+                _buildSubjectsSection(classData['api_data']['subjects']),
               const SizedBox(height: 12),
-              
-              // Location Row
+              // Footer with student count
               Row(
                 children: [
-                  Icon(
-                    Icons.location_on_outlined,
-                    size: 16,
-                    color: Colors.grey.shade600,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${classData['room']}, ${classData['building']}',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey.shade600,
+                  _buildStudentCount(classData['students_count']),
+                  const Spacer(),
+                  if (isSelected)
+                    Text(
+                      'Selected',
+                      style: TextStyle(
+                        color: cardColor,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
                     ),
-                  ),
                 ],
               ),
             ],
@@ -513,42 +552,152 @@ class _ClassSelectionPageState extends State<ClassSelectionPage>
     );
   }
 
-  /// Builds detail chip
-  Widget _buildDetailChip({
-    required IconData icon,
-    required String label,
-    required Color color,
-  }) {
+  Widget _buildInfoChip(String text, Color backgroundColor, Color textColor) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(6),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: 14,
-            color: color,
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 11,
+          color: textColor,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStudentCount(int count) {
+    return Row(
+      children: [
+        Icon(Icons.people_alt_rounded, size: 16, color: Colors.grey.shade600),
+        const SizedBox(width: 4),
+        Text(
+          '$count ${count == 1 ? 'Student' : 'Students'}',
+          style: TextStyle(
+            fontSize: 13,
+            color: Colors.grey.shade700,
+            fontWeight: FontWeight.w500,
           ),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: color,
+        ),
+      ],
+    );
+  }
+
+  /// Builds subjects section with improved component colors
+  Widget _buildSubjectsSection(List<dynamic> subjects) {
+    if (subjects.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.info_outline_rounded,
+              size: 16,
+              color: Colors.grey.shade500,
             ),
+            const SizedBox(width: 8),
+            Text(
+              'No subjects assigned',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Subjects (${subjects.length})',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey.shade700,
           ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 6,
+          children: subjects.map<Widget>((subject) {
+            final subjectMap = subject as Map<String, dynamic>;
+            final component = subjectMap['component']?.toString() ?? 'Unknown';
+            final subjectName =
+                subjectMap['subject_name']?.toString() ?? 'Unknown';
+            final subjectCode = subjectMap['subject_code']?.toString() ?? '';
+
+            final bgColor = componentColors[component] ?? Colors.grey.shade600;
+            final lightColor =
+                componentLightColors[component] ?? Colors.grey.shade100;
+
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: lightColor,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: bgColor.withOpacity(0.3)),
+                boxShadow: [
+                  BoxShadow(
+                    color: bgColor.withOpacity(0.1),
+                    blurRadius: 2,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: bgColor,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    subjectName.length > 20
+                        ? '${subjectName.substring(0, 20)}...'
+                        : subjectName,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade800,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '($component)',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: bgColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 
   /// Builds bottom action button
   Widget _buildBottomActionButton() {
+    final selectedCount = _selectedClassIds.length;
+    final cardColor = Colors.blue.shade600;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -556,78 +705,127 @@ class _ClassSelectionPageState extends State<ClassSelectionPage>
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
+            blurRadius: 15,
+            offset: const Offset(0, -3),
           ),
         ],
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(20),
+          topRight: Radius.circular(20),
+        ),
       ),
-      child: TweenAnimationBuilder<double>(
-        duration: const Duration(milliseconds: 400),
-        tween: Tween(begin: 0.0, end: 1.0),
-        curve: Curves.elasticOut,
-        builder: (context, animationValue, child) {
-          return Transform.scale(
-            scale: animationValue,
-            child: Container(
-              width: double.infinity,
-              height: 50,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.blue.shade600, Colors.blue.shade700],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                ),
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.blue.withOpacity(0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: ElevatedButton.icon(
-                onPressed: _confirmSelection,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  shadowColor: Colors.transparent,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                icon: const Icon(
-                  Icons.check,
-                  color: Colors.white,
-                  size: 20,
-                ),
-                label: const Text(
-                  'Select This Class',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
+      child: Container(
+        width: double.infinity,
+        height: 56,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [cardColor, cardColor.withOpacity(0.8)],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: cardColor.withOpacity(0.4),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
             ),
-          );
-        },
+          ],
+        ),
+        child: ElevatedButton.icon(
+          onPressed: _confirmSelection,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.transparent,
+            shadowColor: Colors.transparent,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+          ),
+          icon: const Icon(
+            Icons.check_circle_rounded,
+            color: Colors.white,
+            size: 22,
+          ),
+          label: Text(
+            'Select $selectedCount ${selectedCount == 1 ? 'Class' : 'Classes'}',
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+        ),
       ),
     );
   }
 
-  /// Confirms class selection
+  /// Confirms class selection and returns formatted data for AppNotificationModel filters
   void _confirmSelection() {
-    if (_selectedClassId != null) {
-      final selectedClass = _classes.firstWhere(
-        (c) => c['id'] == _selectedClassId,
-      );
-      
-      Navigator.pop(context, {
-        'class_id': _selectedClassId,
-        'class_name': selectedClass['name'],
-        'students_count': selectedClass['students_count'],
-      });
+    if (_selectedClassIds.isNotEmpty) {
+      final selectedClasses = _classes
+          .where((c) => _selectedClassIds.contains(c['id']))
+          .toList();
+
+      // Create filters array in the exact format needed for the API
+      final List<Map<String, dynamic>> filters = [];
+
+      for (final selectedClass in selectedClasses) {
+        final apiData = selectedClass['api_data'] as Map<String, dynamic>;
+
+        final program = apiData['program']?.toString() ?? '';
+        final semester = apiData['semester'];
+        final batchYear = _calculateBatchYear(semester);
+        final departments = _extractDepartments(apiData);
+
+        // Use the first department if available, otherwise use program as fallback
+        final dept = departments.isNotEmpty ? departments.first : program;
+
+        // Create filter object in the exact API format
+        final filter = {
+          "dept": dept,
+          "program": program,
+          "semester": semester is int
+              ? semester
+              : int.tryParse(semester.toString()),
+          "batch_year": batchYear,
+        };
+
+        // Only add filter if it has valid data
+        if (filter["dept"] != null && filter["dept"].toString().isNotEmpty) {
+          filters.add(filter);
+        }
+      }
+
+      // Return formatted data for AppNotificationModel filters
+      Navigator.pop(context, {'filters': filters});
     }
+  }
+
+  /// Calculate batch year based on current year and semester
+  int? _calculateBatchYear(dynamic semester) {
+    try {
+      final currentYear = DateTime.now().year;
+      final sem = semester is int
+          ? semester
+          : int.tryParse(semester.toString());
+      if (sem == null) return null;
+
+      final yearOffset = (sem - 1) ~/ 2;
+      return currentYear - yearOffset;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Extract departments from API data
+  List<String> _extractDepartments(Map<String, dynamic> apiData) {
+    final departments = <String>[];
+    final dept = apiData['department']?.toString() ?? '';
+
+    if (dept.isNotEmpty) {
+      departments.add(dept);
+    }
+
+    return departments;
   }
 }

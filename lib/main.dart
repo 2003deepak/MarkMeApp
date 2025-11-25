@@ -32,9 +32,6 @@ Future<void> _initLocalNotifications() async {
   );
 }
 
-// =======================================================
-// MAIN
-// =======================================================
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -54,9 +51,6 @@ void main() async {
   runApp(const ProviderScope(child: MyApp()));
 }
 
-// =======================================================
-// APP ROOT
-// =======================================================
 class MyApp extends ConsumerStatefulWidget {
   const MyApp({super.key});
 
@@ -71,9 +65,8 @@ class _MyAppState extends ConsumerState<MyApp> {
   void initState() {
     super.initState();
 
-    _setupFCMListeners(); // 🔥 Add FCM integration here
+    _setupFCMListeners();
 
-    // ------------------- EXISTING USER SESSION LOGIC -------------------
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final authStore = ref.read(authStoreProvider.notifier);
       await authStore.loadUserData(ref, context);
@@ -101,12 +94,8 @@ class _MyAppState extends ConsumerState<MyApp> {
 
     // FCM Permission
     FirebaseMessaging.instance.requestPermission();
-    // ------------------------------------------------------
   }
 
-  // =======================================================
-  // FCM LISTENERS (FOREGROUND, BACKGROUND, TERMINATED)
-  // =======================================================
   Future<void> _setupFCMListeners() async {
     FirebaseMessaging messaging = FirebaseMessaging.instance;
 
@@ -114,7 +103,6 @@ class _MyAppState extends ConsumerState<MyApp> {
     final token = await messaging.getToken();
     print("🔑 FCM Token: $token");
 
-    // -------------------- FOREGROUND MESSAGES --------------------
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       print("💬 Foreground message: ${message.notification?.title}");
 
@@ -139,13 +127,13 @@ class _MyAppState extends ConsumerState<MyApp> {
       }
     });
 
-    // -------------------- CLICKED FROM BACKGROUND --------------------
+    // CLICKED FROM BACKGROUND
     FirebaseMessaging.onMessageOpenedApp.listen((message) {
       print("📲 Notification clicked (background): ${message.data}");
       _navigateFromNotification(message.data);
     });
 
-    // -------------------- OPENED FROM TERMINATED --------------------
+    // OPENED FROM TERMINATED
     RemoteMessage? initialMessage = await FirebaseMessaging.instance
         .getInitialMessage();
 
@@ -155,9 +143,7 @@ class _MyAppState extends ConsumerState<MyApp> {
     }
   }
 
-  // =======================================================
   // HANDLE NAVIGATION WHEN USER TAPS NOTIFICATION
-  // =======================================================
   void _navigateFromNotification(Map<String, dynamic> data) {
     if (!mounted) return;
 
@@ -167,9 +153,6 @@ class _MyAppState extends ConsumerState<MyApp> {
     }
   }
 
-  // =======================================================
-  // UI
-  // =======================================================
   @override
   Widget build(BuildContext context) {
     final router = ref.watch(AppRouter.routerProvider);

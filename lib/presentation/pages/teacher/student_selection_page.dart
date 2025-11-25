@@ -42,7 +42,7 @@ class _StudentSelectionPageState extends ConsumerState<StudentSelectionPage> {
   final ScrollController _scrollController = ScrollController();
 
   // Static filter options
-  final List<String> _programs = ['BTECH', 'MTECH'];
+  final List<String> _programs = ['MCA', 'AI'];
   final List<int> _batchYears = [2025, 2024];
   final List<int> _semesters = [1, 2, 3, 4, 5, 6, 7, 8];
 
@@ -52,7 +52,6 @@ class _StudentSelectionPageState extends ConsumerState<StudentSelectionPage> {
     _setupSearchDebouncer();
     _setupScrollController();
     _loadStudents(reset: true);
-    _loadPreviouslySelectedStudents();
   }
 
   void _setupSearchDebouncer() {
@@ -72,34 +71,6 @@ class _StudentSelectionPageState extends ConsumerState<StudentSelectionPage> {
     });
   }
 
-  // Load previously selected students from storage or previous session
-  void _loadPreviouslySelectedStudents() {
-    // You can replace this with your actual storage solution
-    // For now, we'll use a simple example
-    // In a real app, you might use SharedPreferences, Hive, or pass data via route parameters
-    try {
-      // Example: Load from shared preferences or previous state
-      // final prefs = await SharedPreferences.getInstance();
-      // final selectedIds = prefs.getStringList('selected_student_ids');
-      // if (selectedIds != null) {
-      //   setState(() {
-      //     _selectedStudentIds.addAll(selectedIds);
-      //   });
-      // }
-
-      // Alternative: Pass selected students via route arguments
-      // final args = ModalRoute.of(context)?.settings.arguments;
-      // if (args is Map && args.containsKey('preselected_students')) {
-      //   final preselected = List<String>.from(args['preselected_students']);
-      //   setState(() {
-      //     _selectedStudentIds.addAll(preselected);
-      //   });
-      // }
-    } catch (e) {
-      print('Error loading previously selected students: $e');
-    }
-  }
-
   Future<void> _loadStudents({bool reset = false}) async {
     if (reset) {
       setState(() {
@@ -112,8 +83,7 @@ class _StudentSelectionPageState extends ConsumerState<StudentSelectionPage> {
       });
     }
 
-    if (_isLoading) return; // prevent duplicate calls
-
+    if (_isLoading) return;
     setState(() => _isLoading = true);
 
     try {
@@ -806,23 +776,10 @@ class _StudentSelectionPageState extends ConsumerState<StudentSelectionPage> {
         .where((s) => _selectedStudentIds.contains(s['id']))
         .toList();
 
-    // Save selected students to storage (optional)
-    // _saveSelectedStudents();
-
     context.pop({
       'count': _selectedStudentIds.length,
       'student_ids': _selectedStudentIds.toList(),
       'students': selectedStudents,
     });
   }
-
-  // Optional: Save selected students to persistent storage
-  // void _saveSelectedStudents() async {
-  //   try {
-  //     final prefs = await SharedPreferences.getInstance();
-  //     await prefs.setStringList('selected_student_ids', _selectedStudentIds.toList());
-  //   } catch (e) {
-  //     print('Error saving selected students: $e');
-  //   }
-  // }
 }

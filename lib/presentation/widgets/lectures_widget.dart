@@ -97,7 +97,7 @@ class LecturesWidget extends StatelessWidget {
         else if (sessions.isEmpty)
           _buildEmptyState()
         else
-          _buildSessionsList(),
+          _buildSessionsList(context),
       ],
     );
   }
@@ -115,7 +115,8 @@ class LecturesWidget extends StatelessWidget {
       subtitle = 'Check back later for scheduled sessions.';
     } else {
       heading = 'No Past Sessions Available';
-      subtitle = 'You haven’t conducted any sessions yet.';
+      subtitle =
+          'You haven\'t conducted any sessions yet.'; // ✅ Fixed: escaped apostrophe
     }
 
     return Container(
@@ -179,10 +180,12 @@ class LecturesWidget extends StatelessWidget {
     return Row(
       children: [
         Expanded(child: _buildSkeletonCard()),
-        const SizedBox(width: 12),
-        Expanded(child: _buildSkeletonCard()),
-        const SizedBox(width: 12),
-        Expanded(child: _buildSkeletonCard()),
+        if (isDesktop) ...[
+          const SizedBox(width: 12),
+          Expanded(child: _buildSkeletonCard()),
+          const SizedBox(width: 12),
+          Expanded(child: _buildSkeletonCard()),
+        ],
       ],
     );
   }
@@ -229,7 +232,7 @@ class LecturesWidget extends StatelessWidget {
   }
 
   // --- Main Sessions List ---
-  Widget _buildSessionsList() {
+  Widget _buildSessionsList(BuildContext context) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
@@ -241,10 +244,12 @@ class LecturesWidget extends StatelessWidget {
           final teacherName = session['teacher_name'] ?? '';
           final timeUntilStart = session['time_until_start_display'] ?? '';
 
-          final color = _getComponentColor(
-            component,
-            subjectName,
-          ); // 🎯 fixed color logic
+          // ✅ FIXED: Use 'session_id' instead of 'id'
+          final sessionId = session['session_id']?.toString();
+
+          debugPrint("🆔 Session ID for card: $sessionId");
+
+          final color = _getComponentColor(component, subjectName);
 
           return Container(
             width: isDesktop ? 200 : 160,
@@ -258,6 +263,8 @@ class LecturesWidget extends StatelessWidget {
               color: color,
               isDesktop: isDesktop,
               entityType: entityType,
+              sessionId: sessionId,
+              sessionData: session,
             ),
           );
         }).toList(),

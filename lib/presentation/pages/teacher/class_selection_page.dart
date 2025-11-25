@@ -11,13 +11,8 @@ class ClassSelectionPage extends ConsumerStatefulWidget {
   ConsumerState<ClassSelectionPage> createState() => _ClassSelectionPageState();
 }
 
-class _ClassSelectionPageState extends ConsumerState<ClassSelectionPage>
-    with TickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
-
-  String? _selectedClassId;
+class _ClassSelectionPageState extends ConsumerState<ClassSelectionPage> {
+  List<String> _selectedClassIds = [];
   List<Map<String, dynamic>> _classes = [];
   bool _isLoading = true;
   String _errorMessage = '';
@@ -37,30 +32,12 @@ class _ClassSelectionPageState extends ConsumerState<ClassSelectionPage>
   };
 
   void _handleBackPressed() {
-    context.pop("/teacher/push-notification");
+    context.pop();
   }
 
   @override
   void initState() {
     super.initState();
-
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
-    );
-
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
-    );
-
-    _slideAnimation =
-        Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
-          CurvedAnimation(
-            parent: _animationController,
-            curve: Curves.easeOutCubic,
-          ),
-        );
-
     _loadClasses();
   }
 
@@ -71,20 +48,14 @@ class _ClassSelectionPageState extends ConsumerState<ClassSelectionPage>
         _errorMessage = '';
       });
 
-      // Correct way to access the repository using Provider
       final teacherRepo = ref.read(teacherRepositoryProvider);
-
       final response = await teacherRepo.fetchClassForNotification();
 
       debugPrint("📦 Class Fetch Response: $response");
 
       if (response['success'] == true) {
         final apiData = response['data'] as List<dynamic>;
-
-        // Transform API data to match UI format
         _classes = _transformApiData(apiData);
-
-        _animationController.forward();
       } else {
         setState(() {
           _errorMessage = response['error'] ?? 'Failed to load classes';
@@ -105,20 +76,19 @@ class _ClassSelectionPageState extends ConsumerState<ClassSelectionPage>
     final List<Map<String, dynamic>> transformedClasses = [];
     final List<Color> colorOptions = [
       Colors.blue.shade600,
-      Colors.green.shade600,
-      Colors.orange.shade600,
-      Colors.purple.shade600,
-      Colors.red.shade600,
-      Colors.teal.shade600,
-      Colors.indigo.shade600,
-      Colors.pink.shade600,
+      Colors.blue.shade600, // All blue colors
+      Colors.blue.shade600,
+      Colors.blue.shade600,
+      Colors.blue.shade600,
+      Colors.blue.shade600,
+      Colors.blue.shade600,
+      Colors.blue.shade600,
     ];
 
     for (int i = 0; i < apiData.length; i++) {
       final classData = apiData[i] as Map<String, dynamic>;
       final subjects = classData['subjects'] as List<dynamic>;
 
-      // Use the first subject for display (you can modify this logic as needed)
       final firstSubject = subjects.isNotEmpty
           ? subjects[0] as Map<String, dynamic>
           : null;
@@ -128,14 +98,14 @@ class _ClassSelectionPageState extends ConsumerState<ClassSelectionPage>
         'name': classData['program'] ?? 'Unknown Program',
         'degree': '${classData['program']} Program',
         'semester': '${classData['semester']}th Semester',
-        'section': 'A', // You might want to get this from API if available
+        'section': 'A',
         'year': _getYearFromSemester(classData['semester']),
         'students_count': classData['student_count'] ?? 0,
         'subject': firstSubject != null
             ? '${firstSubject['subject_name']} (${firstSubject['subject_code']})'
             : 'No Subject',
         'color': colorOptions[i % colorOptions.length],
-        'api_data': classData, // Store original API data for later use
+        'api_data': classData,
       });
     }
 
@@ -150,12 +120,6 @@ class _ClassSelectionPageState extends ConsumerState<ClassSelectionPage>
     if (sem <= 4) return '2nd Year';
     if (sem <= 6) return '3rd Year';
     return '4th Year';
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
   }
 
   @override
@@ -193,25 +157,14 @@ class _ClassSelectionPageState extends ConsumerState<ClassSelectionPage>
         systemOverlayStyle: SystemUiOverlayStyle.light,
       ),
       body: SafeArea(
-        child: AnimatedBuilder(
-          animation: _animationController,
-          builder: (context, child) {
-            return FadeTransition(
-              opacity: _fadeAnimation,
-              child: SlideTransition(
-                position: _slideAnimation,
-                child: Column(
-                  children: [
-                    // Main Content
-                    Expanded(child: _buildContent()),
+        child: Column(
+          children: [
+            // Main Content
+            Expanded(child: _buildContent()),
 
-                    // Bottom Action Button
-                    if (_selectedClassId != null) _buildBottomActionButton(),
-                  ],
-                ),
-              ),
-            );
-          },
+            // Bottom Action Button
+            if (_selectedClassIds.isNotEmpty) _buildBottomActionButton(),
+          ],
         ),
       ),
     );
@@ -337,78 +290,64 @@ class _ClassSelectionPageState extends ConsumerState<ClassSelectionPage>
 
   /// Builds header section
   Widget _buildHeaderSection() {
-    return TweenAnimationBuilder<double>(
-      duration: const Duration(milliseconds: 600),
-      tween: Tween(begin: 0.0, end: 1.0),
-      curve: Curves.easeOutBack,
-      builder: (context, animationValue, child) {
-        return Transform.scale(
-          scale: animationValue,
-          child: Container(
-            padding: const EdgeInsets.all(20),
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.blue.shade600, Colors.blue.shade800],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.blue.withOpacity(0.4),
+            blurRadius: 15,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 60,
+            height: 60,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.blue.shade600, Colors.blue.shade800],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.blue.withOpacity(0.4),
-                  blurRadius: 15,
-                  offset: const Offset(0, 6),
-                ),
-              ],
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: Row(
+            child: Icon(Icons.school_rounded, color: Colors.white, size: 28),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    Icons.school_rounded,
+                Text(
+                  'Choose Your Class',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
                     color: Colors.white,
-                    size: 28,
+                    letterSpacing: -0.5,
                   ),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Choose Your Class',
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                          letterSpacing: -0.5,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        _classes.isEmpty
-                            ? 'No classes available'
-                            : '${_classes.length} ${_classes.length == 1 ? 'class' : 'classes'} available for selection',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.white.withOpacity(0.9),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
+                const SizedBox(height: 6),
+                Text(
+                  _classes.isEmpty
+                      ? 'No classes available'
+                      : '${_classes.length} ${_classes.length == 1 ? 'class' : 'classes'} available for selection',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.white.withOpacity(0.9),
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
             ),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 
@@ -431,25 +370,7 @@ class _ClassSelectionPageState extends ConsumerState<ClassSelectionPage>
           ),
         ),
         const SizedBox(height: 16),
-        ..._classes.asMap().entries.map((entry) {
-          final index = entry.key;
-          final classData = entry.value;
-
-          return TweenAnimationBuilder<double>(
-            duration: Duration(milliseconds: 400 + (index * 100)),
-            tween: Tween(begin: 0.0, end: 1.0),
-            curve: Curves.easeOutBack,
-            builder: (context, animationValue, child) {
-              return Transform.translate(
-                offset: Offset(30 * (1 - animationValue), 0),
-                child: Opacity(
-                  opacity: animationValue.clamp(0.0, 1.0),
-                  child: _buildClassCard(classData),
-                ),
-              );
-            },
-          );
-        }).toList(),
+        ..._classes.map((classData) => _buildClassCard(classData)).toList(),
       ],
     );
   }
@@ -482,20 +403,23 @@ class _ClassSelectionPageState extends ConsumerState<ClassSelectionPage>
 
   /// Builds individual class card
   Widget _buildClassCard(Map<String, dynamic> classData) {
-    final isSelected = _selectedClassId == classData['id'];
-    final cardColor = classData['color'] as Color;
+    final isSelected = _selectedClassIds.contains(classData['id']);
+    final cardColor = Colors.blue.shade600; // Always blue
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       child: GestureDetector(
         onTap: () {
           setState(() {
-            _selectedClassId = isSelected ? null : classData['id'];
+            if (isSelected) {
+              _selectedClassIds.remove(classData['id']);
+            } else {
+              _selectedClassIds.add(classData['id']);
+            }
           });
           HapticFeedback.lightImpact();
         },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
+        child: Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: isSelected ? cardColor.withOpacity(0.05) : Colors.white,
@@ -570,8 +494,8 @@ class _ClassSelectionPageState extends ConsumerState<ClassSelectionPage>
                             const SizedBox(width: 6),
                             _buildInfoChip(
                               classData['semester'],
-                              Colors.green.shade100,
-                              Colors.green.shade800,
+                              Colors.blue.shade100, // Changed to blue
+                              Colors.blue.shade800, // Changed to blue
                             ),
                           ],
                         ),
@@ -579,8 +503,7 @@ class _ClassSelectionPageState extends ConsumerState<ClassSelectionPage>
                     ),
                   ),
                   // Selection Indicator
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
+                  Container(
                     width: 24,
                     height: 24,
                     decoration: BoxDecoration(
@@ -772,10 +695,8 @@ class _ClassSelectionPageState extends ConsumerState<ClassSelectionPage>
 
   /// Builds bottom action button
   Widget _buildBottomActionButton() {
-    final selectedClass = _classes.firstWhere(
-      (c) => c['id'] == _selectedClassId,
-    );
-    final cardColor = selectedClass['color'] as Color;
+    final selectedCount = _selectedClassIds.length;
+    final cardColor = Colors.blue.shade600;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -793,78 +714,118 @@ class _ClassSelectionPageState extends ConsumerState<ClassSelectionPage>
           topRight: Radius.circular(20),
         ),
       ),
-      child: TweenAnimationBuilder<double>(
-        duration: const Duration(milliseconds: 500),
-        tween: Tween(begin: 0.0, end: 1.0),
-        curve: Curves.elasticOut,
-        builder: (context, animationValue, child) {
-          return Transform.scale(
-            scale: animationValue,
-            child: Container(
-              width: double.infinity,
-              height: 56,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [cardColor, cardColor.withOpacity(0.8)],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                ),
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                    color: cardColor.withOpacity(0.4),
-                    blurRadius: 12,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: ElevatedButton.icon(
-                onPressed: _confirmSelection,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  shadowColor: Colors.transparent,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-                icon: const Icon(
-                  Icons.check_circle_rounded,
-                  color: Colors.white,
-                  size: 22,
-                ),
-                label: Text(
-                  'Select ${selectedClass['degree']}',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
+      child: Container(
+        width: double.infinity,
+        height: 56,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [cardColor, cardColor.withOpacity(0.8)],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: cardColor.withOpacity(0.4),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
             ),
-          );
-        },
+          ],
+        ),
+        child: ElevatedButton.icon(
+          onPressed: _confirmSelection,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.transparent,
+            shadowColor: Colors.transparent,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+          ),
+          icon: const Icon(
+            Icons.check_circle_rounded,
+            color: Colors.white,
+            size: 22,
+          ),
+          label: Text(
+            'Select $selectedCount ${selectedCount == 1 ? 'Class' : 'Classes'}',
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+        ),
       ),
     );
   }
 
-  /// Confirms class selection
+  /// Confirms class selection and returns formatted data for AppNotificationModel filters
   void _confirmSelection() {
-    if (_selectedClassId != null) {
-      final selectedClass = _classes.firstWhere(
-        (c) => c['id'] == _selectedClassId,
-      );
+    if (_selectedClassIds.isNotEmpty) {
+      final selectedClasses = _classes
+          .where((c) => _selectedClassIds.contains(c['id']))
+          .toList();
 
-      // Return both formatted data and original API data
-      Navigator.pop(context, {
-        'class_id': _selectedClassId,
-        'class_name': selectedClass['name'],
-        'students_count': selectedClass['students_count'],
-        'program': selectedClass['api_data']['program'],
-        'semester': selectedClass['api_data']['semester'],
-        'subjects': selectedClass['api_data']['subjects'],
-        'original_data': selectedClass['api_data'],
-      });
+      // Create filters array in the exact format needed for the API
+      final List<Map<String, dynamic>> filters = [];
+
+      for (final selectedClass in selectedClasses) {
+        final apiData = selectedClass['api_data'] as Map<String, dynamic>;
+
+        final program = apiData['program']?.toString() ?? '';
+        final semester = apiData['semester'];
+        final batchYear = _calculateBatchYear(semester);
+        final departments = _extractDepartments(apiData);
+
+        // Use the first department if available, otherwise use program as fallback
+        final dept = departments.isNotEmpty ? departments.first : program;
+
+        // Create filter object in the exact API format
+        final filter = {
+          "dept": dept,
+          "program": program,
+          "semester": semester is int
+              ? semester
+              : int.tryParse(semester.toString()),
+          "batch_year": batchYear,
+        };
+
+        // Only add filter if it has valid data
+        if (filter["dept"] != null && filter["dept"].toString().isNotEmpty) {
+          filters.add(filter);
+        }
+      }
+
+      // Return formatted data for AppNotificationModel filters
+      Navigator.pop(context, {'filters': filters});
     }
+  }
+
+  /// Calculate batch year based on current year and semester
+  int? _calculateBatchYear(dynamic semester) {
+    try {
+      final currentYear = DateTime.now().year;
+      final sem = semester is int
+          ? semester
+          : int.tryParse(semester.toString());
+      if (sem == null) return null;
+
+      final yearOffset = (sem - 1) ~/ 2;
+      return currentYear - yearOffset;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Extract departments from API data
+  List<String> _extractDepartments(Map<String, dynamic> apiData) {
+    final departments = <String>[];
+    final dept = apiData['department']?.toString() ?? '';
+
+    if (dept.isNotEmpty) {
+      departments.add(dept);
+    }
+
+    return departments;
   }
 }

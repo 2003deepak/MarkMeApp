@@ -3,7 +3,9 @@ import 'package:dio/dio.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:markmeapp/state/clerk_state.dart';
 import 'package:markmeapp/state/student_state.dart';
+import 'package:markmeapp/state/teacher_state.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:markmeapp/data/repositories/auth_repository.dart';
@@ -51,7 +53,7 @@ class AuthState {
   }
 }
 
-/// AuthStore - Combined state management and repository interactions
+/// AuthStore
 class AuthStore extends StateNotifier<AuthState> {
   final AuthRepository _authRepo;
 
@@ -62,82 +64,89 @@ class AuthStore extends StateNotifier<AuthState> {
   String? get role => state.role;
   bool get isLoading => state.isLoading;
 
-  /// Load user data from SharedPreferences
+  Future<Map<String, dynamic>> loadProfileForRole(
+    WidgetRef ref,
+    String role,
+  ) async {
+    if (role == 'student') {
+      return await ref.read(studentStoreProvider.notifier).loadProfile();
+    } else if (role == 'teacher') {
+      return await ref.read(teacherStoreProvider.notifier).loadProfile();
+    } else if (role == 'admin') {
+      return {'success': true};
+    } else if (role == 'clerk') {
+      return await ref.read(clerkStoreProvider.notifier).loadProfile();
+    }
+
+    // Fallback
+    return {'success': false, 'message': 'Unknown role'};
+  }
+
+  /// Auto Login Logic
   Future<void> loadUserData(WidgetRef ref, BuildContext context) async {
     try {
-      debugPrint('🟡 [AuthStore] Loading user data from SharedPreferences');
+      debugPrint('🟡 Loading user data from SharedPreferences');
       final prefs = await SharedPreferences.getInstance();
       final storedRefreshToken = prefs.getString('refreshToken');
+      final storedRole = prefs.getString('role');
 
-      if (storedRefreshToken == null) {
-        debugPrint('🟡 [AuthStore] No stored refresh token found');
+      if (storedRefreshToken == null || storedRole == null) {
+        debugPrint('🟡 No stored session found');
         state = state.copyWith(hasLoaded: true, isLoggedIn: false);
         return;
       }
 
-      // Try refreshing access token
+      // Refresh Access Token
       final refreshResult = await refreshAccessToken();
 
       if (refreshResult['success'] == true) {
-        debugPrint('🟢 [AuthStore] Access token refresh successful');
+        debugPrint('🟢 Access token refreshed successfully');
 
-        // ✅ Fetch user profile (based on role, here student example)
-        final studentStore = ref.read(studentStoreProvider.notifier);
-        final profileResult = await studentStore.loadProfile();
+        // Load profile (only for student)
+        final profileResult = await loadProfileForRole(ref, storedRole);
 
         if (profileResult['success'] == true) {
-          // Extract role from profile or token payload
-          final role = profileResult['data']?['role'] ?? 'student';
-
-          // ✅ Update AuthState
           state = state.copyWith(
             isLoggedIn: true,
             hasLoaded: true,
             isLoading: false,
-            role: role,
+            role: storedRole,
           );
 
-          debugPrint(
-            '🟢 [AuthStore] User auto-login completed, navigating to $role dashboard',
-          );
+          debugPrint('🟢 Auto-login done for role: $storedRole');
         } else {
-          debugPrint('🔴 [AuthStore] Profile fetch failed');
+          debugPrint('🔴 Profile fetch failed');
           await prefs.remove('refreshToken');
+          await prefs.remove('role');
+
           state = const AuthState(hasLoaded: true, isLoggedIn: false);
         }
       } else {
-        debugPrint(
-          '🔴 [AuthStore] Token refresh failed: ${refreshResult['message']}',
-        );
-
-        // ❌ Clear invalid token
+        debugPrint('🔴 Token refresh failed');
         await prefs.remove('refreshToken');
+        await prefs.remove('role');
+
         state = const AuthState(hasLoaded: true, isLoggedIn: false);
 
-        if (context.mounted) {
-          context.go('/login');
-        }
+        if (context.mounted) context.go('/login');
       }
     } catch (e) {
-      debugPrint('🔴 [AuthStore] Error during auto-login: $e');
+      debugPrint('🔴 Error during auto-login: $e');
       state = state.copyWith(hasLoaded: true, isLoggedIn: false);
-
-      // Optional fallback navigation
-      if (context.mounted) {
-        context.go('/login');
-      }
+      if (context.mounted) context.go('/login');
     }
   }
 
-  /// Set login state and save to SharedPreferences
+  /// Set login state + save refresh token + save role
   Future<void> setLogIn(Map<String, dynamic> userData) async {
     try {
-      debugPrint('🟡 [AuthStore] Setting login state with user data');
       final prefs = await SharedPreferences.getInstance();
-      // Save refresh token if available
+
       if (userData['refresh_token'] != null) {
         await prefs.setString('refreshToken', userData['refresh_token']);
       }
+
+      await prefs.setString('role', userData['role']);
 
       state = state.copyWith(
         user: userData,
@@ -148,37 +157,28 @@ class AuthStore extends StateNotifier<AuthState> {
         hasLoaded: true,
       );
 
-      debugPrint(
-        '🟢 [AuthStore] Login state set successfully. isLoggedIn: true, role: ${userData['role']}',
-      );
+      debugPrint('🟢 Login state saved');
     } catch (e) {
-      debugPrint('🔴 [AuthStore] Error saving login data: $e');
+      debugPrint('🔴 Error saving login data: $e');
       state = state.copyWith(isLoading: false, hasLoaded: true);
     }
   }
 
-  /// Logout - Clear all data
+  /// Logout
   Future<void> setLogOut() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final fcmToken = prefs.getString('fcmToken');
-      final result = await _authRepo.logoutUser(fcmToken!);
 
-      debugPrint("The result in state = ${result}");
+      await _authRepo.logoutUser(fcmToken ?? "");
 
-      if (result['success']) {
-        debugPrint('🟡 [AuthStore] Starting logout process');
+      await prefs.remove('refreshToken');
+      await prefs.remove('fcmToken');
+      await prefs.remove('role');
 
-        await prefs.remove('refreshToken');
-        await prefs.remove('fcmToken');
-
-        state = const AuthState(hasLoaded: true);
-
-        debugPrint('🟢 [AuthStore] Logout completed');
-      }
+      state = const AuthState(hasLoaded: true);
     } catch (e) {
-      debugPrint('🔴 [AuthStore] Error during logout: $e');
-      state = state.copyWith(hasLoaded: true);
+      debugPrint('🔴 Logout error: $e');
     }
   }
 
@@ -192,46 +192,64 @@ class AuthStore extends StateNotifier<AuthState> {
       return {'success': false, 'message': 'Operation already in progress'};
     }
 
-    debugPrint('🟡 [AuthStore] Starting login process for role: $role');
-    state = state.copyWith(isLoading: true);
-
     try {
-      debugPrint("The user is = ${userModel}");
+      state = state.copyWith(isLoading: true);
+
       final result = await _authRepo.loginUser(userModel, role);
 
-      // ✅ Safely read message from repository result
-      final bool success = result['success'] == true;
-      final String message = result['message'] ?? '';
-
-      if (success) {
-        debugPrint('🟢 [AuthStore] Login successful, setting login state');
-
+      if (result['success'] == true) {
         final prefs = await SharedPreferences.getInstance();
-        final loginFcm = userModel.fcmToken;
-        await prefs.setString('fcmToken', loginFcm!);
+        await prefs.setString('fcmToken', userModel.fcmToken!);
 
         await setLogIn(result['data']);
-        state = state.copyWith(isLoading: false);
+
         return {
           'success': true,
-          'message': message.isNotEmpty ? message : 'Login successful',
-        };
-      } else {
-        debugPrint('🔴 [AuthStore] Login failed: $message');
-        state = state.copyWith(isLoading: false);
-        return {
-          'success': false,
-          'message': message.isNotEmpty ? message : 'Login failed',
+          'message': result['message'] ?? 'Login successful',
         };
       }
+
+      return {'success': false, 'message': result['message']};
     } catch (e) {
-      debugPrint('🔴 [AuthStore] Login error: $e');
-      final errorMessage =
-          'Network error: Please check your internet connection';
+      return {'success': false, 'message': 'Network error'};
+    } finally {
       state = state.copyWith(isLoading: false);
-      return {'success': false, 'message': errorMessage};
     }
   }
+
+  /// Refresh access token
+  Future<Map<String, dynamic>> refreshAccessToken() async {
+    try {
+      final refreshToken = await getRefreshToken();
+
+      if (refreshToken == null) {
+        return {'success': false, 'message': 'No refresh token available'};
+      }
+
+      final result = await _authRepo.refreshToken(refreshToken);
+
+      if (result['success'] == true) {
+        final newToken = result['data']['access_token'];
+        state = state.copyWith(accessToken: newToken);
+
+        return {
+          'success': true,
+          'data': {'access_token': newToken},
+        };
+      }
+
+      return {'success': false, 'message': result['error']};
+    } catch (e) {
+      return {'success': false, 'message': 'Token refresh failed'};
+    }
+  }
+
+  Future<String?> getRefreshToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('refreshToken');
+  }
+
+  // PRESERVED FUNCTIONS FROM OLD CODE
 
   /// Get route based on user role
   String getRouteForRole(String role) {
@@ -390,57 +408,9 @@ class AuthStore extends StateNotifier<AuthState> {
       return {'status': 'fail', 'message': errorMessage};
     }
   }
-
-  /// Get refresh token from SharedPreferences
-  Future<String?> getRefreshToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('refreshToken');
-  }
-
-  /// Refresh access token
-  Future<Map<String, dynamic>> refreshAccessToken() async {
-    try {
-      final refreshToken = await getRefreshToken();
-      if (refreshToken == null) {
-        debugPrint('🔴 [AuthStore] No refresh token available');
-        return {'success': false, 'message': 'No refresh token available'};
-      }
-
-      debugPrint('🟡 [AuthStore] Refreshing access token');
-      final result = await _authRepo.refreshToken(refreshToken);
-      print("🟢 [AuthStore] Repo result → $result");
-
-      if (result['success'] == true && result['data'] != null) {
-        final data = result['data'] as Map<String, dynamic>;
-        final newAccessToken = data['access_token'];
-
-        if (newAccessToken == null || newAccessToken.isEmpty) {
-          throw Exception('Access token missing in response');
-        }
-
-        // ✅ Update the store state
-        state = state.copyWith(accessToken: newAccessToken);
-
-        debugPrint('🟢 [AuthStore] Access token refreshed successfully');
-
-        return {
-          'success': true,
-          'data': {'access_token': newAccessToken},
-          'message': result['message'] ?? 'Token refreshed successfully',
-        };
-      } else {
-        final error = result['error'] ?? 'Token refresh failed';
-        debugPrint('🔴 [AuthStore] Token refresh failed: $error');
-        return {'success': false, 'message': error};
-      }
-    } catch (e) {
-      debugPrint("🔴 [AuthStore] Token refresh error: $e");
-      return {'success': false, 'message': 'Token refresh failed'};
-    }
-  }
 }
 
-// Provider for AuthStore
+/// Provider for AuthStore
 final authStoreProvider = StateNotifierProvider<AuthStore, AuthState>((ref) {
   final authRepo = ref.watch(authRepositoryProvider);
   return AuthStore(authRepo);

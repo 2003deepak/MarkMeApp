@@ -49,7 +49,7 @@ class _BottomNavigationState extends State<BottomNavigation> {
       case 'clerk':
         return [
           NavigationDestination(
-            route: '$baseRoute/dashboard',
+            route: '$baseRoute/',
             icon: Icons.home_outlined,
             activeIcon: Icons.home,
             label: 'Home',
@@ -77,7 +77,7 @@ class _BottomNavigationState extends State<BottomNavigation> {
       case 'teacher':
         return [
           NavigationDestination(
-            route: '$baseRoute/dashboard',
+            route: '$baseRoute/',
             icon: Icons.home_outlined,
             activeIcon: Icons.home,
             label: 'Home',

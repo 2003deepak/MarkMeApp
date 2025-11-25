@@ -29,6 +29,7 @@ import 'package:markmeapp/presentation/pages/clerk/profile_page.dart'
 import 'package:markmeapp/presentation/pages/clerk/add_subject_page.dart';
 import 'package:markmeapp/presentation/pages/clerk/add_teacher_page.dart';
 import 'package:markmeapp/presentation/pages/teacher/push_notification_page.dart';
+import 'package:markmeapp/presentation/pages/teacher/session_page.dart';
 
 // Teacher & Admin Pages
 import 'package:markmeapp/presentation/pages/teacher/teacher_dashboard_page.dart';
@@ -237,6 +238,14 @@ class AppRouter {
               path: '/teacher/push-notification',
               name: 'push_notification',
               builder: (context, state) => const PushNotificationPage(),
+            ),
+            GoRoute(
+              path: '/teacher/session/:id',
+              name: 'start_session',
+              builder: (context, state) {
+                final sessionData = state.extra as Map<String, dynamic>? ?? {};
+                return SessionPage(sessionData: sessionData);
+              },
             ),
           ],
         ),

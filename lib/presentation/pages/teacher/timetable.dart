@@ -588,57 +588,114 @@ class _TimeTableState extends ConsumerState<TimeTablePage> {
             ),
           ],
         ),
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            Container(
-              width: 4,
-              height: height - 24,
-              decoration: BoxDecoration(
-                color: borderColor,
-                borderRadius: BorderRadius.circular(2),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 4,
+                height: height - 24, // Adjusted height for padding
+                decoration: BoxDecoration(
+                  color: borderColor,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+                margin: const EdgeInsets.only(right: 12),
               ),
-              margin: const EdgeInsets.only(right: 12),
-            ),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    event.title,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${event.program} - Sem ${event.semester}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF666666),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${event.startTime} - ${event.endTime}',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: Color(0xFF999999),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+              Expanded(child: _buildEventContent(event, height)),
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  // FIXED: Separate method to build event content with proper constraints
+  Widget _buildEventContent(EventData event, double containerHeight) {
+    // Calculate available height for content (subtract padding)
+    final availableHeight =
+        containerHeight - 24; // 12px top + 12px bottom padding
+
+    // Determine content layout based on available height
+    if (availableHeight < 50) {
+      // Very small height - show only subject name
+      return Center(
+        child: Text(
+          event.title,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: Colors.black,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+        ),
+      );
+    } else if (availableHeight < 70) {
+      // Medium height - show subject name and time
+      return Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            event.title,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.black,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${event.startTime} - ${event.endTime}',
+            style: const TextStyle(fontSize: 10, color: Color(0xFF999999)),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      );
+    } else {
+      // Full height - show all information
+      return Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            event.title,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.black,
+            ),
+            maxLines: availableHeight < 90 ? 1 : 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          if (availableHeight >= 90) ...[
+            const SizedBox(height: 4),
+            Text(
+              '${event.program} - Sem ${event.semester}',
+              style: const TextStyle(
+                fontSize: 12,
+                color: Color(0xFF666666),
+                fontWeight: FontWeight.w500,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+          const SizedBox(height: 2),
+          Text(
+            '${event.startTime} - ${event.endTime}',
+            style: const TextStyle(fontSize: 11, color: Color(0xFF999999)),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      );
+    }
   }
 }
 

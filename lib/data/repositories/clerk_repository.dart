@@ -8,9 +8,9 @@ class ClerkRepository {
 
   ClerkRepository(this._dio);
 
-  Future<Map<String, dynamic>> fetchProfile(String clerkId) async {
+  Future<Map<String, dynamic>> fetchProfile() async {
     try {
-      final response = await _dio.get('/clerk/$clerkId/profile');
+      final response = await _dio.get('/clerk/me');
 
       if (response.statusCode == 200) {
         return {'success': true, 'data': response.data['data']};

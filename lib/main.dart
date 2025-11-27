@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:markmeapp/core/config/permission.dart';
 import 'package:markmeapp/state/auth_state.dart';
 import 'core/routing/app_router.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -68,6 +69,7 @@ class _MyAppState extends ConsumerState<MyApp> {
     _setupFCMListeners();
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // 2️⃣ Load user data after permissions are taken
       final authStore = ref.read(authStoreProvider.notifier);
       await authStore.loadUserData(ref, context);
 
@@ -91,9 +93,6 @@ class _MyAppState extends ConsumerState<MyApp> {
         context.go('/login');
       }
     });
-
-    // FCM Permission
-    FirebaseMessaging.instance.requestPermission();
   }
 
   Future<void> _setupFCMListeners() async {

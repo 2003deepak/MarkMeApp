@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:markmeapp/data/repositories/teacher_repository.dart';
-import 'package:markmeapp/presentation/skeleton/student_dashboard_skeleton.dart';
 import 'package:markmeapp/presentation/widgets/dashboard_action_card.dart';
 import 'package:markmeapp/presentation/widgets/lectures_widget.dart';
 import 'package:markmeapp/presentation/widgets/recent_activity_widget.dart';

@@ -3,8 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:markmeapp/state/auth_state.dart';
 
-/// A wrapper that protects routes behind authentication.
-/// If user logs out, it redirects to login and shows a snackbar.
 class ProtectedLayout extends ConsumerWidget {
   final Widget child;
 

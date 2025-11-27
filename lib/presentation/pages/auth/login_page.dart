@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:markmeapp/core/config/permission.dart';
 import 'package:markmeapp/core/utils/get_device_info.dart';
 import 'package:markmeapp/data/models/user_model.dart';
 import 'package:markmeapp/presentation/widgets/ui/input_field.dart';
@@ -24,6 +25,22 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   String _enteredPassword = '';
   bool _rememberMe = false;
   String _selectedRole = 'student'; // Default role
+  bool _permissionsInitialized = false; // Add this flag
+
+  @override
+  void initState() {
+    super.initState();
+    _initializePermissions();
+  }
+
+  Future<void> _initializePermissions() async {
+    if (!_permissionsInitialized) {
+      await appPermissions.initialize(context);
+      setState(() {
+        _permissionsInitialized = true;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -68,8 +85,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         deviceInfo: deviceInfo,
       );
 
-  
-
       debugPrint(
         '🔵 [LoginPage] Attempting login with email: ${user.email}, role: $_selectedRole',
       );
@@ -113,6 +128,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth > 600;
     final primaryColor = Colors.blue.shade600;
+
+    // REMOVED: appPermissions.initialize(context) from here
 
     // Watch the auth state for loading & errors
     final authState = ref.watch(authStoreProvider);

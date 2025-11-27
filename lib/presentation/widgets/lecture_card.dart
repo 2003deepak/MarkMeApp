@@ -12,6 +12,7 @@ class LectureCardWidget extends StatelessWidget {
   final String entityType;
   final String? sessionId;
   final Map<String, dynamic> sessionData;
+  final String lectureType; // ✅ Added lectureType parameter
 
   const LectureCardWidget({
     Key? key,
@@ -25,6 +26,7 @@ class LectureCardWidget extends StatelessWidget {
     this.isDesktop = false,
     this.sessionId,
     required this.sessionData,
+    required this.lectureType, // ✅ Required parameter
   }) : super(key: key);
 
   // 🎯 Handle card click navigation
@@ -42,8 +44,15 @@ class LectureCardWidget extends StatelessWidget {
 
     debugPrint("🎯 Navigating to session: $sessionId");
     debugPrint("📦 Session Data: $sessionData");
+    debugPrint("📋 Lecture Type: $lectureType");
 
-    context.go('/teacher/session/$sessionId', extra: sessionData);
+    // ✅ Create enhanced session data with lectureType
+    final enhancedSessionData = Map<String, dynamic>.from(sessionData);
+    enhancedSessionData['lecture_type'] = lectureType;
+    enhancedSessionData['navigation_timestamp'] = DateTime.now()
+        .toIso8601String();
+
+    context.go('/teacher/session/$sessionId', extra: enhancedSessionData);
   }
 
   @override
@@ -173,23 +182,13 @@ class LectureCardWidget extends StatelessWidget {
                         ),
                       ),
 
-                    // Session ID indicator (optional)
-                    if (sessionId != null && sessionId!.isNotEmpty)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade100,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Icon(
-                          Icons.arrow_forward_ios_rounded,
-                          size: isDesktop ? 12 : 10,
-                          color: Colors.grey.shade600,
-                        ),
+                    // ✅ Optional: Show lecture type badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
                       ),
+                    ),
                   ],
                 ),
               ],
@@ -212,6 +211,20 @@ class LectureCardWidget extends StatelessWidget {
         return Icons.build;
       default:
         return Icons.access_time;
+    }
+  }
+
+  // 🎨 Get color based on lecture type
+  Color _getLectureTypeColor() {
+    switch (lectureType.toLowerCase()) {
+      case 'current':
+        return Colors.green;
+      case 'upcoming':
+        return Colors.orange;
+      case 'past':
+        return Colors.grey;
+      default:
+        return Colors.blue;
     }
   }
 }

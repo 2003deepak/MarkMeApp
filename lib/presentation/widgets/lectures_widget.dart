@@ -54,6 +54,20 @@ class LecturesWidget extends StatelessWidget {
     return '$startTime - $endTime';
   }
 
+  // 🔍 Determine lecture type from title
+  String _getLectureType() {
+    final lowerTitle = title.toLowerCase();
+    if (lowerTitle.contains('current')) {
+      return 'current';
+    } else if (lowerTitle.contains('upcoming')) {
+      return 'upcoming';
+    } else if (lowerTitle.contains('past')) {
+      return 'past';
+    } else {
+      return 'unknown'; // Fallback
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     debugPrint("📚 $title Sessions: $sessions");
@@ -233,6 +247,8 @@ class LecturesWidget extends StatelessWidget {
 
   // --- Main Sessions List ---
   Widget _buildSessionsList(BuildContext context) {
+    final lectureType = _getLectureType(); // Get the lecture type
+
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
@@ -265,6 +281,7 @@ class LecturesWidget extends StatelessWidget {
               entityType: entityType,
               sessionId: sessionId,
               sessionData: session,
+              lectureType: lectureType,
             ),
           );
         }).toList(),

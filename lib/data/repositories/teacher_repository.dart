@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:markmeapp/core/network/api_client.dart';
 import 'package:markmeapp/core/utils/data_filter.dart';
 import '../models/notification_model.dart';
@@ -87,7 +90,6 @@ class TeacherRepository {
     }
   }
 
-  // In teacher_repository.dart
   Future<Map<String, dynamic>> fetchTodaySessions() async {
     try {
       final response = await _dio.get('/teacher/current-session');
@@ -249,6 +251,55 @@ class TeacherRepository {
     } catch (e) {
       print('🔴 Exception: $e');
       return {'success': false, 'error': 'An unexpected error occurred'};
+    }
+  }
+
+  // In TeacherRepository
+  Stream<Map<String, dynamic>> recognizeStudent(
+    String attendanceId,
+    List<XFile> images,
+  ) async* {
+    final url = "/teacher/session/recognize/6910d0293be681499ec0f04f";
+    final formData = FormData();
+
+    for (var img in images) {
+      formData.files.add(
+        MapEntry(
+          "images",
+          await MultipartFile.fromFile(img.path, filename: img.name),
+        ),
+      );
+    }
+
+    final response = await _dio.post(
+      url,
+      data: formData,
+      options: Options(
+        headers: {
+          "Content-Type": "multipart/form-data",
+          "Accept": "text/event-stream",
+        },
+        responseType: ResponseType.stream,
+      ),
+    );
+
+    final stream = response.data.stream;
+
+    await for (final chunk in stream) {
+      final text = String.fromCharCodes(chunk);
+      for (var line in text.split("\n")) {
+        if (line.startsWith("data:")) {
+          final jsonString = line.replaceFirst("data:", "").trim();
+          if (jsonString.isNotEmpty) {
+            try {
+              final data = jsonDecode(jsonString);
+              yield data; // Stream the data to UI
+            } catch (e) {
+              print('JSON Parse Error: $e');
+            }
+          }
+        }
+      }
     }
   }
 }

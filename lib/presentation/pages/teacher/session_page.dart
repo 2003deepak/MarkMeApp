@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:camera/camera.dart';
+import 'package:markmeapp/presentation/pages/teacher/attendance_camera_page.dart';
 
 class SessionPage extends StatefulWidget {
   final Map<String, dynamic> sessionData;
@@ -19,6 +23,10 @@ class _SessionPageState extends State<SessionPage>
   late Animation<double> _buttonScaleAnimation;
 
   bool _isStartingAttendance = false;
+  String _timeUntilStart = '';
+  Timer? _countdownTimer;
+  Duration _timeRemaining = Duration.zero;
+  List<CameraDescription>? _cameras;
 
   // Helper methods to extract data from sessionData
   String get subjectName =>
@@ -31,6 +39,9 @@ class _SessionPageState extends State<SessionPage>
   String get endTime => widget.sessionData['end_time'] ?? '';
   String get sessionId => widget.sessionData['session_id'] ?? '';
 
+  // ✅ Get lecture type from session data
+  String get lectureType => widget.sessionData['lecture_type'] ?? 'current';
+
   @override
   void initState() {
     super.initState();
@@ -38,6 +49,7 @@ class _SessionPageState extends State<SessionPage>
     // Log the received data for debugging
     debugPrint("🎯 Session Data Received: ${widget.sessionData}");
     debugPrint("🆔 Session ID: $sessionId");
+    debugPrint("📋 Lecture Type: $lectureType");
 
     _pulseController = AnimationController(
       duration: const Duration(milliseconds: 2000),
@@ -57,18 +69,129 @@ class _SessionPageState extends State<SessionPage>
       CurvedAnimation(parent: _buttonController, curve: Curves.easeInOut),
     );
 
-    _pulseController.repeat(reverse: true);
+    // ✅ Only pulse for current sessions
+    if (lectureType == 'current') {
+      _pulseController.repeat(reverse: true);
+    }
+
+    // ✅ Start countdown timer for upcoming sessions
+    if (lectureType == 'upcoming') {
+      _startCountdownTimer();
+    }
+
+    // ✅ Initialize cameras
+    _initializeCameras();
   }
 
   @override
   void dispose() {
     _pulseController.dispose();
     _buttonController.dispose();
+    _countdownTimer?.cancel();
     super.dispose();
   }
 
+  // ✅ Initialize cameras
+  Future<void> _initializeCameras() async {
+    try {
+      _cameras = await availableCameras();
+      debugPrint('📷 Cameras initialized: ${_cameras?.length ?? 0} found');
+    } catch (e) {
+      debugPrint('❌ Error initializing cameras: $e');
+      _showErrorSnackBar('Failed to initialize camera: $e');
+    }
+  }
+
   void _handleBackPressed() {
-    context.pop(context);
+    if (mounted) {
+      HapticFeedback.lightImpact();
+      context.go('/teacher');
+    }
+  }
+
+  // ✅ Start countdown timer for upcoming sessions
+  void _startCountdownTimer() {
+    // Calculate initial time remaining
+    _calculateTimeRemaining();
+
+    // Update every second
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+
+      setState(() {
+        _timeRemaining = _timeRemaining - const Duration(seconds: 1);
+        _timeUntilStart = _formatDuration(_timeRemaining);
+
+        // If session has started, update lecture type
+        if (_timeRemaining.isNegative || _timeRemaining.inSeconds == 0) {
+          timer.cancel();
+          // You might want to update the lecture type to 'current' here
+          // and refresh the UI accordingly
+        }
+      });
+    });
+  }
+
+  // ✅ Calculate time remaining until session starts
+  void _calculateTimeRemaining() {
+    try {
+      final now = DateTime.now();
+      final startTimeParts = startTime.split(':');
+
+      if (startTimeParts.length >= 2) {
+        int hour = int.parse(startTimeParts[0]);
+        int minute = int.parse(startTimeParts[1].split(' ')[0]);
+
+        // Handle PM times (if time contains PM and hour < 12, add 12)
+        if (startTime.toLowerCase().contains('pm') && hour < 12) {
+          hour += 12;
+        }
+        // Handle AM times (if time contains AM and hour == 12, set to 0)
+        if (startTime.toLowerCase().contains('am') && hour == 12) {
+          hour = 0;
+        }
+
+        final sessionStart = DateTime(
+          now.year,
+          now.month,
+          now.day,
+          hour,
+          minute,
+        );
+        _timeRemaining = sessionStart.difference(now);
+
+        if (_timeRemaining.isNegative) {
+          _timeRemaining = Duration.zero;
+        }
+
+        _timeUntilStart = _formatDuration(_timeRemaining);
+      }
+    } catch (e) {
+      debugPrint('Error calculating time remaining: $e');
+      _timeUntilStart = 'Time not available';
+    }
+  }
+
+  // Helper method to format duration in a readable way
+  String _formatDuration(Duration duration) {
+    if (duration.inDays > 0) {
+      final hours = duration.inHours.remainder(24);
+      final minutes = duration.inMinutes.remainder(60);
+      final seconds = duration.inSeconds.remainder(60);
+      return '${duration.inDays}d ${hours}h ${minutes}m ${seconds}s';
+    } else if (duration.inHours > 0) {
+      final minutes = duration.inMinutes.remainder(60);
+      final seconds = duration.inSeconds.remainder(60);
+      return '${duration.inHours}h ${minutes}m ${seconds}s';
+    } else if (duration.inMinutes > 0) {
+      final seconds = duration.inSeconds.remainder(60);
+      return '${duration.inMinutes}m ${seconds}s';
+    } else {
+      return '${duration.inSeconds}s';
+    }
   }
 
   @override
@@ -76,7 +199,7 @@ class _SessionPageState extends State<SessionPage>
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF2563EB),
+        backgroundColor: const Color(0xFF2563EB), // Always blue
         leading: IconButton(
           icon: Container(
             width: 36,
@@ -114,13 +237,16 @@ class _SessionPageState extends State<SessionPage>
 
               const SizedBox(height: 32),
 
-              // Start Attendance Button
-              _buildStartAttendanceButton(),
+              // Attendance Button (conditionally shown)
+              if (lectureType != 'past') _buildAttendanceButton(),
 
               const SizedBox(height: 24),
 
               // Additional Info
               _buildAdditionalInfo(),
+
+              // ✅ Past session message
+              if (lectureType == 'past') _buildPastSessionMessage(),
             ],
           ),
         ),
@@ -154,8 +280,8 @@ class _SessionPageState extends State<SessionPage>
                 width: 60,
                 height: 60,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.blue.shade600, Colors.blue.shade700],
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -188,9 +314,9 @@ class _SessionPageState extends State<SessionPage>
                     const SizedBox(height: 4),
                     Text(
                       subjectCode,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 16,
-                        color: Colors.blue.shade600,
+                        color: Color(0xFF2563EB),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -198,6 +324,7 @@ class _SessionPageState extends State<SessionPage>
                 ),
               ),
 
+              // Status badge with appropriate color
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
@@ -250,7 +377,7 @@ class _SessionPageState extends State<SessionPage>
                   icon: Icons.access_time,
                   title: 'Time',
                   value: _formatTimeRange(),
-                  color: Colors.blue.shade600,
+                  color: const Color(0xFF2563EB),
                 ),
               ),
               Expanded(
@@ -258,7 +385,7 @@ class _SessionPageState extends State<SessionPage>
                   icon: Icons.category,
                   title: 'Component',
                   value: component,
-                  color: Colors.teal.shade600,
+                  color: const Color(0xFF2563EB),
                 ),
               ),
             ],
@@ -306,8 +433,8 @@ class _SessionPageState extends State<SessionPage>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.blue.shade50, Colors.blue.shade100],
+        gradient: const LinearGradient(
+          colors: [Color(0xFFEFF6FF), Color(0xFFDBEAFE)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -318,8 +445,8 @@ class _SessionPageState extends State<SessionPage>
           Container(
             width: 40,
             height: 40,
-            decoration: BoxDecoration(
-              color: Colors.blue.shade600,
+            decoration: const BoxDecoration(
+              color: Color(0xFF2563EB),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.person, color: Colors.white, size: 20),
@@ -342,10 +469,10 @@ class _SessionPageState extends State<SessionPage>
                 const SizedBox(height: 2),
                 Text(
                   teacherName,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: Colors.blue.shade700,
+                    color: Color(0xFF2563EB),
                   ),
                 ),
               ],
@@ -356,7 +483,18 @@ class _SessionPageState extends State<SessionPage>
     );
   }
 
-  /// Builds start attendance button
+  /// Builds attendance button based on lecture type
+  Widget _buildAttendanceButton() {
+    if (lectureType == 'current') {
+      return _buildStartAttendanceButton();
+    } else if (lectureType == 'upcoming') {
+      return _buildUpcomingButton();
+    } else {
+      return const SizedBox.shrink();
+    }
+  }
+
+  /// Builds start attendance button for current sessions
   Widget _buildStartAttendanceButton() {
     return AnimatedBuilder(
       animation: _pulseAnimation,
@@ -377,8 +515,8 @@ class _SessionPageState extends State<SessionPage>
                     width: 200,
                     height: 200,
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Colors.blue.shade600, Colors.blue.shade700],
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -440,6 +578,94 @@ class _SessionPageState extends State<SessionPage>
     );
   }
 
+  /// Builds upcoming session button
+  Widget _buildUpcomingButton() {
+    return AnimatedBuilder(
+      animation: _pulseAnimation,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _pulseAnimation.value,
+          child: AnimatedBuilder(
+            animation: _buttonScaleAnimation,
+            builder: (context, child) {
+              return Transform.scale(
+                scale: _buttonScaleAnimation.value,
+                child: Container(
+                  width: 200,
+                  height: 200,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF6B7280), Color(0xFF4B5563)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.4),
+                        blurRadius: 30,
+                        offset: const Offset(0, 15),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.schedule, color: Colors.white, size: 40),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Starts In\n$_timeUntilStart',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  /// Builds past session message
+  Widget _buildPastSessionMessage() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Column(
+        children: [
+          Icon(Icons.history, color: Colors.grey.shade500, size: 48),
+          const SizedBox(height: 16),
+          Text(
+            'Session Completed',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey.shade700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'This session has already ended. You can view attendance records in the history section.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// Builds additional info
   Widget _buildAdditionalInfo() {
     return Container(
@@ -453,14 +679,18 @@ class _SessionPageState extends State<SessionPage>
         children: [
           Row(
             children: [
-              Icon(Icons.info_outline, color: Colors.blue.shade600, size: 20),
+              const Icon(
+                Icons.info_outline,
+                color: Color(0xFF2563EB),
+                size: 20,
+              ),
               const SizedBox(width: 8),
-              Text(
-                'Instructions',
+              const Text(
+                'Information',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: Colors.blue.shade600,
+                  color: Color(0xFF2563EB),
                 ),
               ),
             ],
@@ -468,14 +698,7 @@ class _SessionPageState extends State<SessionPage>
 
           const SizedBox(height: 12),
 
-          _buildInstructionItem(
-            '1. Ensure all students are present in the classroom',
-          ),
-          _buildInstructionItem(
-            '2. Click "Start Attendance" to begin the session',
-          ),
-          _buildInstructionItem('3. Mark each student as present or absent'),
-          _buildInstructionItem('4. Submit the attendance when complete'),
+          ..._getInstructions().map(_buildInstructionItem).toList(),
         ],
       ),
     );
@@ -488,15 +711,6 @@ class _SessionPageState extends State<SessionPage>
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 6,
-            height: 6,
-            margin: const EdgeInsets.only(top: 6),
-            decoration: BoxDecoration(
-              color: Colors.blue.shade600,
-              shape: BoxShape.circle,
-            ),
-          ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
@@ -513,9 +727,9 @@ class _SessionPageState extends State<SessionPage>
     );
   }
 
-  /// Starts attendance marking
-  void _startAttendance() async {
-    if (_isStartingAttendance) return;
+  /// Starts attendance marking (only for current sessions)
+  Future<void> _startAttendance() async {
+    if (_isStartingAttendance || lectureType != 'current') return;
 
     setState(() {
       _isStartingAttendance = true;
@@ -530,29 +744,89 @@ class _SessionPageState extends State<SessionPage>
       _isStartingAttendance = false;
     });
 
-    // TODO: Uncomment and implement navigation to AttendanceMarkingPage
-    // if (mounted) {
-    //   Navigator.pushReplacement(
-    //     context,
-    //     MaterialPageRoute(
-    //       builder: (context) => AttendanceMarkingPage(sessionData: widget.sessionData),
-    //     ),
-    //   );
-    // }
+    if (mounted) {
+      try {
+        context.push(
+          '/teacher/session/capture',
+          extra: {'sessionData': widget.sessionData},
+        );
+      } catch (e) {
+        _showErrorSnackBar('Failed to open camera: $e');
+      }
+    }
   }
 
-  /// Gets status color
+  // ✅ Status color helpers (only for status badges)
   Color _getStatusColor() {
-    return Colors.green.shade600;
+    switch (lectureType) {
+      case 'current':
+        return Colors.green; // Green for current
+      case 'upcoming':
+        return Colors.orange; // Yellow/Orange for upcoming
+      case 'past':
+        return Colors.red; // Red for past
+      default:
+        return const Color(0xFF2563EB);
+    }
   }
 
-  /// Gets status text
   String _getStatusText() {
-    return 'Ready to Start';
+    switch (lectureType) {
+      case 'current':
+        return 'Current';
+      case 'upcoming':
+        return 'Upcoming';
+      case 'past':
+        return 'Completed';
+      default:
+        return 'Unknown';
+    }
+  }
+
+  List<String> _getInstructions() {
+    switch (lectureType) {
+      case 'current':
+        return [
+          '1. Ensure all students are present in the classroom',
+          '2. Click "Start Attendance" to begin the session',
+          '3. Mark each student as present or absent',
+          '4. Submit the attendance when complete',
+        ];
+      case 'upcoming':
+        return [
+          '1. Prepare your teaching materials in advance',
+          '2. Ensure the classroom is ready for students',
+          '3. Attendance can only be started when session begins',
+        ];
+      case 'past':
+        return [
+          '1. This session has already been completed',
+          '2. Attendance records are available in history',
+          '3. You can review student participation data',
+          '4. Contact admin for any attendance modifications',
+        ];
+      default:
+        return [
+          '1. Session details are displayed above',
+          '2. Follow the appropriate procedures',
+          '3. Contact support if you need assistance',
+        ];
+    }
   }
 
   /// Formats time range
   String _formatTimeRange() {
     return '$startTime - $endTime';
+  }
+
+  /// Shows error snackbar
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 3),
+      ),
+    );
   }
 }

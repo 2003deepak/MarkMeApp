@@ -1,3 +1,4 @@
+import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -28,6 +29,8 @@ import 'package:markmeapp/presentation/pages/clerk/profile_page.dart'
     as ClerkProfile;
 import 'package:markmeapp/presentation/pages/clerk/add_subject_page.dart';
 import 'package:markmeapp/presentation/pages/clerk/add_teacher_page.dart';
+import 'package:markmeapp/presentation/pages/teacher/attendance_camera_page.dart';
+import 'package:markmeapp/presentation/pages/teacher/attendance_marking_page.dart';
 import 'package:markmeapp/presentation/pages/teacher/push_notification_page.dart';
 import 'package:markmeapp/presentation/pages/teacher/session_page.dart';
 
@@ -240,11 +243,40 @@ class AppRouter {
               builder: (context, state) => const PushNotificationPage(),
             ),
             GoRoute(
+              path: '/teacher/session/capture',
+              name: 'capture_attendance',
+              builder: (context, state) {
+                final extra = state.extra as Map<String, dynamic>? ?? {};
+                final sessionData =
+                    extra['sessionData'] as Map<String, dynamic>? ?? {};
+
+                return CameraCaptureScreen(sessionData: sessionData);
+              },
+            ),
+            GoRoute(
               path: '/teacher/session/:id',
               name: 'start_session',
               builder: (context, state) {
                 final sessionData = state.extra as Map<String, dynamic>? ?? {};
                 return SessionPage(sessionData: sessionData);
+              },
+            ),
+
+            GoRoute(
+              path: '/teacher/mark-attendance',
+              name: 'mark-attendance',
+              builder: (context, state) {
+                final extra = state.extra as Map<String, dynamic>? ?? {};
+                final sessionData =
+                    extra['session_data'] as Map<String, dynamic>? ?? {};
+                final images = extra['images'] as List<XFile>? ?? [];
+                final attendanceId = extra['attendance_id'] as String? ?? '';
+
+                return AttendanceMarkingPage(
+                  attendanceId: attendanceId,
+                  sessionData: sessionData,
+                  images: images,
+                );
               },
             ),
           ],

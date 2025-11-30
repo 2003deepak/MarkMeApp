@@ -79,10 +79,10 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
   }
 
   Widget _buildDashboardContent(bool isDesktop) {
-    // // ✅ Still loading — show skeleton
-    // if (isLoading) {
-    //   return DashboardSkeleton(isDesktop: isDesktop);
-    // }
+    // ✅ Still loading — show skeleton
+    if (isLoading) {
+      // return DashboardSkeleton(isDesktop: isDesktop);
+    }
 
     // ✅ Actual error (API failed, server error, etc.)
     if (errorMessage.isNotEmpty) {

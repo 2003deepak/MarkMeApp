@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:markmeapp/data/repositories/teacher_repository.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class AttendanceMarkingPage extends ConsumerStatefulWidget {
   final Map<String, dynamic> sessionData;
@@ -25,7 +26,7 @@ class AttendanceMarkingPage extends ConsumerStatefulWidget {
 
 class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
     with TickerProviderStateMixin {
-  // Animation Controllers
+  // Animation Controllers (only for initial page load)
   late AnimationController _animationController;
   late AnimationController _headerController;
   late AnimationController _submitController;
@@ -33,10 +34,12 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
   late Animation<Offset> _slideAnimation;
   late Animation<double> _submitScaleAnimation;
 
-  // Face Recognition Logic
+  // Student Data
+  final List<Map<String, dynamic>> _allStudents = [];
   final List<Map<String, dynamic>> _recognizedStudents = [];
   final List<String> _annotatedImages = [];
   bool _isProcessing = true;
+  bool _isLoadingStudents = true;
   StreamSubscription? _streamSubscription;
 
   // UI State
@@ -46,10 +49,17 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
   bool _isSubmitting = false;
   String _selectedFilter = 'all';
 
+  // BitString state
+  String _attendanceBitString = '';
+
+  TeacherRepository get teacherRepository =>
+      ref.read(teacherRepositoryProvider);
+
   @override
   void initState() {
     super.initState();
     _initializeAnimations();
+    _loadAllStudents();
     _startFaceRecognition();
   }
 
@@ -99,10 +109,100 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
     _headerController.forward();
   }
 
+  void _generatePresentAbsentLists() {
+    final present = <String>[];
+    final absent = <String>[];
+
+    _allStudents.forEach((student) {
+      final id = student['id']!;
+      final isPresent = _attendanceMap[id] ?? false;
+
+      if (isPresent) {
+        present.add(id);
+      } else {
+        absent.add(id);
+      }
+    });
+
+    print("🎯 Present IDs: $present");
+    print("🎯 Absent IDs:  $absent");
+
+    // Attach to state
+    widget.sessionData['present_students'] = present;
+    widget.sessionData['absent_students'] = absent;
+  }
+
+  // ========== LOAD ALL STUDENTS ==========
+  Future<void> _loadAllStudents() async {
+    try {
+      final batchYear = int.tryParse(
+        widget.sessionData['academic_year'].toString(),
+      );
+      final program = widget.sessionData['program']?.toString();
+      final semester = int.tryParse(widget.sessionData['semester'].toString());
+
+      if (batchYear == null || program == null || semester == null) {
+        print("❌ sessionData incomplete: $batchYear, $program, $semester");
+        setState(() => _isLoadingStudents = false);
+        return;
+      }
+
+      print("📌 Fetching students for $batchYear $program Sem-$semester");
+
+      final result = await teacherRepository.fetchStudentsForAttendance(
+        batchYear: batchYear,
+        program: program,
+        semester: semester,
+      );
+
+      if (result['success'] == true) {
+        final studentsData = List<Map<String, dynamic>>.from(
+          result['data'] ?? [],
+        );
+
+        setState(() {
+          _allStudents.clear();
+          _attendanceMap.clear();
+          _recognizedStudents.clear();
+
+          for (final student in studentsData) {
+            final studentId = student['_id']?.toString() ?? '';
+            final studentData = {
+              'id': studentId,
+              'name':
+                  '${student['first_name'] ?? ''} ${student['last_name'] ?? ''}'
+                      .trim(),
+              'roll_number': student['roll_number']?.toString() ?? '',
+              'confidence': '0',
+              'profile_image': (student['profile_picture'] ?? '')
+                  .toString()
+                  .trim(),
+
+              'student_id': studentId,
+              'is_recognized': false,
+            };
+
+            _allStudents.add(studentData);
+            _attendanceMap[studentId] = false; // mark absent default
+          }
+
+          _isLoadingStudents = false;
+          _filterStudents();
+          _generateAttendanceBitString(); // Generate initial bitstring
+        });
+      } else {
+        setState(() => _isLoadingStudents = false);
+        print('Error loading students: ${result['error']}');
+      }
+    } catch (e) {
+      setState(() => _isLoadingStudents = false);
+      print('Exception loading students: $e');
+    }
+  }
+
   // ========== FACE RECOGNITION LOGIC ==========
   Future<void> _startFaceRecognition() async {
     try {
-      final teacherRepository = ref.read(teacherRepositoryProvider);
       final stream = teacherRepository.recognizeStudent(
         widget.attendanceId,
         widget.images,
@@ -133,38 +233,64 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
   void _handleSSEData(Map<String, dynamic> data) {
     print('Received SSE data: $data');
 
-    // Handle student recognition events - FIXED TYPE CONVERSION
+    // Handle student recognition events
     if (data['student_id'] != null && data['name'] != null) {
       setState(() {
-        // Convert roll_number to string to avoid type errors
+        final recognizedStudentId = data['student_id'].toString();
         final rollNumber = data['roll_number']?.toString() ?? '';
-        final studentKey = '$rollNumber:${data['name']}';
+        final confidence = data['confidence']?.toString() ?? '0';
 
-        final exists = _recognizedStudents.any(
-          (student) =>
-              '${student['roll_number']}:${student['name']}' == studentKey,
+        // Find if this student exists in allStudents list
+        final existingStudentIndex = _allStudents.indexWhere(
+          (student) => student['id'] == recognizedStudentId,
         );
 
-        if (!exists) {
-          final newStudent = {
-            'id': data['student_id'].toString(),
-            'name': data['name'].toString(),
-            'roll_number': rollNumber, // Use converted string
-            'confidence': data['confidence']?.toString() ?? '0',
-            'student_id': data['student_id'].toString(),
+        if (existingStudentIndex != -1) {
+          // Update existing student with recognition data
+          _allStudents[existingStudentIndex] = {
+            ..._allStudents[existingStudentIndex],
+            'confidence': confidence,
+            'is_recognized': true,
           };
 
+          // Mark as present when recognized
+          _attendanceMap[recognizedStudentId] = true;
+
+          // Add to recognized students list if not already there
+          final existsInRecognized = _recognizedStudents.any(
+            (student) => student['id'] == recognizedStudentId,
+          );
+
+          if (!existsInRecognized) {
+            _recognizedStudents.add(_allStudents[existingStudentIndex]);
+          }
+        } else {
+          // Create new student entry (in case of unexpected student)
+          final newStudent = {
+            'id': recognizedStudentId,
+            'name': data['name'].toString(),
+            'roll_number': rollNumber,
+            'confidence': confidence,
+            'profile_image': '', // No profile image for unexpected students
+            'student_id': recognizedStudentId,
+            'is_recognized': true,
+          };
+
+          _allStudents.add(newStudent);
           _recognizedStudents.add(newStudent);
-          _attendanceMap[data['student_id'].toString()] = true;
-          // Update filtered list
-          _filterStudents();
+          _attendanceMap[recognizedStudentId] = true;
         }
+
+        // Update filtered list and regenerate bitstring
+        _filterStudents();
+        _generateAttendanceBitString();
       });
       return;
     }
 
     // Handle progress updates
     if (data['status'] == 'progress') {
+      // Progress update handling
     } else if (data['status'] == 'image_processed') {
       if (data['annotated_image_base64'] != null) {
         setState(() {
@@ -182,6 +308,51 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
     }
   }
 
+  // ========== BITSTRING GENERATION ==========
+  void _generateAttendanceBitString() {
+    if (_allStudents.isEmpty) {
+      setState(() {
+        _attendanceBitString = '';
+      });
+      return;
+    }
+
+    // Sort students by roll number to ensure consistent ordering
+    final sortedStudents = List<Map<String, dynamic>>.from(_allStudents)
+      ..sort((a, b) {
+        final rollA = a['roll_number']?.toString() ?? '';
+        final rollB = b['roll_number']?.toString() ?? '';
+        return rollA.compareTo(rollB);
+      });
+
+    // Generate bitstring: 1 for present, 0 for absent
+    final bitString = StringBuffer();
+    for (final student in sortedStudents) {
+      final studentId = student['id'] ?? '';
+      final isPresent = _attendanceMap[studentId] ?? false;
+      bitString.write(isPresent ? '1' : '0');
+    }
+
+    setState(() {
+      _attendanceBitString = bitString.toString();
+    });
+
+    print('📊 Generated BitString: $_attendanceBitString');
+    print('📊 Total Students: ${sortedStudents.length}');
+    print(
+      '📊 Present Count: ${_attendanceMap.values.where((present) => present).length}',
+    );
+
+    // Print roll numbers with attendance status for verification
+    for (int i = 0; i < sortedStudents.length; i++) {
+      final student = sortedStudents[i];
+      final status = _attendanceBitString[i];
+      print(
+        '🎯 Roll: ${student['roll_number']} - ${status == '1' ? 'Present' : 'Absent'}',
+      );
+    }
+  }
+
   void _handleBackPressed() {
     context.pop();
   }
@@ -191,7 +362,8 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
     final presentCount = _attendanceMap.values
         .where((present) => present)
         .length;
-    final totalCount = _recognizedStudents.length;
+    final totalCount = _allStudents.length;
+    final absentCount = totalCount - presentCount;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
@@ -206,10 +378,10 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
                 position: _slideAnimation,
                 child: Column(
                   children: [
-                    // Header with total count
-                    _buildHeaderSection(presentCount, totalCount),
                     // Search and filter section
-                    _buildSearchAndFilterBar(),
+                    _buildSearchAndFilterBar(presentCount, absentCount),
+                    // Header with total count and bitstring
+                    _buildHeaderSection(presentCount, totalCount),
                     // Students list
                     Expanded(child: _buildStudentsList()),
                     // Submit button
@@ -226,7 +398,7 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
 
   AppBar _buildAppBar() {
     return AppBar(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFF2563EB),
       elevation: 0,
       leading: IconButton(
         icon: Container(
@@ -245,11 +417,11 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
         onPressed: _handleBackPressed,
       ),
       title: const Text(
-        'Class Attendance',
+        'Mark Attendance',
         style: TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.w600,
-          color: Colors.black,
+          color: Colors.white,
         ),
       ),
       centerTitle: true,
@@ -276,7 +448,19 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
             ),
           ),
           const SizedBox(height: 8),
-          if (_isProcessing) ...[
+
+          if (_isLoadingStudents) ...[
+            const LinearProgressIndicator(
+              backgroundColor: Color(0xFFE2E8F0),
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF2563EB)),
+              minHeight: 2,
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Loading students...',
+              style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+            ),
+          ] else if (_isProcessing) ...[
             const LinearProgressIndicator(
               backgroundColor: Color(0xFFE2E8F0),
               valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF2563EB)),
@@ -293,7 +477,7 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
     );
   }
 
-  Widget _buildSearchAndFilterBar() {
+  Widget _buildSearchAndFilterBar(int presentCount, int absentCount) {
     return Container(
       padding: const EdgeInsets.all(20),
       color: Colors.white,
@@ -355,11 +539,11 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
           // Filter chips
           Row(
             children: [
-              _buildFilterChip('all', 'All (${_recognizedStudents.length})'),
+              _buildFilterChip('all', 'All (${_allStudents.length})'),
               const SizedBox(width: 12),
-              _buildFilterChip('present', 'Present '),
+              _buildFilterChip('present', 'Present ($presentCount)'),
               const SizedBox(width: 12),
-              _buildFilterChip('absent', 'Absent (0)'),
+              _buildFilterChip('absent', 'Absent ($absentCount)'),
             ],
           ),
         ],
@@ -404,7 +588,11 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
   }
 
   Widget _buildStudentsList() {
-    if (_recognizedStudents.isEmpty && !_isProcessing) {
+    if (_isLoadingStudents) {
+      return _buildLoadingState();
+    }
+
+    if (_allStudents.isEmpty) {
       return _buildEmptyState();
     }
 
@@ -418,22 +606,28 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
         itemCount: _filteredStudents.length,
         itemBuilder: (context, index) {
           final student = _filteredStudents[index];
-
-          return TweenAnimationBuilder<double>(
-            duration: Duration(milliseconds: 300 + (index * 50)),
-            tween: Tween(begin: 0.0, end: 1.0),
-            curve: Curves.easeOutBack,
-            builder: (context, animationValue, child) {
-              return Transform.translate(
-                offset: Offset(30 * (1 - animationValue), 0),
-                child: Opacity(
-                  opacity: animationValue.clamp(0.0, 1.0),
-                  child: _buildStudentCard(student),
-                ),
-              );
-            },
-          );
+          return _buildStudentCard(student);
         },
+      ),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const CircularProgressIndicator(color: Color(0xFF2563EB)),
+          const SizedBox(height: 16),
+          const Text(
+            'Loading students...',
+            style: TextStyle(
+              fontSize: 16,
+              color: Color(0xFF64748B),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -452,19 +646,17 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
           ),
           const SizedBox(height: 16),
           Text(
-            _isProcessing
-                ? 'Processing images...'
-                : 'No students recognized yet',
+            _isLoadingStudents ? 'Loading students...' : 'No students found',
             style: const TextStyle(
               fontSize: 16,
               color: Color(0xFF64748B),
               fontWeight: FontWeight.w500,
             ),
           ),
-          if (!_isProcessing) ...[
+          if (!_isLoadingStudents) ...[
             const SizedBox(height: 8),
             const Text(
-              'Students will appear here once recognized',
+              'No students registered for this class',
               style: TextStyle(fontSize: 14, color: Color(0xFF94A3B8)),
             ),
           ],
@@ -501,6 +693,8 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
   Widget _buildStudentCard(Map<String, dynamic> student) {
     final isPresent = _attendanceMap[student['id']] ?? false;
     final confidence = student['confidence'] ?? '0';
+    final isRecognized = student['is_recognized'] ?? false;
+    final profileImage = student['profile_image']?.toString().trim() ?? '';
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
@@ -520,22 +714,14 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
           horizontal: 16,
           vertical: 12,
         ),
-        leading: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: const Color(0xFFF1F5F9),
-            border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
-          ),
-          child: const Icon(Icons.person, size: 20, color: Color(0xFF64748B)),
-        ),
+        leading: _buildProfileImage(profileImage, isRecognized),
         title: Text(
           student['name']?.toString() ?? 'Unknown',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF1E293B),
+            color: const Color(0xFF1E293B),
+            fontStyle: FontStyle.normal,
           ),
         ),
         subtitle: Column(
@@ -551,14 +737,24 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
               ),
             ),
             const SizedBox(height: 2),
-            Text(
-              '$confidence%',
-              style: TextStyle(
-                fontSize: 12,
-                color: _getConfidenceColor(double.tryParse(confidence) ?? 0),
-                fontWeight: FontWeight.w500,
+            if (isRecognized)
+              Text(
+                'Confidence :- $confidence%',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: _getConfidenceColor(double.tryParse(confidence) ?? 0),
+                  fontWeight: FontWeight.w500,
+                ),
+              )
+            else
+              const Text(
+                'Absent',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Color.fromARGB(255, 192, 32, 32),
+                  fontWeight: FontWeight.w500,
+                ),
               ),
-            ),
           ],
         ),
         trailing: Container(
@@ -581,6 +777,57 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
         onTap: () => _toggleAttendance(student['id']),
       ),
     );
+  }
+
+  Widget _buildProfileImage(String profileImageUrl, bool isRecognized) {
+    if (profileImageUrl.isNotEmpty) {
+      return Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: isRecognized
+                ? const Color(0xFF10B981)
+                : const Color(0xFFE2E8F0),
+            width: isRecognized ? 2 : 1,
+          ),
+        ),
+        child: ClipOval(
+          child: CachedNetworkImage(
+            imageUrl: profileImageUrl,
+            fit: BoxFit.cover,
+            placeholder: (context, url) => Container(
+              color: const Color(0xFFF1F5F9),
+              child: const Icon(
+                Icons.person,
+                size: 20,
+                color: Color(0xFF64748B),
+              ),
+            ),
+            errorWidget: (context, url, error) => Container(
+              color: const Color(0xFFF1F5F9),
+              child: const Icon(
+                Icons.person,
+                size: 20,
+                color: Color(0xFF64748B),
+              ),
+            ),
+          ),
+        ),
+      );
+    } else {
+      return Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: const Color(0xFFF1F5F9),
+          border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
+        ),
+        child: Icon(Icons.person, size: 20, color: const Color(0xFF64748B)),
+      );
+    }
   }
 
   Color _getConfidenceColor(double confidence) {
@@ -659,11 +906,12 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
 
     HapticFeedback.lightImpact();
     _filterStudents();
+    _generateAttendanceBitString(); // Regenerate bitstring when attendance changes
   }
 
   void _filterStudents() {
     setState(() {
-      _filteredStudents = _recognizedStudents.where((student) {
+      _filteredStudents = _allStudents.where((student) {
         final searchQuery = _searchController.text.toLowerCase();
 
         // Safe string conversion for search
@@ -698,37 +946,73 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
 
     HapticFeedback.mediumImpact();
 
-    // Simulate API call
-    await Future.delayed(const Duration(seconds: 2));
+    // Generate present & absent lists
+    _generatePresentAbsentLists();
 
-    if (mounted) {
-      setState(() {
-        _isSubmitting = false;
-      });
+    // Include the bitstring in your submission if needed
+    print('🎯 Submitting attendance with bitstring: $_attendanceBitString');
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Row(
-            children: [
-              Icon(Icons.check_circle, color: Colors.white, size: 20),
-              SizedBox(width: 8),
-              Text('Attendance submitted successfully!'),
-            ],
+    final resp = await teacherRepository.saveAttendance(
+      widget.attendanceId,
+      _attendanceBitString,
+      widget.sessionData['present_students'],
+      widget.sessionData['absent_students'],
+    );
+
+    if (resp['success'] != true) {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error, color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  resp['message']?.toString() ?? 'Failed to submit attendance',
+                ),
+              ],
+            ),
+            backgroundColor: const Color(0xFFEF4444),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            duration: const Duration(seconds: 3),
           ),
-          backgroundColor: const Color(0xFF10B981),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+        );
+      }
+      return;
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                Text(resp['message']?.toString() ?? 'Attendance submitted'),
+              ],
+            ),
+            backgroundColor: const Color(0xFF10B981),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            duration: const Duration(seconds: 3),
           ),
-          duration: const Duration(seconds: 3),
-        ),
-      );
+        );
 
-      Future.delayed(const Duration(milliseconds: 1500), () {
-        if (mounted) {
-          context.pop();
-        }
-      });
+        // Navigate back after a short delay
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) {
+            context.pop();
+          }
+        });
+      }
     }
   }
 }

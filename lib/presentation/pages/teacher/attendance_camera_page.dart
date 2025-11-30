@@ -427,7 +427,7 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
   Future<void> _submitAttendance() async {
     if (_capturedImages.isEmpty || _isLoading || _isDisposed) return;
 
-    final attendanceId = widget.sessionData['session_id'];
+    final attendanceId = widget.sessionData['attendance_id'];
 
     // 🚀 Dispose camera BEFORE navigation
     try {

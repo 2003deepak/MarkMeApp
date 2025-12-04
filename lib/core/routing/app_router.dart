@@ -7,6 +7,9 @@ import 'package:go_router/go_router.dart';
 import 'package:markmeapp/presentation/layout/guest_layout.dart';
 import 'package:markmeapp/presentation/layout/role_based_layout.dart';
 import 'package:markmeapp/presentation/layout/protected_layout.dart';
+import 'package:markmeapp/presentation/pages/clerk/add_time_table_page.dart';
+import 'package:markmeapp/presentation/pages/clerk/student_list_page.dart';
+import 'package:markmeapp/presentation/pages/clerk/teacher_list_page.dart';
 
 // Auth Pages
 import 'package:markmeapp/presentation/pages/splash/splash_page.dart';
@@ -197,6 +200,16 @@ class AppRouter {
               name: 'clerk_profile',
               builder: (context, state) => ClerkProfile.ProfilePage(),
             ),
+            GoRoute(
+              path: '/clerk/student-list',
+              name: 'student_list',
+              builder: (context, state) => StudentListPage(),
+            ),
+            GoRoute(
+              path: '/clerk/teacher-list',
+              name: 'teacher_list',
+              builder: (context, state) => TeacherListPage(),
+            ),
 
             // =======================
             // 🛡️ ADMIN ROUTES
@@ -236,6 +249,11 @@ class AppRouter {
               path: '/clerk/add-subject',
               name: 'add_subject',
               builder: (context, state) => const AddSubjectPage(),
+            ),
+            GoRoute(
+              path: '/clerk/add-time-table',
+              name: 'time-table',
+              builder: (context, state) => const AddTimeTablePage(),
             ),
             GoRoute(
               path: '/teacher/push-notification',

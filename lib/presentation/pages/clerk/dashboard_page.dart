@@ -43,17 +43,6 @@ class _ClerkDashboardPageState extends State<ClerkDashboardPage> {
                 _buildActionButtons(),
                 const SizedBox(height: 24),
                 Text(
-                  'Edit Details',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey.shade800,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _buildEditDetailsSection(),
-                const SizedBox(height: 24),
-                Text(
                   'Recent Activity',
                   style: TextStyle(
                     fontSize: 18,
@@ -142,7 +131,7 @@ class _ClerkDashboardPageState extends State<ClerkDashboardPage> {
           icon: Icons.person_add_alt_1_outlined,
           title: "Add Student",
           onTap: () {
-            Navigator.pushNamed(context, '/clerk/new-student');
+            context.push('/clerk/new-student');
           },
           color: const Color(0xFF64B5F6),
           index: 0,
@@ -151,7 +140,7 @@ class _ClerkDashboardPageState extends State<ClerkDashboardPage> {
           icon: Icons.person_add_alt_outlined,
           title: "Add Teacher",
           onTap: () {
-            Navigator.pushNamed(context, '/clerk/add-teacher');
+            context.push('/clerk/add-teacher');
           },
           color: const Color(0xFF81C784),
           index: 1,
@@ -160,7 +149,7 @@ class _ClerkDashboardPageState extends State<ClerkDashboardPage> {
           icon: Icons.assignment_outlined,
           title: "Add Subject",
           onTap: () {
-            Navigator.pushNamed(context, '/clerk/add-subject');
+            context.push('/clerk/add-subject');
           },
           color: const Color(0xFFBA68C8),
           index: 2,
@@ -169,89 +158,12 @@ class _ClerkDashboardPageState extends State<ClerkDashboardPage> {
           icon: Icons.calendar_month_outlined,
           title: "Set Timetable",
           onTap: () {
-            Navigator.pushNamed(context, '/clerk/add-timetable');
+            context.push('/clerk/add-time-table');
           },
           color: const Color(0xFFFFB74D),
           index: 3,
         ),
       ],
-    );
-  }
-
-  Widget _buildEditDetailsSection() {
-    return Column(
-      children: [
-        _buildDetailListItem(
-          icon: Icons.people_alt_outlined,
-          title: 'View Students List',
-          subtitle: 'Register new student',
-          onTap: () {
-            context.go('/clerk/students');
-          },
-        ),
-        const SizedBox(height: 12),
-        _buildDetailListItem(
-          icon: Icons.person_outline,
-          title: 'View Teacher List',
-          subtitle: 'Register new teacher',
-          onTap: () {
-            context.go('/clerk/teachers');
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDetailListItem({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    return Card(
-      elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
-            children: [
-              Icon(icon, color: Colors.blue.shade600, size: 28),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey.shade800,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(
-                Icons.arrow_forward_ios,
-                color: Colors.grey.shade400,
-                size: 18,
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

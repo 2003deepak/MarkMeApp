@@ -26,12 +26,6 @@ class _AddSubjectPageState extends ConsumerState<AddSubjectPage>
   int? _selectedCredits;
   bool _isLoading = false;
 
-  // <CHANGE> Extracted constants for better maintainability
-  static const String _primaryColor = '0xFF2563EB';
-  static const String _backgroundColor = '0xFFF5F7FA';
-  static const String _lightGray = '0xFFF1F5F9';
-  static const String _darkGray = '0xFF475569';
-
   final List<String> _semesters = List.generate(10, (i) => '${i + 1}');
   final List<String> _components = ['Lecture', 'Lab'];
   final List<int> _credits = List.generate(10, (i) => i + 1);

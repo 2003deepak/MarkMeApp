@@ -9,9 +9,10 @@ class LectureCardWidget extends StatelessWidget {
   final String? timeUntilStart;
   final Color color;
   final bool isDesktop;
-  final String entityType;
+  final String entityType; // student | teacher | clerk | admin
   final String? sessionId;
   final Map<String, dynamic> sessionData;
+  final String lectureType;
 
   const LectureCardWidget({
     Key? key,
@@ -25,10 +26,24 @@ class LectureCardWidget extends StatelessWidget {
     this.isDesktop = false,
     this.sessionId,
     required this.sessionData,
+    required this.lectureType,
   }) : super(key: key);
 
-  // 🎯 Handle card click navigation
+  // 🎯 Handle click
   void _handleCardClick(BuildContext context) {
+    // ❌ If user is NOT teacher → block navigation
+    if (entityType.toLowerCase() != 'teacher') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Only teachers can start or view this session'),
+          backgroundColor: Colors.red.shade600,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    // ❌ Missing session ID
     if (sessionId == null || sessionId!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -40,10 +55,18 @@ class LectureCardWidget extends StatelessWidget {
       return;
     }
 
+    // DEBUG LOGS
     debugPrint("🎯 Navigating to session: $sessionId");
     debugPrint("📦 Session Data: $sessionData");
+    debugPrint("📋 Lecture Type: $lectureType");
 
-    context.go('/teacher/session/$sessionId', extra: sessionData);
+    // Add extra info
+    final enhancedData = Map<String, dynamic>.from(sessionData);
+    enhancedData['lecture_type'] = lectureType;
+    enhancedData['navigation_timestamp'] = DateTime.now().toIso8601String();
+
+    // ✅ ONLY TEACHER can navigate
+    context.go('/teacher/session/$sessionId', extra: enhancedData);
   }
 
   @override
@@ -94,7 +117,7 @@ class LectureCardWidget extends StatelessWidget {
                       ),
                     ),
                     const Spacer(),
-                    // 👇 Conditionally show timeUntilStart chip
+
                     if (timeUntilStart != null && timeUntilStart!.isNotEmpty)
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -156,10 +179,9 @@ class LectureCardWidget extends StatelessWidget {
 
                 const Spacer(),
 
-                // --- Footer Section ---
+                // --- Footer ---
                 Row(
                   children: [
-                    // Teacher name (conditionally shown)
                     if (entityType.toLowerCase() != 'teacher')
                       Expanded(
                         child: Text(
@@ -173,23 +195,12 @@ class LectureCardWidget extends StatelessWidget {
                         ),
                       ),
 
-                    // Session ID indicator (optional)
-                    if (sessionId != null && sessionId!.isNotEmpty)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade100,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Icon(
-                          Icons.arrow_forward_ios_rounded,
-                          size: isDesktop ? 12 : 10,
-                          color: Colors.grey.shade600,
-                        ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
                       ),
+                    ),
                   ],
                 ),
               ],
@@ -212,6 +223,20 @@ class LectureCardWidget extends StatelessWidget {
         return Icons.build;
       default:
         return Icons.access_time;
+    }
+  }
+
+  // 🎨 Optional helper
+  Color _getLectureTypeColor() {
+    switch (lectureType.toLowerCase()) {
+      case 'current':
+        return Colors.green;
+      case 'upcoming':
+        return Colors.orange;
+      case 'past':
+        return Colors.grey;
+      default:
+        return Colors.blue;
     }
   }
 }

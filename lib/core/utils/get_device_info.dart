@@ -1,8 +1,14 @@
 import 'dart:io';
-
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:flutter/foundation.dart';
 
 Future<String> getDeviceInfo() async {
+  // For desktop platforms, return generic info
+  if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+    return "${getPlatformType()} Desktop";
+  }
+
+  // For mobile platforms, use device_info_plus
   final deviceInfo = DeviceInfoPlugin();
 
   if (Platform.isAndroid) {
@@ -14,3 +20,18 @@ Future<String> getDeviceInfo() async {
   }
   return "Unknown Device";
 }
+
+String getPlatformType() {
+  if (kIsWeb) return "web";
+  if (Platform.isAndroid) return "android";
+  if (Platform.isIOS) return "ios";
+  if (Platform.isWindows) return "windows";
+  if (Platform.isMacOS) return "macos";
+  if (Platform.isLinux) return "linux";
+  return "unknown";
+}
+
+// Add this helper function
+bool get isMobilePlatform => Platform.isAndroid || Platform.isIOS;
+bool get isDesktopPlatform =>
+    Platform.isWindows || Platform.isMacOS || Platform.isLinux;

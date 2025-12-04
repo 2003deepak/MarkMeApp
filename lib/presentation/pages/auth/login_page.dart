@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:markmeapp/core/config/permission.dart';
 import 'package:markmeapp/core/utils/get_device_info.dart';
 import 'package:markmeapp/data/models/user_model.dart';
 import 'package:markmeapp/presentation/widgets/ui/input_field.dart';
@@ -24,6 +25,28 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   String _enteredPassword = '';
   bool _rememberMe = false;
   String _selectedRole = 'student'; // Default role
+  bool _permissionsInitialized = false; // Add this flag
+
+  @override
+  void initState() {
+    super.initState();
+    _initializePermissions();
+  }
+
+  Future<void> _initializePermissions() async {
+    if (!_permissionsInitialized) {
+      // Skip permission initialization on desktop platforms
+      if (!Platform.isWindows && !Platform.isMacOS && !Platform.isLinux) {
+        await appPermissions.initialize(context);
+        print("✅ Permissions initialized for mobile platform");
+      } else {
+        print("🖥️ Skipping permissions on desktop platform");
+      }
+      setState(() {
+        _permissionsInitialized = true;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -54,8 +77,31 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         return;
       }
 
-      final fcmToken = await FirebaseMessaging.instance.getToken();
-      final deviceType = Platform.isAndroid ? "android" : "ios";
+      // Platform-specific FCM token handling
+      String? fcmToken;
+      try {
+        // Only get FCM token on mobile platforms
+        if (Platform.isAndroid || Platform.isIOS) {
+          fcmToken = await FirebaseMessaging.instance.getToken();
+          print("📱 FCM Token: $fcmToken");
+        } else {
+          // Desktop platforms - generate mock token
+          fcmToken = "desktop-token-${DateTime.now().millisecondsSinceEpoch}";
+          print("🖥️ Using mock FCM token for desktop");
+        }
+      } catch (e) {
+        print("⚠️ Error getting FCM token: $e");
+        fcmToken = "error-token-${DateTime.now().millisecondsSinceEpoch}";
+      }
+
+      // Platform-specific device info
+      final platformType = getPlatformType();
+      final deviceType = platformType == 'android'
+          ? "android"
+          : platformType == 'ios'
+          ? "ios"
+          : platformType; // windows, macos, linux
+
       final deviceInfo = await getDeviceInfo();
 
       final user = User(
@@ -63,15 +109,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         lastName: '',
         email: _emailController.text.trim(),
         password: _enteredPassword,
-        fcmToken: fcmToken,
+        fcmToken: fcmToken ?? "unknown-token",
         deviceType: deviceType,
         deviceInfo: deviceInfo,
       );
 
-  
-
       debugPrint(
-        '🔵 [LoginPage] Attempting login with email: ${user.email}, role: $_selectedRole',
+        '🔵 [LoginPage] Attempting login with email: ${user.email}, role: $_selectedRole, platform: $platformType',
       );
 
       final authStore = ref.read(authStoreProvider.notifier);
@@ -113,6 +157,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth > 600;
     final primaryColor = Colors.blue.shade600;
+
+    // REMOVED: appPermissions.initialize(context) from here
 
     // Watch the auth state for loading & errors
     final authState = ref.watch(authStoreProvider);

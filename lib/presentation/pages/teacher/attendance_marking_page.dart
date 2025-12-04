@@ -1009,7 +1009,7 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
         // Navigate back after a short delay
         Future.delayed(const Duration(seconds: 2), () {
           if (mounted) {
-            context.pop();
+            context.go("/teacher");
           }
         });
       }

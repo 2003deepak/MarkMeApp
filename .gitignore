@@ -7,6 +7,7 @@
 .pub/
 build/
 flutter_*.png
+.flutter-plugins-dependencies
 
 # Generated plugin registrant
 lib/generated_plugin_registrant.dart

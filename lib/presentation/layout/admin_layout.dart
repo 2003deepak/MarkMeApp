@@ -31,9 +31,7 @@ class AdminLayout extends StatelessWidget {
                   color: Colors.white,
                   size: 28,
                 ),
-                onPressed: () {
-                  // TODO: Notification action
-                },
+                onPressed: () {},
               ),
               Positioned(
                 right: 6,

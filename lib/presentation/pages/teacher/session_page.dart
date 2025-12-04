@@ -125,11 +125,16 @@ class _SessionPageState extends State<SessionPage>
         _timeRemaining = _timeRemaining - const Duration(seconds: 1);
         _timeUntilStart = _formatDuration(_timeRemaining);
 
-        // If session has started, update lecture type
-        if (_timeRemaining.isNegative || _timeRemaining.inSeconds == 0) {
+        if (_timeRemaining.inSeconds <= 0) {
           timer.cancel();
-          // You might want to update the lecture type to 'current' here
-          // and refresh the UI accordingly
+
+          setState(() {
+            widget.sessionData['lecture_type'] = 'current';
+          });
+
+          // Restart pulse animation because it is required for current sessions
+          _pulseController.reset();
+          _pulseController.repeat(reverse: true);
         }
       });
     });

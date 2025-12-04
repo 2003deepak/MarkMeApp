@@ -129,8 +129,7 @@ class LecturesWidget extends StatelessWidget {
       subtitle = 'Check back later for scheduled sessions.';
     } else {
       heading = 'No Past Sessions Available';
-      subtitle =
-          'You haven\'t conducted any sessions yet.'; // ✅ Fixed: escaped apostrophe
+      subtitle = 'You haven\'t conducted any sessions yet.';
     }
 
     return Container(

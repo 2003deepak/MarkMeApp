@@ -3,13 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:markmeapp/data/repositories/student_repository.dart';
 
 class TimeTablePage extends ConsumerStatefulWidget {
-  const TimeTablePage({Key? key}) : super(key: key);
+  const TimeTablePage({super.key});
 
   @override
   ConsumerState<TimeTablePage> createState() => _TimeTableState();
 }
 
-class _TimeTableState extends ConsumerState<TimeTablePage> {
+class _TimeTableState extends ConsumerState<TimeTablePage>
+    with SingleTickerProviderStateMixin {
   int selectedDayIndex = 0; // Monday as default
   final List<String> days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -17,6 +18,8 @@ class _TimeTableState extends ConsumerState<TimeTablePage> {
   Map<String, dynamic>? timetableData;
   bool isLoading = true;
   String errorMessage = '';
+  late AnimationController _animationController;
+  late Animation<double> _opacityAnimation;
 
   // Timeline configuration
   static const double pixelsPerHour = 100.0;
@@ -38,7 +41,22 @@ class _TimeTableState extends ConsumerState<TimeTablePage> {
   @override
   void initState() {
     super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+
+    _opacityAnimation = Tween<double>(begin: 0.3, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
+
     _fetchTimetable();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchTimetable() async {
@@ -351,6 +369,10 @@ class _TimeTableState extends ConsumerState<TimeTablePage> {
   }
 
   Widget _buildContent() {
+    if (isLoading) {
+      return _buildLoadingSkeleton();
+    }
+
     if (errorMessage.isNotEmpty && timetableData == null) {
       return Center(
         child: Column(
@@ -481,7 +503,7 @@ class _TimeTableState extends ConsumerState<TimeTablePage> {
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.4),
+            color: color.withValues(alpha: 0.4),
             blurRadius: 3,
             spreadRadius: 1,
           ),
@@ -575,7 +597,7 @@ class _TimeTableState extends ConsumerState<TimeTablePage> {
           borderRadius: BorderRadius.circular(8),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 4,
               offset: const Offset(0, 2),
             ),
@@ -625,6 +647,156 @@ class _TimeTableState extends ConsumerState<TimeTablePage> {
                     style: const TextStyle(
                       fontSize: 11,
                       color: Color(0xFF999999),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Skeleton Loading Widget
+  Widget _buildLoadingSkeleton() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final timelineHeight = totalHours * pixelsPerHour;
+        final eventAreaWidth = constraints.maxWidth - 80 - 16;
+
+        return FadeTransition(
+          opacity: _opacityAnimation,
+          child: SingleChildScrollView(
+            physics:
+                const NeverScrollableScrollPhysics(), // Disable scrolling during load
+            child: SizedBox(
+              height: timelineHeight,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Skeleton Time Labels
+                  SizedBox(
+                    width: 80,
+                    child: Column(
+                      children: List.generate(totalHours, (i) {
+                        return SizedBox(
+                          height: pixelsPerHour,
+                          child: Padding(
+                            padding: const EdgeInsets.only(
+                              top: 8.0,
+                              left: 16.0,
+                            ),
+                            child: Container(
+                              width: 40,
+                              height: 14,
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade200,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+
+                  // Skeleton Event Area
+                  SizedBox(
+                    width: eventAreaWidth,
+                    height: timelineHeight,
+                    child: Stack(
+                      children: [
+                        // Horizontal Lines
+                        ...List.generate(totalHours, (i) {
+                          return Positioned(
+                            top: i * pixelsPerHour,
+                            left: 0,
+                            right: 0,
+                            child: Container(
+                              height: 1,
+                              color: Colors.grey.shade200,
+                            ),
+                          );
+                        }),
+
+                        // Fake Events
+                        _buildSkeletonEvent(
+                          top: 100,
+                          height: 120,
+                          color: Colors.blue.shade50,
+                        ),
+                        _buildSkeletonEvent(
+                          top: 350,
+                          height: 90,
+                          color: Colors.orange.shade50,
+                        ),
+                        _buildSkeletonEvent(
+                          top: 500,
+                          height: 180,
+                          color: Colors.blue.shade50,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSkeletonEvent({
+    required double top,
+    required double height,
+    required Color color,
+  }) {
+    return Positioned(
+      top: top,
+      left: 0,
+      right: 0,
+      child: Container(
+        height: height,
+        margin: const EdgeInsets.only(bottom: 8.0),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 4,
+              height: height - 24,
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 120,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    width: 80,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(4),
                     ),
                   ),
                 ],

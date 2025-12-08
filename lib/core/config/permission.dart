@@ -96,6 +96,7 @@ class AppPermissions {
 
     for (final permission in requiredPermissions) {
       final status = await _status(permission);
+      if (!context.mounted) return;
       final permissionName = _name(permission);
 
       debugPrint('🔍 [AppPermissions] Checking $permissionName: $status');
@@ -129,6 +130,7 @@ class AppPermissions {
 
         // First attempt to request
         final result = await _request(permission);
+        if (!context.mounted) return;
 
         if (!result.isGranted) {
           debugPrint(
@@ -148,6 +150,7 @@ class AppPermissions {
               '🔄 [AppPermissions] Retrying $permissionName after rationale...',
             );
             final retryResult = await _request(permission);
+            if (!context.mounted) return;
 
             if (retryResult.isGranted) {
               debugPrint(

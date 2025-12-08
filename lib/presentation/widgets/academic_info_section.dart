@@ -19,7 +19,7 @@ class AcademicInfoSection extends StatelessWidget {
   final String? Function(String?)? validateSemester;
 
   const AcademicInfoSection({
-    Key? key,
+    super.key,
     required this.rollCtrl,
     required this.batchYearCtrl,
     required this.program,
@@ -32,7 +32,7 @@ class AcademicInfoSection extends StatelessWidget {
     this.validateRollNumber,
     this.validateBatchYear,
     this.validateSemester,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

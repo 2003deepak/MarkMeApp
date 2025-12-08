@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:markmeapp/presentation/widgets/bottom_navigation.dart';
-import 'package:markmeapp/presentation/widgets/ui/notification_badge.dart';
+// import 'package:markmeapp/presentation/widgets/ui/notification_badge.dart'; // Removed static badge
 import 'package:markmeapp/state/auth_state.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:markmeapp/data/models/notification_model.dart';
+import 'package:markmeapp/data/repositories/notification_repository.dart';
 
 class StudentLayout extends ConsumerStatefulWidget {
   final Widget child;
@@ -67,27 +70,36 @@ class _StudentLayoutState extends ConsumerState<StudentLayout> {
         ),
         elevation: 0,
         actions: [
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              IconButton(
-                icon: const Icon(
-                  Icons.notifications_outlined,
-                  color: Colors.white,
-                  size: 28,
+          ValueListenableBuilder(
+            valueListenable: Hive.box<NotificationModel>(
+              NotificationRepository.boxName,
+            ).listenable(),
+            builder: (context, Box<NotificationModel> box, widget) {
+              final now = DateTime.now();
+              final today = DateTime(now.year, now.month, now.day);
+
+              final unreadCount = box.values.where((notification) {
+                final date = notification.timestamp;
+                final isToday =
+                    date.year == today.year &&
+                    date.month == today.month &&
+                    date.day == today.day;
+                return isToday && !notification.isRead;
+              }).length;
+
+              return IconButton(
+                onPressed: () => context.push('/student/notifications'),
+                icon: Badge(
+                  isLabelVisible: unreadCount > 0,
+                  label: Text(unreadCount > 9 ? '9+' : unreadCount.toString()),
+                  child: const Icon(
+                    Icons.notifications_outlined,
+                    color: Colors.white,
+                    size: 28,
+                  ),
                 ),
-                onPressed: () {},
-              ),
-              Positioned(
-                right: 6,
-                top: 6,
-                child: NotificationBadge(
-                  count: 12,
-                  backgroundColor: Colors.red.shade600,
-                  borderColor: Colors.white,
-                ),
-              ),
-            ],
+              );
+            },
           ),
           const SizedBox(width: 8),
         ],

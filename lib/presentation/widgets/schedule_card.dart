@@ -67,14 +67,14 @@
 //               boxShadow: schedule.isOngoing
 //                   ? [
 //                       BoxShadow(
-//                         color: _getAccentColor().withOpacity(0.3),
+//                         color: _getAccentColor().withValues(alpha: 0.3),
 //                         blurRadius: 8,
 //                         offset: const Offset(0, 2),
 //                       ),
 //                     ]
 //                   : [
 //                       BoxShadow(
-//                         color: Colors.black.withOpacity(0.05),
+//                         color: Colors.black.withValues(alpha: 0.05),
 //                         blurRadius: 4,
 //                         offset: const Offset(0, 2),
 //                       ),
@@ -120,7 +120,7 @@
 //                               Container(
 //                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
 //                                 decoration: BoxDecoration(
-//                                   color: _getAccentColor().withOpacity(0.1),
+//                                   color: _getAccentColor().withValues(alpha: 0.1),
 //                                   borderRadius: BorderRadius.circular(12),
 //                                 ),
 //                                 child: Text(
@@ -321,8 +321,8 @@
 
 //     // Adjust colors based on status
 //     if (schedule.status == ScheduleStatus.completed) {
-//       iconColor = iconColor.withOpacity(0.6);
-//       backgroundColor = backgroundColor.withOpacity(0.5);
+//       iconColor = iconColor.withValues(alpha: 0.6);
+//       backgroundColor = backgroundColor.withValues(alpha: 0.5);
 //     } else if (schedule.status == ScheduleStatus.cancelled) {
 //       iconColor = Colors.red.shade600;
 //       backgroundColor = Colors.red.shade50;
@@ -501,10 +501,10 @@
 //     return Container(
 //       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
 //       decoration: BoxDecoration(
-//         color: chipColor.withOpacity(0.1),
+//         color: chipColor.withValues(alpha: 0.1),
 //         borderRadius: BorderRadius.circular(12),
 //         border: Border.all(
-//           color: chipColor.withOpacity(0.3),
+//           color: chipColor.withValues(alpha: 0.3),
 //           width: 0.5,
 //         ),
 //       ),
@@ -590,7 +590,7 @@
 //   Color _getBackgroundColor() {
 //     switch (schedule.status) {
 //       case ScheduleStatus.ongoing:
-//         return _getAccentColor().withOpacity(0.05);
+//         return _getAccentColor().withValues(alpha: 0.05);
 //       case ScheduleStatus.completed:
 //         return Colors.grey.shade50;
 //       case ScheduleStatus.cancelled:
@@ -607,7 +607,7 @@
 //   Color _getBorderColor() {
 //     switch (schedule.status) {
 //       case ScheduleStatus.ongoing:
-//         return _getAccentColor().withOpacity(0.3);
+//         return _getAccentColor().withValues(alpha: 0.3);
 //       case ScheduleStatus.completed:
 //         return Colors.grey.shade200;
 //       case ScheduleStatus.cancelled:

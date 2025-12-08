@@ -6,7 +6,7 @@ import 'package:markmeapp/data/models/student_model.dart';
 import 'package:markmeapp/data/repositories/clerk_repository.dart';
 
 class StudentListPage extends ConsumerStatefulWidget {
-  const StudentListPage({Key? key}) : super(key: key);
+  const StudentListPage({super.key});
 
   @override
   ConsumerState<StudentListPage> createState() => _StudentListPageState();
@@ -336,9 +336,9 @@ class _StudentListPageState extends ConsumerState<StudentListPage> {
               child: Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
+                  color: Colors.red.withValues(),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.red.withOpacity(0.3)),
+                  border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   children: [
@@ -543,10 +543,12 @@ class _StudentListPageState extends ConsumerState<StudentListPage> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: isDark
-              ? const Color(0xFF3B5BDB).withOpacity(0.2)
-              : const Color(0xFF3B5BDB).withOpacity(0.1),
+              ? const Color(0xFF3B5BDB).withValues(alpha: 0.2)
+              : const Color(0xFF3B5BDB).withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFF3B5BDB).withOpacity(0.3)),
+          border: Border.all(
+            color: const Color(0xFF3B5BDB).withValues(alpha: 0.3),
+          ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -590,7 +592,7 @@ class StudentCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.2 : 0.05),
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -620,7 +622,7 @@ class StudentCard extends StatelessWidget {
               width: 50,
               height: 50,
               decoration: BoxDecoration(
-                color: avatarColor.withOpacity(isDark ? 0.3 : 0.2),
+                color: avatarColor.withValues(alpha: isDark ? 0.3 : 0.2),
                 shape: BoxShape.circle,
               ),
               child: Center(

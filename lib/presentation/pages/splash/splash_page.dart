@@ -26,7 +26,6 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
   late Animation<double> _pulseAnimation;
   late Animation<double> _particleAnimation;
   late Animation<double> _textAnimation;
-  late Animation<double> _logoRotateAnimation;
 
   @override
   void initState() {
@@ -101,10 +100,6 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
       CurvedAnimation(parent: _textController, curve: Curves.easeOutCubic),
     );
 
-    _logoRotateAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _logoRotateController, curve: Curves.elasticOut),
-    );
-
     _startAnimations();
 
     // Navigate after delay
@@ -141,7 +136,6 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
     _pulseController.repeat(reverse: true);
   }
 
-  @override
   @override
   void dispose() {
     _fadeController.dispose();
@@ -198,7 +192,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                 children: [
                   Expanded(
                     flex: 2,
-                    child: Container(
+                    child: SizedBox(
                       width: double.infinity,
                       child: Stack(
                         children: [
@@ -223,15 +217,19 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                                             shape: BoxShape.circle,
                                             gradient: RadialGradient(
                                               colors: [
-                                                Colors.white.withOpacity(0.2),
-                                                Colors.white.withOpacity(0.05),
+                                                Colors.white.withAlpha(
+                                                  51,
+                                                ), // 0.2
+                                                Colors.white.withAlpha(
+                                                  13,
+                                                ), // 0.05
                                                 Colors.transparent,
                                               ],
                                             ),
                                             border: Border.all(
-                                              color: Colors.white.withOpacity(
-                                                0.3,
-                                              ),
+                                              color: Colors.white.withAlpha(
+                                                77,
+                                              ), // 0.3
                                               width: 2,
                                             ),
                                           ),
@@ -265,8 +263,12 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                                             shape: BoxShape.circle,
                                             gradient: RadialGradient(
                                               colors: [
-                                                Colors.white.withOpacity(0.3),
-                                                Colors.white.withOpacity(0.1),
+                                                Colors.white.withAlpha(
+                                                  77,
+                                                ), // 0.3
+                                                Colors.white.withAlpha(
+                                                  26,
+                                                ), // 0.1
                                                 Colors.transparent,
                                               ],
                                             ),
@@ -305,20 +307,24 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                                       gradient: RadialGradient(
                                         colors: [
                                           Colors.white,
-                                          Colors.white.withOpacity(0.95),
-                                          Colors.white.withOpacity(0.9),
+                                          Colors.white.withAlpha(242), // 0.95
+                                          Colors.white.withAlpha(230), // 0.9
                                         ],
                                       ),
                                       shape: BoxShape.circle,
                                       boxShadow: [
                                         BoxShadow(
-                                          color: Colors.black.withOpacity(0.3),
+                                          color: Colors.black.withAlpha(
+                                            77,
+                                          ), // 0.3
                                           blurRadius: 30,
                                           offset: const Offset(0, 15),
                                           spreadRadius: 5,
                                         ),
                                         BoxShadow(
-                                          color: Colors.blue.withOpacity(0.4),
+                                          color: Colors.blue.withAlpha(
+                                            102,
+                                          ), // 0.4
                                           blurRadius: 20,
                                           offset: const Offset(0, 5),
                                         ),
@@ -372,7 +378,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                                   shaderCallback: (bounds) => LinearGradient(
                                     colors: [
                                       Colors.white,
-                                      Colors.white.withOpacity(0.8),
+                                      Colors.white.withAlpha(204), // 0.8
                                       Colors.white,
                                     ],
                                     stops: const [0.0, 0.5, 1.0],
@@ -386,12 +392,16 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                                       letterSpacing: 3.0,
                                       shadows: [
                                         Shadow(
-                                          color: Colors.white.withOpacity(0.5),
+                                          color: Colors.white.withAlpha(
+                                            128,
+                                          ), // 0.5
                                           offset: const Offset(0, 0),
                                           blurRadius: 20,
                                         ),
                                         Shadow(
-                                          color: Colors.black.withOpacity(0.3),
+                                          color: Colors.black.withAlpha(
+                                            77,
+                                          ), // 0.3
                                           offset: const Offset(0, 4),
                                           blurRadius: 8,
                                         ),
@@ -412,7 +422,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        Container(
+                        SizedBox(
                           height: isDesktop ? 120 : 100,
                           child: AnimatedBuilder(
                             animation: _fadeAnimation,
@@ -458,7 +468,8 @@ class ParticlePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.white.withOpacity(0.1)
+      ..color = Colors.white
+          .withAlpha(26) // 0.1
       ..style = PaintingStyle.fill;
 
     // Create floating particles
@@ -492,8 +503,8 @@ class EnhancedWavePainter extends CustomPainter {
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          Colors.white.withOpacity(0.2),
-          Colors.white.withOpacity(0.1),
+          Colors.white.withAlpha(51), // 0.2
+          Colors.white.withAlpha(26), // 0.1
           Colors.transparent,
         ],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height))

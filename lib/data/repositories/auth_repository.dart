@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:markmeapp/core/network/api_client.dart';
 import '../models/user_model.dart';
+import 'package:markmeapp/core/utils/app_logger.dart';
 
 class AuthRepository {
   final Dio _dio;
@@ -9,11 +10,13 @@ class AuthRepository {
   AuthRepository(this._dio);
 
   Future<Map<String, dynamic>> registerUser(User user) async {
-    print('🔵 [AuthRepository] registerUser called with email: ${user.email}');
+    AppLogger.info(
+      '🔵 [AuthRepository] registerUser called with email: ${user.email}',
+    );
 
     try {
       final url = '/student/';
-      print('🔵 [AuthRepository] Making POST request to: $url');
+      AppLogger.info('🔵 [AuthRepository] Making POST request to: $url');
 
       final response = await _dio.post(
         url,
@@ -25,14 +28,16 @@ class AuthRepository {
         },
       );
 
-      print('🔵 [AuthRepository] HTTP Status Code: ${response.statusCode}');
-      print('🔵 [AuthRepository] Response Body: ${response.data}');
+      AppLogger.info(
+        '🔵 [AuthRepository] HTTP Status Code: ${response.statusCode}',
+      );
+      AppLogger.info('🔵 [AuthRepository] Response Body: ${response.data}');
 
       final responseBody = response.data;
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         if (responseBody['success'] == true) {
-          print('🟢 [AuthRepository] Registration successful');
+          AppLogger.info('🟢 [AuthRepository] Registration successful');
           return {'success': true, 'data': responseBody['data']};
         } else {
           return {
@@ -48,26 +53,28 @@ class AuthRepository {
         };
       }
     } on DioException catch (e) {
-      print('🔴 [AuthRepository] DioException caught: $e');
-      print('🔴 [AuthRepository] Error response: ${e.response?.data}');
+      AppLogger.error('🔴 [AuthRepository] DioException caught: $e');
+      AppLogger.error(
+        '🔴 [AuthRepository] Error response: ${e.response?.data}',
+      );
 
       final errorMessage =
           e.response?.data?['message'] ?? e.message ?? 'Network error occurred';
       return {'success': false, 'message': errorMessage};
     } catch (e) {
-      print('🔴 [AuthRepository] Exception caught: $e');
+      AppLogger.error('🔴 [AuthRepository] Exception caught: $e');
       return {'success': false, 'message': e.toString()};
     }
   }
 
   Future<Map<String, dynamic>> loginUser(User user, String role) async {
-    print(
+    AppLogger.info(
       '🔵 [AuthRepository] loginUser called with email: ${user.email}, role: $role',
     );
 
     try {
       final url = '/auth/login';
-      print('🔵 [AuthRepository] Making POST request to: $url');
+      AppLogger.info('🔵 [AuthRepository] Making POST request to: $url');
 
       final response = await _dio.post(
         url,
@@ -81,13 +88,15 @@ class AuthRepository {
         },
       );
 
-      print('🔵 [AuthRepository] HTTP Status Code: ${response.statusCode}');
-      print('🔵 [AuthRepository] Response Body: ${response.data}');
+      AppLogger.info(
+        '🔵 [AuthRepository] HTTP Status Code: ${response.statusCode}',
+      );
+      AppLogger.info('🔵 [AuthRepository] Response Body: ${response.data}');
 
       final responseBody = response.data;
 
       if (response.statusCode == 200) {
-        print('🟢 [AuthRepository] Login successful');
+        AppLogger.info('🟢 [AuthRepository] Login successful');
         // Ensure role is included in the response data
         final userData = responseBody['data'] ?? {};
         if (userData is Map<String, dynamic>) {
@@ -95,21 +104,23 @@ class AuthRepository {
         }
         return {'success': true, 'data': userData};
       } else {
-        print(responseBody);
+        AppLogger.warning(responseBody.toString());
         return {
           'success': false,
           'message': responseBody['message'] ?? 'Login failed',
         };
       }
     } on DioException catch (e) {
-      print('🔴 [AuthRepository] DioException caught: $e');
-      print('🔴 [AuthRepository] Error response: ${e.response?.data}');
+      AppLogger.error('🔴 [AuthRepository] DioException caught: $e');
+      AppLogger.error(
+        '🔴 [AuthRepository] Error response: ${e.response?.data}',
+      );
 
       final errorMessage =
           e.response?.data?['message'] ?? e.message ?? 'Network error occurred';
       return {'success': false, 'message': errorMessage};
     } catch (e) {
-      print('🔴 [AuthRepository] Exception caught: $e');
+      AppLogger.error('🔴 [AuthRepository] Exception caught: $e');
       return {'success': false, 'message': e.toString()};
     }
   }
@@ -120,28 +131,32 @@ class AuthRepository {
 
       final response = await _dio.post(url, data: {'fcm_token': fcmToken});
 
-      print('🔵 [AuthRepository] HTTP Status Code: ${response.statusCode}');
+      AppLogger.info(
+        '🔵 [AuthRepository] HTTP Status Code: ${response.statusCode}',
+      );
 
       final responseBody = response.data;
 
       if (response.statusCode == 200) {
         return {'success': true, 'message': responseBody["message"]};
       } else {
-        print(responseBody);
+        AppLogger.warning(responseBody.toString());
         return {
           'success': false,
           'message': responseBody['message'] ?? 'Logout failed',
         };
       }
     } on DioException catch (e) {
-      print('🔴 [AuthRepository] DioException caught: $e');
-      print('🔴 [AuthRepository] Error response: ${e.response?.data}');
+      AppLogger.error('🔴 [AuthRepository] DioException caught: $e');
+      AppLogger.error(
+        '🔴 [AuthRepository] Error response: ${e.response?.data}',
+      );
 
       final errorMessage =
           e.response?.data?['message'] ?? e.message ?? 'Network error occurred';
       return {'success': false, 'message': errorMessage};
     } catch (e) {
-      print('🔴 [AuthRepository] Exception caught: $e');
+      AppLogger.error('🔴 [AuthRepository] Exception caught: $e');
       return {'success': false, 'message': e.toString()};
     }
   }
@@ -294,7 +309,7 @@ class AuthRepository {
       );
 
       final responseBody = response.data;
-      print("🔵 [AuthRepo] refresh-token response → $responseBody");
+      AppLogger.info("🔵 [AuthRepo] refresh-token response → $responseBody");
 
       if (response.statusCode == 200) {
         if (responseBody['success'] == true) {

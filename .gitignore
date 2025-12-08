@@ -1,6 +1,4 @@
-# ----------------------------
 # Flutter/Dart/Pub related
-# ----------------------------
 .dart_tool/
 .packages
 .pub-cache/
@@ -21,7 +19,6 @@ assets/*.env
 
 # ----------------------------
 # Android related
-# ----------------------------
 **/android/**/gradle-wrapper.jar
 **/android/.gradle/
 **/android/captures/
@@ -30,9 +27,7 @@ assets/*.env
 **/android/key.properties
 **/android/app/google-services.json
 
-# ----------------------------
 # iOS/macOS related
-# ----------------------------
 **/ios/Pods/
 **/ios/.symlinks/
 **/ios/Flutter/Flutter.framework
@@ -53,40 +48,25 @@ assets/*.env
 *.mode2v3
 *.perspectivev3
 
-# ----------------------------
-# Windows related
-# ----------------------------
+# Web related
+lib/generated_plugin_registrant.dart
+
+# Windows
 **/windows/flutter/ephemeral/
 
-# ----------------------------
-# Linux related
-# ----------------------------
+# Linux
 **/linux/flutter/ephemeral/
 
-# ----------------------------
-# Web related
-# ----------------------------
-**/web/.dart_tool/
-**/web/.packages
-**/web/.firebase/
-
-# ----------------------------
-# IDEs & Editors
-# ----------------------------
+# Visual Studio Code
 .vscode/
-.idea/
-*.iml
-*.ipr
-*.iws
-*.swp
 .history
 
-# ----------------------------
+# IntelliJ / Android Studio
+.idea/
+*.iml
+
 # Misc
-# ----------------------------
 *.log
 *.lock
 *.DS_Store
-*.tmp
-*.bak
-*.orig
+*.swp

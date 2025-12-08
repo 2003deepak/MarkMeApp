@@ -88,12 +88,6 @@ class LecturesWidget extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            if (isLoading)
-              SizedBox(
-                width: isDesktop ? 20 : 16,
-                height: isDesktop ? 20 : 16,
-                child: const CircularProgressIndicator(strokeWidth: 2),
-              ),
           ],
         ),
         const SizedBox(height: 16),

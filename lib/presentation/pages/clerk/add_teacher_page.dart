@@ -4,9 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:markmeapp/data/repositories/clerk_repository.dart';
 import 'package:markmeapp/presentation/widgets/ui/dropdown.dart';
 import 'package:markmeapp/presentation/widgets/ui/input_field.dart';
+import 'package:markmeapp/core/utils/app_logger.dart';
 
 class AddTeacherPage extends ConsumerStatefulWidget {
-  const AddTeacherPage({Key? key}) : super(key: key);
+  const AddTeacherPage({super.key});
 
   @override
   ConsumerState<AddTeacherPage> createState() => _AddTeacherPageState();
@@ -20,9 +21,7 @@ class _AddTeacherPageState extends ConsumerState<AddTeacherPage> {
   final _emailIdController = TextEditingController();
 
   // Dynamic subject assignments
-  List<Map<String, String?>> _subjectAssignments = [
-    {'subject': null},
-  ];
+  final List<Map<String, String?>> _subjectAssignments = [];
 
   // Dynamic subjects from API
   List<Map<String, dynamic>> _subjects = [];
@@ -457,9 +456,11 @@ class _AddTeacherPageState extends ConsumerState<AddTeacherPage> {
           'subjects_assigned': subjectsAssigned,
         };
 
-        print('Teacher Data: $teacherData');
+        AppLogger.info('Teacher Data: $teacherData');
 
         final result = await clerkRepo.createTeacher(teacherData);
+
+        if (!mounted) return;
 
         if (result['success'] == true) {
           // Show success snackbar
@@ -509,20 +510,22 @@ class _AddTeacherPageState extends ConsumerState<AddTeacherPage> {
         }
       } catch (error) {
         // Show error snackbar for network/other errors
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Failed to save teacher: ${error.toString()}',
-              style: const TextStyle(color: Colors.white),
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Failed to save teacher: ${error.toString()}',
+                style: const TextStyle(color: Colors.white),
+              ),
+              backgroundColor: Colors.red.shade600,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              duration: const Duration(seconds: 3),
             ),
-            backgroundColor: Colors.red.shade600,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            duration: const Duration(seconds: 3),
-          ),
-        );
+          );
+        }
       } finally {
         if (mounted) {
           setState(() {

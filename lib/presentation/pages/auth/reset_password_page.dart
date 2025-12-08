@@ -9,8 +9,7 @@ class ResetPasswordPage extends ConsumerStatefulWidget {
   final String email;
   final String role;
 
-  const ResetPasswordPage({Key? key, required this.email, required this.role})
-    : super(key: key);
+  const ResetPasswordPage({super.key, required this.email, required this.role});
 
   @override
   ConsumerState<ResetPasswordPage> createState() => _ResetPasswordPageState();
@@ -280,7 +279,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
           width: 80,
           height: 80,
           decoration: BoxDecoration(
-            color: primaryColor.withOpacity(0.1),
+            color: primaryColor.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
           child: Icon(Icons.lock_reset, color: primaryColor, size: 40),
@@ -417,7 +416,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
           width: 80,
           height: 80,
           decoration: BoxDecoration(
-            color: primaryColor.withOpacity(0.1),
+            color: primaryColor.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
           child: Icon(Icons.lock_outline, color: primaryColor, size: 40),

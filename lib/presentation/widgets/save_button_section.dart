@@ -4,15 +4,15 @@ class SaveButtonSection extends StatelessWidget {
   final VoidCallback onSave;
   final VoidCallback? onClearError;
   final bool isSaveEnabled;
-  final bool isLoading; // Added isLoading parameter
+  final bool isLoading;
 
   const SaveButtonSection({
-    Key? key,
+    super.key,
     required this.onSave,
     this.onClearError,
     this.isSaveEnabled = true,
     this.isLoading = false, // Default to false
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

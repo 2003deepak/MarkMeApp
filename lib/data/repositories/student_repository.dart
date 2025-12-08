@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:markmeapp/core/network/api_client.dart';
+import 'package:markmeapp/core/utils/app_logger.dart';
 
 class StudentRepository {
   final Dio _dio;
@@ -9,15 +10,15 @@ class StudentRepository {
 
   Future<Map<String, dynamic>> fetchProfile() async {
     try {
-      print('🔵 [StudentRepository] Fetching student profile');
+      AppLogger.info('🔵 [StudentRepository] Fetching student profile');
 
       final response = await _dio.get('/student/me/');
       final responseBody = response.data;
 
-      print("The response in repo is $responseBody");
+      AppLogger.info("The response in repo is $responseBody");
 
       if (response.statusCode == 200) {
-        print('🟢 [StudentRepository] Profile fetched successfully');
+        AppLogger.info('🟢 [StudentRepository] Profile fetched successfully');
         return {'success': true, 'data': responseBody['data']};
       } else {
         return {
@@ -26,7 +27,7 @@ class StudentRepository {
         };
       }
     } on DioException catch (e) {
-      print('🔴 [StudentRepository] DioException: ${e.message}');
+      AppLogger.error('🔴 [StudentRepository] DioException: ${e.message}');
 
       // Handle specific error cases
       if (e.response?.statusCode == 401) {
@@ -41,23 +42,25 @@ class StudentRepository {
           'Failed to fetch profile';
       return {'success': false, 'error': errorMessage};
     } catch (e) {
-      print('🔴 [StudentRepository] Exception: $e');
+      AppLogger.error('🔴 [StudentRepository] Exception: $e');
       return {'success': false, 'error': e.toString()};
     }
   }
 
   Future<Map<String, dynamic>> updateProfile(FormData formData) async {
     try {
-      print('🔵 [StudentRepository] Updating student profile with FormData');
+      AppLogger.info(
+        '🔵 [StudentRepository] Updating student profile with FormData',
+      );
 
       // Log form data for debugging
-      print('📦 FormData fields:');
+      AppLogger.info('📦 FormData fields:');
       for (final field in formData.fields) {
-        print('  ${field.key}: ${field.value}');
+        AppLogger.info('  ${field.key}: ${field.value}');
       }
-      print('📦 FormData files:');
+      AppLogger.info('📦 FormData files:');
       for (final file in formData.files) {
-        print('  ${file.key}: ${file.value.filename}');
+        AppLogger.info('  ${file.key}: ${file.value.filename}');
       }
 
       // Send PUT request to the correct endpoint
@@ -71,10 +74,12 @@ class StudentRepository {
       );
 
       final responseBody = response.data;
-      print('🟢 [StudentRepository] Profile update response: $responseBody');
+      AppLogger.info(
+        '🟢 [StudentRepository] Profile update response: $responseBody',
+      );
 
       if (response.statusCode == 200) {
-        print('🟢 [StudentRepository] Profile updated successfully');
+        AppLogger.info('🟢 [StudentRepository] Profile updated successfully');
 
         // Handle success response based on backend structure
         if (responseBody['status'] == 'success') {
@@ -116,8 +121,8 @@ class StudentRepository {
         };
       }
     } on DioException catch (e) {
-      print('🔴 [StudentRepository] DioException: ${e.message}');
-      print('🔴 [StudentRepository] Error type: ${e.type}');
+      AppLogger.error('🔴 [StudentRepository] DioException: ${e.message}');
+      AppLogger.error('🔴 [StudentRepository] Error type: ${e.type}');
 
       // Handle different DioException types
       if (e.response != null) {
@@ -125,8 +130,8 @@ class StudentRepository {
         final errorData = e.response!.data;
         final statusCode = e.response!.statusCode;
 
-        print('🔴 [StudentRepository] Error response: $errorData');
-        print('🔴 [StudentRepository] Status code: $statusCode');
+        AppLogger.error('🔴 [StudentRepository] Error response: $errorData');
+        AppLogger.error('🔴 [StudentRepository] Status code: $statusCode');
 
         String errorMessage;
 
@@ -192,8 +197,11 @@ class StudentRepository {
         return {'status': 'fail', 'message': errorMessage, 'errorCode': null};
       }
     } catch (e, stackTrace) {
-      print('🔴 [StudentRepository] Unexpected Exception: $e');
-      print('🔴 [StudentRepository] Stack trace: $stackTrace');
+      AppLogger.error(
+        '🔴 [StudentRepository] Unexpected Exception: $e',
+        e,
+        stackTrace,
+      );
       return {
         'status': 'fail',
         'message': 'An unexpected error occurred: ${e.toString()}',
@@ -207,14 +215,16 @@ class StudentRepository {
       final response = await _dio.get('/attendance/student/summary');
 
       final responseBody = response.data;
-      print('🟢 [StudentRepository] API Response: $responseBody');
+      AppLogger.info('🟢 [StudentRepository] API Response: $responseBody');
 
       // ✅ Handle 200 OK response
       if (response.statusCode == 200) {
         final success = responseBody['success'] ?? false;
 
         if (success) {
-          print('✅ [StudentRepository] Attendance fetched successfully');
+          AppLogger.info(
+            '✅ [StudentRepository] Attendance fetched successfully',
+          );
           return {
             'success': true,
             'message': responseBody['message'] ?? 'Fetched successfully',
@@ -222,7 +232,7 @@ class StudentRepository {
             'source': responseBody['source'] ?? 'unknown',
           };
         } else {
-          print(
+          AppLogger.warning(
             '⚠️ [StudentRepository] Attendance fetch failed (API returned success=false)',
           );
           return {
@@ -242,14 +252,14 @@ class StudentRepository {
         'data': responseBody['data'] ?? {},
       };
     } on DioException catch (e) {
-      print('🔴 [StudentRepository] DioException: ${e.message}');
-      print('🔴 [StudentRepository] Error type: ${e.type}');
+      AppLogger.error('🔴 [StudentRepository] DioException: ${e.message}');
+      AppLogger.error('🔴 [StudentRepository] Error type: ${e.type}');
 
       if (e.response != null) {
         final errorData = e.response!.data;
         final statusCode = e.response!.statusCode;
-        print('🔴 [StudentRepository] Error response: $errorData');
-        print('🔴 [StudentRepository] Status code: $statusCode');
+        AppLogger.error('🔴 [StudentRepository] Error response: $errorData');
+        AppLogger.error('🔴 [StudentRepository] Status code: $statusCode');
 
         return {
           'success': false,
@@ -282,8 +292,11 @@ class StudentRepository {
         return {'success': false, 'message': errorMessage, 'errorCode': null};
       }
     } catch (e, stackTrace) {
-      print('💥 [StudentRepository] Unexpected Exception: $e');
-      print('🧠 Stack trace: $stackTrace');
+      AppLogger.error(
+        '💥 [StudentRepository] Unexpected Exception: $e',
+        e,
+        stackTrace,
+      );
       return {'success': false, 'message': 'An unexpected error occurred: $e'};
     }
   }
@@ -295,16 +308,18 @@ class StudentRepository {
     required String batch,
   }) async {
     try {
-      print('🔵 [StudentRepository] Fetching student timetable');
-      print('➡️ Params: program=$program, dept=$dept, sem=$sem, batch=$batch');
+      AppLogger.info('🔵 [StudentRepository] Fetching student timetable');
+      AppLogger.info(
+        '➡️ Params: program=$program, dept=$dept, sem=$sem, batch=$batch',
+      );
 
       final response = await _dio.get('/timetable/$program/$dept/$sem/$batch');
       final responseBody = response.data;
 
-      // print("📦 [StudentRepository] Response: $responseBody");
+      // AppLogger.info("📦 [StudentRepository] Response: $responseBody");
 
       if (response.statusCode == 200) {
-        print('🟢 [StudentRepository] Timetable fetched successfully');
+        AppLogger.info('🟢 [StudentRepository] Timetable fetched successfully');
         return {'success': true, 'data': responseBody['data']};
       } else {
         return {
@@ -313,7 +328,7 @@ class StudentRepository {
         };
       }
     } on DioException catch (e) {
-      print('🔴 [StudentRepository] DioException: ${e.message}');
+      AppLogger.error('🔴 [StudentRepository] DioException: ${e.message}');
 
       if (e.response?.statusCode == 401) {
         return {'success': false, 'error': 'Authentication required'};
@@ -327,7 +342,7 @@ class StudentRepository {
           'Failed to fetch timetable';
       return {'success': false, 'error': errorMessage};
     } catch (e) {
-      print('🔴 [StudentRepository] Exception: $e');
+      AppLogger.error('🔴 [StudentRepository] Exception: $e');
       return {'success': false, 'error': e.toString()};
     }
   }
@@ -337,10 +352,10 @@ class StudentRepository {
       final response = await _dio.get('/student/current-session');
       final responseBody = response.data;
 
-      // print("📦 [StudentRepository] Response: $responseBody");
+      // AppLogger.info("📦 [StudentRepository] Response: $responseBody");
 
       if (response.statusCode == 200) {
-        print('🟢 [StudentRepository] Current fetched successfully');
+        AppLogger.info('🟢 [StudentRepository] Current fetched successfully');
         return {'success': true, 'data': responseBody['data']};
       } else {
         return {
@@ -349,7 +364,7 @@ class StudentRepository {
         };
       }
     } on DioException catch (e) {
-      print('🔴 [StudentRepository] DioException: ${e.message}');
+      AppLogger.error('🔴 [StudentRepository] DioException: ${e.message}');
 
       if (e.response?.statusCode == 401) {
         return {'success': false, 'error': 'Authentication required'};
@@ -363,7 +378,7 @@ class StudentRepository {
           'Failed to fetch timetable';
       return {'success': false, 'error': errorMessage};
     } catch (e) {
-      print('🔴 [StudentRepository] Exception: $e');
+      AppLogger.error('🔴 [StudentRepository] Exception: $e');
       return {'success': false, 'error': e.toString()};
     }
   }

@@ -5,7 +5,7 @@ import 'package:markmeapp/presentation/widgets/dashboard_action_card.dart';
 import 'package:markmeapp/presentation/widgets/recent_activity.dart';
 
 class ClerkDashboardPage extends StatefulWidget {
-  const ClerkDashboardPage({Key? key}) : super(key: key);
+  const ClerkDashboardPage({super.key});
 
   @override
   State<ClerkDashboardPage> createState() => _ClerkDashboardPageState();

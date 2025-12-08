@@ -266,9 +266,9 @@ class _TeacherListPageState extends ConsumerState<TeacherListPage> {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.red.withOpacity(0.1),
+          color: Colors.red.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.red.withOpacity(0.3)),
+          border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
         ),
         child: Row(
           children: [
@@ -308,7 +308,7 @@ class _TeacherListPageState extends ConsumerState<TeacherListPage> {
           const Spacer(),
           if (_hasMoreData && _teachers.isNotEmpty)
             Text(
-              'Page ${_currentPage}',
+              'Page $_currentPage',
               style: TextStyle(
                 color: isDark ? Colors.white60 : Colors.grey,
                 fontSize: 12,
@@ -435,7 +435,7 @@ class TeacherCard extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.2 : 0.05),
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -475,7 +475,7 @@ class TeacherCard extends StatelessWidget {
       width: 60,
       height: 60,
       decoration: BoxDecoration(
-        color: avatarColor.withOpacity(isDark ? 0.3 : 0.2),
+        color: avatarColor.withValues(alpha: isDark ? 0.3 : 0.2),
         shape: BoxShape.circle,
       ),
       child: Center(

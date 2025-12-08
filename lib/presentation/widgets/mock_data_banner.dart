@@ -7,10 +7,10 @@ class MockDataBanner extends StatelessWidget {
   final String message;
 
   const MockDataBanner({
-    Key? key,
+    super.key,
     this.showBanner = true,
     this.message = 'Using Mock Data - Backend Not Connected',
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -22,10 +22,7 @@ class MockDataBanner extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.orange.shade100,
         border: Border(
-          bottom: BorderSide(
-            color: Colors.orange.shade300,
-            width: 1,
-          ),
+          bottom: BorderSide(color: Colors.orange.shade300, width: 1),
         ),
       ),
       child: Row(
@@ -46,11 +43,7 @@ class MockDataBanner extends StatelessWidget {
               ),
             ),
           ),
-          Icon(
-            Icons.developer_mode,
-            color: Colors.orange.shade700,
-            size: 16,
-          ),
+          Icon(Icons.developer_mode, color: Colors.orange.shade700, size: 16),
         ],
       ),
     );

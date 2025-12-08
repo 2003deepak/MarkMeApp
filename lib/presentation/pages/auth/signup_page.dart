@@ -6,6 +6,7 @@ import 'package:markmeapp/data/models/user_model.dart';
 import 'package:markmeapp/presentation/widgets/ui/input_field.dart';
 import 'package:markmeapp/presentation/widgets/ui/otp_field.dart';
 import 'package:markmeapp/state/auth_state.dart';
+import 'package:markmeapp/core/utils/app_logger.dart';
 
 class SignupPage extends ConsumerStatefulWidget {
   const SignupPage({super.key});
@@ -68,7 +69,7 @@ class _SignupPageState extends ConsumerState<SignupPage> {
       final authStore = ref.read(authStoreProvider.notifier);
       final result = await authStore.registerUser(user);
 
-      debugPrint(result?.toString());
+      AppLogger.info(result.toString());
 
       // Handle the response from auth store
       if (result['success'] == true) {
@@ -96,7 +97,7 @@ class _SignupPageState extends ConsumerState<SignupPage> {
       _enteredPassword = password;
     });
     _checkFormValidity();
-    debugPrint('✅ Password Entered: $password');
+    AppLogger.info('✅ Password Entered: $password');
   }
 
   void _checkFormValidity() {
@@ -300,7 +301,7 @@ class _SignupPageState extends ConsumerState<SignupPage> {
                           ? []
                           : [
                               BoxShadow(
-                                color: primaryColor.withOpacity(0.3),
+                                color: primaryColor.withAlpha(77), // 0.3
                                 blurRadius: 12,
                                 offset: const Offset(0, 6),
                               ),

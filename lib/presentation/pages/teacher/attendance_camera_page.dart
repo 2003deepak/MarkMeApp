@@ -1,16 +1,13 @@
-import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
 
 class CameraCaptureScreen extends StatefulWidget {
   final Map<String, dynamic> sessionData;
 
-  const CameraCaptureScreen({Key? key, required this.sessionData})
-    : super(key: key);
+  const CameraCaptureScreen({super.key, required this.sessionData});
 
   @override
   State<CameraCaptureScreen> createState() => _CameraCaptureScreenState();
@@ -20,7 +17,7 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
   late CameraController _controller;
   Future<void>? _initializeControllerFuture;
 
-  List<XFile> _capturedImages = [];
+  final List<XFile> _capturedImages = [];
   bool _isLoading = false;
   bool _isCameraReady = false;
   bool _isDisposed = false;
@@ -164,7 +161,7 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.3),
+                    color: Colors.black.withAlpha(76), // 0.3 * 255
                     blurRadius: 20,
                     offset: const Offset(0, 10),
                   ),
@@ -379,8 +376,9 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
         _cameras!.length < 2 ||
         !_isCameraReady ||
         _isLoading ||
-        _isDisposed)
+        _isDisposed) {
       return;
+    }
 
     try {
       setState(() {

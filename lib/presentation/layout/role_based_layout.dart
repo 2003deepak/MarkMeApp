@@ -5,6 +5,7 @@ import 'package:markmeapp/presentation/layout/teacher_layout.dart';
 import 'package:markmeapp/presentation/layout/clerk_layout.dart';
 import 'package:markmeapp/presentation//layout/guest_layout.dart';
 import 'package:markmeapp/state/auth_state.dart';
+import 'package:markmeapp/core/utils/app_logger.dart';
 
 class RoleBasedLayout extends ConsumerWidget {
   final Widget child;
@@ -15,7 +16,9 @@ class RoleBasedLayout extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final auth = ref.watch(authStoreProvider);
 
-    print('🎭 [RoleBasedLayout] Building layout for role: ${auth.role}');
+    AppLogger.info(
+      '🎭 [RoleBasedLayout] Building layout for role: ${auth.role}',
+    );
 
     switch (auth.role) {
       case 'student':

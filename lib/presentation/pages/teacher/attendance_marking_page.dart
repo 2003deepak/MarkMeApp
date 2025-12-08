@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:markmeapp/data/repositories/teacher_repository.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:markmeapp/core/utils/app_logger.dart';
 
 class AttendanceMarkingPage extends ConsumerStatefulWidget {
   final Map<String, dynamic> sessionData;
@@ -13,11 +14,11 @@ class AttendanceMarkingPage extends ConsumerStatefulWidget {
   final String attendanceId;
 
   const AttendanceMarkingPage({
-    Key? key,
+    super.key,
     required this.sessionData,
     required this.images,
     required this.attendanceId,
-  }) : super(key: key);
+  });
 
   @override
   ConsumerState<AttendanceMarkingPage> createState() =>
@@ -113,7 +114,7 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
     final present = <String>[];
     final absent = <String>[];
 
-    _allStudents.forEach((student) {
+    for (var student in _allStudents) {
       final id = student['id']!;
       final isPresent = _attendanceMap[id] ?? false;
 
@@ -122,10 +123,10 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
       } else {
         absent.add(id);
       }
-    });
+    }
 
-    print("🎯 Present IDs: $present");
-    print("🎯 Absent IDs:  $absent");
+    AppLogger.info("🎯 Present IDs: $present");
+    AppLogger.info("🎯 Absent IDs:  $absent");
 
     // Attach to state
     widget.sessionData['present_students'] = present;
@@ -142,12 +143,16 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
       final semester = int.tryParse(widget.sessionData['semester'].toString());
 
       if (batchYear == null || program == null || semester == null) {
-        print("❌ sessionData incomplete: $batchYear, $program, $semester");
+        AppLogger.error(
+          "❌ sessionData incomplete: $batchYear, $program, $semester",
+        );
         setState(() => _isLoadingStudents = false);
         return;
       }
 
-      print("📌 Fetching students for $batchYear $program Sem-$semester");
+      AppLogger.info(
+        "📌 Fetching students for $batchYear $program Sem-$semester",
+      );
 
       final result = await teacherRepository.fetchStudentsForAttendance(
         batchYear: batchYear,
@@ -192,11 +197,11 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
         });
       } else {
         setState(() => _isLoadingStudents = false);
-        print('Error loading students: ${result['error']}');
+        AppLogger.error('Error loading students: ${result['error']}');
       }
     } catch (e) {
       setState(() => _isLoadingStudents = false);
-      print('Exception loading students: $e');
+      AppLogger.error('Exception loading students: $e');
     }
   }
 
@@ -231,7 +236,7 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
   }
 
   void _handleSSEData(Map<String, dynamic> data) {
-    print('Received SSE data: $data');
+    AppLogger.info('Received SSE data: $data');
 
     // Handle student recognition events
     if (data['student_id'] != null && data['name'] != null) {
@@ -337,9 +342,9 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
       _attendanceBitString = bitString.toString();
     });
 
-    print('📊 Generated BitString: $_attendanceBitString');
-    print('📊 Total Students: ${sortedStudents.length}');
-    print(
+    AppLogger.info('📊 Generated BitString: $_attendanceBitString');
+    AppLogger.info('📊 Total Students: ${sortedStudents.length}');
+    AppLogger.info(
       '📊 Present Count: ${_attendanceMap.values.where((present) => present).length}',
     );
 
@@ -347,7 +352,7 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
     for (int i = 0; i < sortedStudents.length; i++) {
       final student = sortedStudents[i];
       final status = _attendanceBitString[i];
-      print(
+      AppLogger.info(
         '🎯 Roll: ${student['roll_number']} - ${status == '1' ? 'Present' : 'Absent'}',
       );
     }
@@ -489,7 +494,7 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withAlpha(13), // 0.05 * 255
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -703,7 +708,7 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withAlpha(13), // 0.05 * 255
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -798,219 +803,242 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
             imageUrl: profileImageUrl,
             fit: BoxFit.cover,
             placeholder: (context, url) => Container(
-              color: const Color(0xFFF1F5F9),
-              child: const Icon(
-                Icons.person,
-                size: 20,
-                color: Color(0xFF64748B),
-              ),
+              color: Colors.grey.shade200,
+              child: const Icon(Icons.person, color: Colors.grey, size: 20),
             ),
             errorWidget: (context, url, error) => Container(
-              color: const Color(0xFFF1F5F9),
-              child: const Icon(
-                Icons.person,
-                size: 20,
-                color: Color(0xFF64748B),
-              ),
+              color: Colors.grey.shade200,
+              child: const Icon(Icons.error, color: Colors.red, size: 20),
             ),
           ),
         ),
       );
-    } else {
-      return Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: const Color(0xFFF1F5F9),
-          border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
-        ),
-        child: Icon(Icons.person, size: 20, color: const Color(0xFF64748B)),
-      );
     }
+
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: isRecognized ? const Color(0xFFD1FAE5) : const Color(0xFFF1F5F9),
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: isRecognized
+              ? const Color(0xFF10B981)
+              : const Color(0xFFE2E8F0),
+          width: isRecognized ? 2 : 1,
+        ),
+      ),
+      child: Icon(
+        Icons.person,
+        color: isRecognized ? const Color(0xFF10B981) : const Color(0xFF64748B),
+        size: 20,
+      ),
+    );
   }
 
   Color _getConfidenceColor(double confidence) {
-    if (confidence >= 80) return const Color(0xFF10B981);
-    if (confidence >= 60) return const Color(0xFFF59E0B);
+    if (confidence >= 0.8) return const Color(0xFF10B981);
+    if (confidence >= 0.5) return const Color(0xFFF59E0B);
     return const Color(0xFFEF4444);
-  }
-
-  Widget _buildSubmitButton(int presentCount, int totalCount) {
-    final hasMarkedAttendance = presentCount > 0;
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: const Border(
-          top: BorderSide(color: Color(0xFFE2E8F0), width: 1),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: AnimatedBuilder(
-        animation: _submitController,
-        builder: (context, child) {
-          return Transform.scale(
-            scale: _submitScaleAnimation.value,
-            child: SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: hasMarkedAttendance && !_isSubmitting
-                    ? _submitAttendance
-                    : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2563EB),
-                  disabledBackgroundColor: const Color(0xFFE2E8F0),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 0,
-                ),
-                child: _isSubmitting
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : const Text(
-                        'Save Attendance',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
   }
 
   void _toggleAttendance(String studentId) {
     setState(() {
       _attendanceMap[studentId] = !(_attendanceMap[studentId] ?? false);
+      _generateAttendanceBitString(); // Update bitstring
     });
-
-    HapticFeedback.lightImpact();
-    _filterStudents();
-    _generateAttendanceBitString(); // Regenerate bitstring when attendance changes
+    HapticFeedback.selectionClick();
   }
 
   void _filterStudents() {
+    final query = _searchController.text.toLowerCase().trim();
+
     setState(() {
       _filteredStudents = _allStudents.where((student) {
-        final searchQuery = _searchController.text.toLowerCase();
-
-        // Safe string conversion for search
-        final studentName = student['name']?.toString().toLowerCase() ?? '';
-        final studentRoll =
-            student['roll_number']?.toString().toLowerCase() ?? '';
-
         final matchesSearch =
-            searchQuery.isEmpty ||
-            studentName.contains(searchQuery) ||
-            studentRoll.contains(searchQuery);
+            student['name'].toString().toLowerCase().contains(query) ||
+            student['roll_number'].toString().toLowerCase().contains(query);
 
         final isPresent = _attendanceMap[student['id']] ?? false;
-        final matchesFilter =
-            _selectedFilter == 'all' ||
-            (_selectedFilter == 'present' && isPresent) ||
-            (_selectedFilter == 'absent' && !isPresent);
+
+        bool matchesFilter = true;
+        if (_selectedFilter == 'present') {
+          matchesFilter = isPresent;
+        } else if (_selectedFilter == 'absent') {
+          matchesFilter = !isPresent;
+        }
 
         return matchesSearch && matchesFilter;
       }).toList();
     });
   }
 
-  void _submitAttendance() async {
-    if (_isSubmitting) return;
+  Widget _buildSubmitButton(int presentCount, int totalCount) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      color: Colors.white,
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Summary',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF64748B),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  RichText(
+                    text: TextSpan(
+                      children: [
+                        TextSpan(
+                          text: '$presentCount',
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF10B981),
+                          ),
+                        ),
+                        const TextSpan(
+                          text: ' Present',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Color(0xFF1E293B),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              GestureDetector(
+                onTap: _isSubmitting ? null : _submitAttendance,
+                child: ScaleTransition(
+                  scale: _submitScaleAnimation,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 32,
+                      vertical: 16,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(
+                            0xFF2563EB,
+                          ).withAlpha(76), // 0.3 * 255
+                          blurRadius: 12,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: _isSubmitting
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Text(
+                            'Submit',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 
-    _submitController.forward().then((_) => _submitController.reverse());
+  Future<void> _submitAttendance() async {
+    if (_isSubmitting) return;
 
     setState(() {
       _isSubmitting = true;
     });
 
-    HapticFeedback.mediumImpact();
+    _submitController.forward().then((_) => _submitController.reverse());
 
-    // Generate present & absent lists
-    _generatePresentAbsentLists();
+    try {
+      _generatePresentAbsentLists();
 
-    // Include the bitstring in your submission if needed
-    print('🎯 Submitting attendance with bitstring: $_attendanceBitString');
+      final response = await teacherRepository.saveAttendance(
+        widget.attendanceId,
+        _attendanceBitString,
+        widget.sessionData['present_students'],
+        widget.sessionData['absent_students'],
+      );
 
-    final resp = await teacherRepository.saveAttendance(
-      widget.attendanceId,
-      _attendanceBitString,
-      widget.sessionData['present_students'],
-      widget.sessionData['absent_students'],
-    );
+      if (response['success'] == true) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Attendance submitted successfully!'),
+              backgroundColor: const Color(0xFF10B981),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          );
 
-    if (resp['success'] != true) {
+          // Pop back to dashboard or previous screen
+          context.pop();
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                response['message'] ?? 'Failed to submit attendance',
+              ),
+              backgroundColor: const Color(0xFFEF4444),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          );
+        }
+      }
+    } catch (e) {
       if (mounted) {
-        setState(() {
-          _isSubmitting = false;
-        });
-
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.error, color: Colors.white, size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  resp['message']?.toString() ?? 'Failed to submit attendance',
-                ),
-              ],
-            ),
+            content: Text('Error submitting attendance: $e'),
             backgroundColor: const Color(0xFFEF4444),
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
             ),
-            duration: const Duration(seconds: 3),
           ),
         );
       }
-      return;
-    } else {
+    } finally {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle, color: Colors.white, size: 20),
-                const SizedBox(width: 8),
-                Text(resp['message']?.toString() ?? 'Attendance submitted'),
-              ],
-            ),
-            backgroundColor: const Color(0xFF10B981),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            duration: const Duration(seconds: 3),
-          ),
-        );
-
-        // Navigate back after a short delay
-        Future.delayed(const Duration(seconds: 2), () {
-          if (mounted) {
-            context.go("/teacher");
-          }
+        setState(() {
+          _isSubmitting = false;
         });
       }
     }

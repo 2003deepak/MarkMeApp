@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -9,17 +8,45 @@ import 'package:markmeapp/core/utils/get_device_info.dart';
 import 'package:markmeapp/state/auth_state.dart';
 import 'package:markmeapp/core/routing/app_router.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:markmeapp/core/utils/app_logger.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:markmeapp/data/models/notification_model.dart';
+import 'package:markmeapp/data/repositories/notification_repository.dart';
 
 // Background message handler (only for mobile)
 Future<void> _firebaseMessagingHandler(RemoteMessage message) async {
   final platformType = getPlatformType();
   if (platformType == 'android' || platformType == 'ios') {
     await Firebase.initializeApp();
-    print("🔥 Background message: ${message.notification?.title}");
+
+    // Initialize Hive for background isolate
+    await Hive.initFlutter();
+    if (!Hive.isAdapterRegistered(0)) {
+      Hive.registerAdapter(NotificationModelAdapter());
+    }
+
+    // Save notification
+    if (message.notification != null) {
+      final notification = NotificationModel(
+        id:
+            message.messageId ??
+            DateTime.now().millisecondsSinceEpoch.toString(),
+        title: message.notification!.title ?? 'No Title',
+        body: message.notification!.body ?? 'No Body',
+        timestamp: message.sentTime ?? DateTime.now(),
+        data: message.data,
+      );
+
+      final repo = NotificationRepository();
+      await repo.saveNotification(notification);
+    }
+
+    AppLogger.info(
+      "🔥 Background message saved: ${message.notification?.title}",
+    );
   }
 }
 
-// Initialize Firebase only on mobile platforms
 // Initialize Firebase only on mobile platforms
 Future<void> _initializeFirebase() async {
   final platformType = getPlatformType();
@@ -28,17 +55,17 @@ Future<void> _initializeFirebase() async {
   if (platformType == 'windows' ||
       platformType == 'macos' ||
       platformType == 'linux') {
-    print("🖥️ Skipping Firebase initialization on $platformType");
+    AppLogger.info("🖥️ Skipping Firebase initialization on $platformType");
     return;
   }
 
   try {
     await Firebase.initializeApp();
-    print("✅ Firebase initialized successfully on $platformType");
+    AppLogger.info("✅ Firebase initialized successfully on $platformType");
   } catch (e) {
-    print("⚠️ Firebase initialization error on $platformType: $e");
+    AppLogger.error("⚠️ Firebase initialization error on $platformType: $e");
     if (platformType == 'web') {
-      print("🌐 Firebase might need web configuration");
+      AppLogger.warning("🌐 Firebase might need web configuration");
     }
   }
 }
@@ -58,12 +85,14 @@ Future<void> _initLocalNotifications() async {
     await flutterLocalNotificationsPlugin.initialize(
       initSettings,
       onDidReceiveNotificationResponse: (details) {
-        print("📲 Notification clicked (foreground): ${details.payload}");
+        AppLogger.info(
+          "📲 Notification clicked (foreground): ${details.payload}",
+        );
       },
     );
-    print("✅ Local notifications initialized on $platformType");
+    AppLogger.info("✅ Local notifications initialized on $platformType");
   } else {
-    print("🖥️ Skipping local notifications on $platformType");
+    AppLogger.info("🖥️ Skipping local notifications on $platformType");
   }
 }
 
@@ -74,24 +103,37 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   final platformType = getPlatformType();
-  print("🚀 Starting app on platform: $platformType");
+  AppLogger.info("🚀 Starting app on platform: $platformType");
 
   // ALWAYS LOAD .env FILE - Your app needs it for API URLs, etc.
   try {
     await dotenv.load(fileName: ".env");
-    print("✅ Environment loaded for $platformType");
+    AppLogger.info("✅ Environment loaded for $platformType");
   } catch (e) {
-    print("⚠️ Error loading .env file: $e");
+    AppLogger.error("⚠️ Error loading .env file: $e");
     // Set default environment variables if .env fails
     // This prevents the NotInitializedError
     if (dotenv.env.isEmpty) {
       // Set default mock values for development
-      print("⚠️ Setting default environment variables for development");
+      AppLogger.warning(
+        "⚠️ Setting default environment variables for development",
+      );
     }
   }
 
   // Initialize Firebase only on mobile and web
   await _initializeFirebase();
+
+  // Initialize Hive
+  await Hive.initFlutter();
+  Hive.registerAdapter(NotificationModelAdapter());
+
+  // Cleanup old notifications
+  try {
+    await NotificationRepository().clearOldNotifications();
+  } catch (e) {
+    AppLogger.error("⚠️ Error clearing old notifications: $e");
+  }
 
   // Initialize local notifications
   await _initLocalNotifications();
@@ -99,7 +141,7 @@ void main() async {
   // Setup background messages only for mobile
   if (platformType == 'android' || platformType == 'ios') {
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingHandler);
-    print("✅ FCM background handler registered");
+    AppLogger.info("✅ FCM background handler registered");
   }
 
   runApp(const ProviderScope(child: MyApp()));
@@ -121,7 +163,7 @@ class _MyAppState extends ConsumerState<MyApp> {
   void initState() {
     super.initState();
     platformType = getPlatformType();
-    print("📱 Current platform: $platformType");
+    AppLogger.info("📱 Current platform: $platformType");
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _checkUserSession();
@@ -142,23 +184,28 @@ class _MyAppState extends ConsumerState<MyApp> {
       if (authState.isLoggedIn) {
         final role = authState.role ?? "student";
         final route = _getDashboardRoute(role);
-        print("🔑 User logged in as $role, redirecting to $route");
-        context.go(route);
+        AppLogger.info("🔑 User logged in as $role, redirecting to $route");
+        if (mounted) {
+          context.go(route);
+        }
       } else {
-        print("👤 User not logged in, redirecting to login");
-        context.go('/login');
+        AppLogger.info("👤 User not logged in, redirecting to login");
+        if (mounted) {
+          context.go('/login');
+        }
       }
     } catch (e, stackTrace) {
-      print("❌ Error checking user session: $e");
-      print("Stack trace: $stackTrace");
+      AppLogger.error("❌ Error checking user session: $e", e, stackTrace);
 
       setState(() {
         _initializationError = true;
         _hasCheckedSession = true;
       });
 
-      // Redirect to login if there's an error
-      context.go('/login');
+      if (mounted) {
+        // Redirect to login if there's an error
+        context.go('/login');
+      }
     }
   }
 
@@ -179,11 +226,13 @@ class _MyAppState extends ConsumerState<MyApp> {
 
         // Print FCM token
         final token = await messaging.getToken();
-        print("🔑 FCM Token: $token");
+        AppLogger.info("🔑 FCM Token: $token");
 
         // Foreground messages
-        FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-          print("💬 Foreground message: ${message.notification?.title}");
+        FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
+          AppLogger.info(
+            "💬 Foreground message: ${message.notification?.title}",
+          );
 
           final notification = message.notification;
           if (notification != null) {
@@ -201,12 +250,28 @@ class _MyAppState extends ConsumerState<MyApp> {
               ),
               payload: message.data.toString(),
             );
+
+            // Save to Hive
+            final notificationModel = NotificationModel(
+              id:
+                  message.messageId ??
+                  DateTime.now().millisecondsSinceEpoch.toString(),
+              title: notification.title ?? 'No Title',
+              body: notification.body ?? 'No Body',
+              timestamp: message.sentTime ?? DateTime.now(),
+              data: message.data,
+            );
+
+            await NotificationRepository().saveNotification(notificationModel);
+            AppLogger.info("💾 Notification saved locally");
           }
         });
 
         // Background messages
         FirebaseMessaging.onMessageOpenedApp.listen((message) {
-          print("📲 Notification clicked (background): ${message.data}");
+          AppLogger.info(
+            "📲 Notification clicked (background): ${message.data}",
+          );
           _navigateFromNotification(message.data);
         });
 
@@ -214,16 +279,18 @@ class _MyAppState extends ConsumerState<MyApp> {
         RemoteMessage? initialMessage = await FirebaseMessaging.instance
             .getInitialMessage();
         if (initialMessage != null) {
-          print("🛑 Opened app from terminated: ${initialMessage.data}");
+          AppLogger.info(
+            "🛑 Opened app from terminated: ${initialMessage.data}",
+          );
           _navigateFromNotification(initialMessage.data);
         }
 
-        print("✅ FCM listeners setup complete on $platformType");
+        AppLogger.info("✅ FCM listeners setup complete on $platformType");
       } catch (e) {
-        print("⚠️ Error setting up FCM on $platformType: $e");
+        AppLogger.error("⚠️ Error setting up FCM on $platformType: $e");
       }
     } else {
-      print("🖥️ Skipping FCM setup on $platformType");
+      AppLogger.info("🖥️ Skipping FCM setup on $platformType");
     }
   }
 
@@ -232,7 +299,7 @@ class _MyAppState extends ConsumerState<MyApp> {
 
     final route = data["screen"];
     if (route != null && route is String) {
-      print("📍 Navigating to: $route from notification");
+      AppLogger.info("📍 Navigating to: $route from notification");
       context.go(route);
     }
   }
@@ -251,7 +318,7 @@ class _MyAppState extends ConsumerState<MyApp> {
     // Log route changes
     router.routerDelegate.addListener(() {
       final route = router.routerDelegate.currentConfiguration.uri.toString();
-      print('🔵 [Navigation] Current route: $route');
+      AppLogger.info('🔵 [Navigation] Current route: $route');
     });
 
     if (!_hasCheckedSession) {

@@ -11,7 +11,7 @@ import 'package:markmeapp/presentation/widgets/student_gallery_section.dart';
 import 'package:markmeapp/presentation/widgets/student_personal_info_section.dart';
 import 'package:markmeapp/presentation/widgets/ui/profile_picture.dart';
 import 'package:markmeapp/state/student_state.dart';
-import 'package:collection/collection.dart';
+import 'package:flutter/foundation.dart';
 
 class EditProfilePage extends ConsumerStatefulWidget {
   const EditProfilePage({super.key});
@@ -84,21 +84,21 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   }
 
   Map<String, dynamic> _getCurrentFormData() {
-    String? _nullIfEmpty(String? value) =>
+    String? nullIfEmpty(String? value) =>
         (value == null || value.trim().isEmpty) ? null : value.trim();
 
     return {
-      'first_name': _nullIfEmpty(_firstNameCtrl.text),
-      'middle_name': _nullIfEmpty(_middleNameCtrl.text),
-      'last_name': _nullIfEmpty(_lastNameCtrl.text),
-      'email': _nullIfEmpty(_emailCtrl.text),
-      'phone': _nullIfEmpty(_phoneCtrl.text),
+      'first_name': nullIfEmpty(_firstNameCtrl.text),
+      'middle_name': nullIfEmpty(_middleNameCtrl.text),
+      'last_name': nullIfEmpty(_lastNameCtrl.text),
+      'email': nullIfEmpty(_emailCtrl.text),
+      'phone': nullIfEmpty(_phoneCtrl.text),
       'dob': _dob?.toIso8601String().split('T').first,
-      'roll_number': _nullIfEmpty(_rollCtrl.text),
+      'roll_number': nullIfEmpty(_rollCtrl.text),
       'program': _program,
       'department': _department,
       'semester': _semester,
-      'batch_year': _nullIfEmpty(_batchYearCtrl.text),
+      'batch_year': nullIfEmpty(_batchYearCtrl.text),
       'profile_picture': _profilePicture,
       'gallery': _gallery.whereType<String>().toList(),
       'is_embeddings': _isEmbeddings,
@@ -113,7 +113,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       if (key == 'gallery') {
         final list1 = map1[key] as List?;
         final list2 = map2[key] as List?;
-        if (!const ListEquality().equals(list1, list2)) return false;
+        if (!listEquals(list1, list2)) return false;
       } else if (map1[key] != map2[key]) {
         return false;
       }
@@ -123,8 +123,9 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
 
   bool get _isSaveEnabled {
     if (!_isFormDirty || _isUpdating) return false;
-    if (!_isEmbeddings && _gallery.whereType<String>().length != 4)
+    if (!_isEmbeddings && _gallery.whereType<String>().length != 4) {
       return false;
+    }
     return true;
   }
 
@@ -173,7 +174,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       if (key == 'gallery') {
         final initialGallery = (initialValue ?? []) as List;
         final currentGallery = (value ?? []) as List;
-        if (!const ListEquality().equals(initialGallery, currentGallery)) {
+        if (!listEquals(initialGallery, currentGallery)) {
           changedData[key] = currentGallery;
         }
       } else if (value != initialValue) {
@@ -497,7 +498,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
               children: _buildFormContent(ref.read(studentStoreProvider)),
             ),
             Container(
-              color: Colors.black.withOpacity(0.3),
+              color: Colors.black.withValues(alpha: 0.3),
               child: const Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,

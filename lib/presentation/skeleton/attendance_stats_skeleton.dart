@@ -25,8 +25,11 @@ class AttendanceStatsSkeleton extends StatelessWidget {
     );
   }
 
-  Widget _divider() =>
-      Container(width: 1, height: 50, color: Colors.white.withOpacity(0.5));
+  Widget _divider() => Container(
+    width: 1,
+    height: 50,
+    color: Colors.white.withValues(alpha: 0.5),
+  );
 
   Widget _buildSkeletonItem() {
     return Column(

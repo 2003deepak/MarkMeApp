@@ -21,7 +21,7 @@ class InputField extends StatefulWidget {
   final void Function(String)? onFieldSubmitted;
 
   const InputField({
-    Key? key,
+    super.key,
     required this.label,
     this.hintText,
     this.controller,
@@ -39,37 +39,35 @@ class InputField extends StatefulWidget {
     this.textInputAction,
     this.onChanged,
     this.onFieldSubmitted,
-  }) : super(key: key);
+  });
 
   @override
   State<InputField> createState() => _InputFieldState();
 }
 
 class _InputFieldState extends State<InputField> {
-  bool _isFocused = false;
+  // bool _isFocused = false;
   late FocusNode _focusNode;
 
   @override
   void initState() {
     super.initState();
     _focusNode = widget.focusNode ?? FocusNode();
-    _focusNode.addListener(_onFocusChange);
   }
 
   @override
   void dispose() {
-    _focusNode.removeListener(_onFocusChange);
     if (widget.focusNode == null) {
       _focusNode.dispose();
     }
     super.dispose();
   }
 
-  void _onFocusChange() {
-    setState(() {
-      _isFocused = _focusNode.hasFocus;
-    });
-  }
+  // void _onFocusChange() {
+  //   setState(() {
+  //     _isFocused = _focusNode.hasFocus;
+  //   });
+  // }
 
   @override
   Widget build(BuildContext context) {

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:markmeapp/core/network/api_client.dart';
+import 'package:markmeapp/core/utils/app_logger.dart';
 
 class ClerkRepository {
   final Dio _dio;
@@ -42,7 +43,7 @@ class ClerkRepository {
         "credit": data['credit'],
       };
 
-      print("Request body: $requestBody");
+      AppLogger.info("Request body: $requestBody");
 
       final response = await _dio.post('/clerk/subject', data: requestBody);
 
@@ -58,7 +59,7 @@ class ClerkRepository {
         );
       }
 
-      print("Response from API: $responseData");
+      AppLogger.info("Response from API: $responseData");
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return responseData;
@@ -69,20 +70,36 @@ class ClerkRepository {
         };
       }
     } on DioException catch (e) {
-      print("Dio error: ${e}");
+      AppLogger.error("Dio error: $e");
       return {
         'success': false,
         'error': e.response?.data?['message'] ?? e.message ?? 'Network error',
       };
     } catch (e) {
-      print("Other error: $e");
+      AppLogger.error("Other error: $e");
       return {'success': false, 'error': e.toString()};
     }
   }
 
-  Future<Map<String, dynamic>> fetchSubjects() async {
+  Future<Map<String, dynamic>> fetchSubjects({
+    String? program,
+    int? semester,
+  }) async {
     try {
-      final response = await _dio.get('/clerk/subject');
+      final Map<String, dynamic> query = {};
+
+      if (program != null && program.trim().isNotEmpty) {
+        query['program'] = program.trim();
+      }
+
+      if (semester != null) {
+        query['semester'] = semester;
+      }
+
+      final response = await _dio.get(
+        '/clerk/subject',
+        queryParameters: query.isNotEmpty ? query : null,
+      );
 
       if (response.statusCode == 200) {
         return {
@@ -119,7 +136,7 @@ class ClerkRepository {
         "subjects_assigned": data['subjects_assigned'] ?? [],
       };
 
-      print("Request body: $requestBody");
+      AppLogger.info("Request body: $requestBody");
 
       final response = await _dio.post('/clerk/teacher/', data: requestBody);
 
@@ -135,7 +152,7 @@ class ClerkRepository {
         );
       }
 
-      print("Response from API: $responseData");
+      AppLogger.info("Response from API: $responseData");
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return responseData;
@@ -146,13 +163,13 @@ class ClerkRepository {
         };
       }
     } on DioException catch (e) {
-      print("Dio error: $e");
+      AppLogger.error("Dio error: $e");
       return {
         'success': false,
         'error': e.response?.data?['message'] ?? e.message ?? 'Network error',
       };
     } catch (e) {
-      print("Other error: $e");
+      AppLogger.error("Other error: $e");
       return {'success': false, 'error': e.toString()};
     }
   }
@@ -167,7 +184,7 @@ class ClerkRepository {
     int limit = 10,
   }) async {
     try {
-      print('🔵 [ClerkRepository] Fetching students...');
+      AppLogger.info('🔵 [ClerkRepository] Fetching students...');
 
       // -------------------------------
       // Build query params safely
@@ -192,7 +209,7 @@ class ClerkRepository {
       params['page'] = page;
       params['limit'] = limit;
 
-      print("🔍 Final Query Params → $params");
+      AppLogger.info("🔍 Final Query Params → $params");
 
       // -------------------------------
       // API Request
@@ -203,7 +220,7 @@ class ClerkRepository {
       );
 
       final body = response.data;
-      print("📦 API Response → $body");
+      AppLogger.info("📦 API Response → $body");
 
       if (response.statusCode == 200) {
         return {
@@ -226,13 +243,13 @@ class ClerkRepository {
         'error': body['message'] ?? 'Unknown error occurred',
       };
     } on DioException catch (e) {
-      print('🔴 DioException → ${e.message}');
+      AppLogger.error('🔴 DioException → ${e.message}');
       return {
         'success': false,
         'error': e.response?.data?['message'] ?? e.message ?? "Network Error",
       };
     } catch (e) {
-      print('🔴 Exception → $e');
+      AppLogger.error('🔴 Exception → $e');
       return {'success': false, 'error': e.toString()};
     }
   }
@@ -243,7 +260,7 @@ class ClerkRepository {
     int limit = 10,
   }) async {
     try {
-      print('🔵 [ClerkRepository] Fetching teachers...');
+      AppLogger.info('🔵 [ClerkRepository] Fetching teachers...');
 
       // -------------------------------
       // Build query params safely
@@ -259,7 +276,7 @@ class ClerkRepository {
       params['page'] = page;
       params['limit'] = limit;
 
-      print("🔍 Final Query Params → $params");
+      AppLogger.info("🔍 Final Query Params → $params");
 
       // -------------------------------
       // API Request
@@ -270,7 +287,7 @@ class ClerkRepository {
       );
 
       final body = response.data;
-      print("📦 API Response → $body");
+      AppLogger.info("📦 API Response → $body");
 
       if (response.statusCode == 200) {
         return {
@@ -293,13 +310,55 @@ class ClerkRepository {
         'error': body['message'] ?? 'Unknown error occurred',
       };
     } on DioException catch (e) {
-      print('🔴 DioException → ${e.message}');
+      AppLogger.error('🔴 DioException → ${e.message}');
       return {
         'success': false,
         'error': e.response?.data?['message'] ?? e.message ?? "Network Error",
       };
     } catch (e) {
-      print('🔴 Exception → $e');
+      AppLogger.error('🔴 Exception → $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> createTimeTable(
+    Map<String, dynamic> data,
+  ) async {
+    try {
+      AppLogger.info("Request body: $data");
+
+      final response = await _dio.post('/timetable/', data: data);
+
+      // ✅ Parse response safely
+      Map<String, dynamic> responseData;
+      if (response.data is String) {
+        responseData = json.decode(response.data);
+      } else if (response.data is Map<String, dynamic>) {
+        responseData = response.data;
+      } else {
+        throw Exception(
+          'Unexpected response type: ${response.data.runtimeType}',
+        );
+      }
+
+      AppLogger.info("Response from API: $responseData");
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return responseData;
+      } else {
+        return {
+          'success': false,
+          'error': responseData['message'] ?? 'Failed to create subject',
+        };
+      }
+    } on DioException catch (e) {
+      AppLogger.error("Dio error: $e");
+      return {
+        'success': false,
+        'error': e.response?.data?['message'] ?? e.message ?? 'Network error',
+      };
+    } catch (e) {
+      AppLogger.error("Other error: $e");
       return {'success': false, 'error': e.toString()};
     }
   }

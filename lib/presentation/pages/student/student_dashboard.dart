@@ -1,4 +1,3 @@
-// Student_Dashboard.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:markmeapp/data/repositories/student_repository.dart';
@@ -6,7 +5,6 @@ import 'package:markmeapp/presentation/skeleton/student_dashboard_skeleton.dart'
 import 'package:markmeapp/presentation/widgets/attendance_chart_widget.dart';
 import 'package:markmeapp/presentation/widgets/subject_selector_widget.dart';
 import 'package:markmeapp/presentation/widgets/attendance_stats_widget.dart';
-import 'package:markmeapp/presentation/widgets/ui/empty_data.dart';
 import 'package:markmeapp/presentation/widgets/lectures_widget.dart';
 import 'package:markmeapp/presentation/widgets/recent_activity_widget.dart';
 import 'package:markmeapp/presentation/widgets/ui/error.dart';
@@ -43,7 +41,6 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
       final response = await studentRepo.fetchStudentAttendance();
 
       if (response['success'] == true) {
-        // print("The response = $response");
         final rawData = response['data'];
         final dataProcessor = StudentDataProcessor(rawData: rawData);
 
@@ -75,7 +72,7 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
 
       if (response['success'] == true) {
         setState(() {
-          upcomingSessions = response['data']['upcoming_sessions'] ?? [];
+          upcomingSessions = response['data']['upcoming'] ?? [];
           isLoadingUpcoming = false;
         });
       } else {

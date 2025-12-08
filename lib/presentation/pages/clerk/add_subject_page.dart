@@ -4,9 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:markmeapp/data/repositories/clerk_repository.dart';
 import 'package:markmeapp/presentation/widgets/ui/dropdown.dart';
 import 'package:markmeapp/presentation/widgets/ui/input_field.dart';
+import 'package:markmeapp/presentation/widgets/ui/snackbar.dart';
 
 class AddSubjectPage extends ConsumerStatefulWidget {
-  const AddSubjectPage({Key? key}) : super(key: key);
+  const AddSubjectPage({super.key});
 
   @override
   ConsumerState<AddSubjectPage> createState() => _AddSubjectPageState();
@@ -199,7 +200,7 @@ class _AddSubjectPageState extends ConsumerState<AddSubjectPage>
   }
 
   Widget _buildDropdownContainer({required Widget child}) {
-    return Container(width: double.maxFinite, child: child);
+    return SizedBox(width: double.maxFinite, child: child);
   }
 
   Widget _buildSaveButton() {
@@ -259,68 +260,25 @@ class _AddSubjectPageState extends ConsumerState<AddSubjectPage>
       if (!mounted) return;
 
       if (result['success'] == true) {
-        _showSuccessSnackBar(
+        showSuccessSnackBar(
+          context,
           result['message'] ?? 'Subject added successfully!',
         );
         await Future.delayed(const Duration(milliseconds: 500));
         if (mounted) context.go('/clerk');
       } else {
-        _showErrorSnackBar(result['error'] ?? 'Failed to add subject');
+        showErrorSnackBar(context, result['error'] ?? 'Failed to add subject');
       }
     } catch (error) {
       if (mounted) {
-        _showErrorSnackBar('Failed to add subject: ${error.toString()}');
+        showErrorSnackBar(
+          context,
+          'Failed to add subject: ${error.toString()}',
+        );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
-  }
-
-  // <CHANGE> Extracted snackbar methods for reusability
-  void _showSuccessSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.check_circle, color: Colors.white),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                message,
-                style: const TextStyle(color: Colors.white, fontSize: 14),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: Colors.green.shade600,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        duration: const Duration(seconds: 3),
-      ),
-    );
-  }
-
-  void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.error_outline, color: Colors.white),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                message,
-                style: const TextStyle(color: Colors.white, fontSize: 14),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: Colors.red.shade600,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        duration: const Duration(seconds: 3),
-      ),
-    );
   }
 
   @override

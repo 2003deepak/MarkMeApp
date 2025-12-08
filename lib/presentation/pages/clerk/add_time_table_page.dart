@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:markmeapp/data/repositories/clerk_repository.dart';
+import 'package:markmeapp/presentation/widgets/ui/dropdown.dart';
+import 'package:markmeapp/presentation/widgets/ui/snackbar.dart';
 
 class AddTimeTablePage extends ConsumerStatefulWidget {
-  const AddTimeTablePage({Key? key}) : super(key: key);
+  const AddTimeTablePage({super.key});
 
   @override
   ConsumerState<AddTimeTablePage> createState() => _AddTimeTableState();
@@ -12,16 +14,23 @@ class AddTimeTablePage extends ConsumerStatefulWidget {
 
 class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
   int selectedDayIndex = 0;
-  final List<String> days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  final List<String> days = [
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+  ];
 
   // Track subjects added for each day
-  Map<int, List<Map<String, String>>> addedSubjectsByDay = {
-    0: [], // Mon
-    1: [], // Tue
-    2: [], // Wed
-    3: [], // Thu
-    4: [], // Fri
-    5: [], // Sat
+  Map<int, List<Map<String, dynamic>>> addedSubjectsByDay = {
+    0: [], // Monday
+    1: [], // Tuesday
+    2: [], // Wednesday
+    3: [], // Thursday
+    4: [], // Friday
+    5: [], // Saturday
   };
 
   List<Map<String, dynamic>> _subjects = [];
@@ -29,17 +38,17 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
   String? _subjectsError;
 
   // Subject form fields
+  Map<String, dynamic>? selectedSubject;
   String? selectedSubjectId;
   String selectedSubjectName = '';
+  String selectedComponent = 'Lecture';
   String startTime = '10:10 AM';
   String endTime = '11:00 AM';
-  String selectedClass = 'SY';
-  String selectedType = 'Lab';
 
   // Color scheme for different components
   final Map<String, Color> componentColors = {
-    'Lecture': const Color(0xFFE8F0FF), // Light Blue
-    'Lab': const Color(0xFFFFF4E6), // Light Orange
+    'Lecture': const Color(0xFFE8F0FF),
+    'Lab': const Color(0xFFFFF4E6),
   };
 
   final Map<String, Color> componentBorderColors = {
@@ -61,28 +70,38 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
 
     try {
       final clerkRepo = ref.read(clerkRepositoryProvider);
-      final result = await clerkRepo.fetchSubjects();
+
+      final result = await clerkRepo.fetchSubjects(program: 'MCA', semester: 2);
 
       if (result['success'] == true) {
         final subjectsData = result['data']['subjects'] as List<dynamic>;
 
-        // Extract unique subjects by subject_code to avoid duplicates
-        final uniqueSubjects = <String, Map<String, dynamic>>{};
+        // List to store every subject (Lecture + Lab separately)
+        final List<Map<String, dynamic>> subjectsList = [];
 
         for (var subject in subjectsData) {
-          final subjectCode = subject['subject_code'];
-          final subjectName = subject['subject_name'];
+          final subjectId = subject['subject_id']?.toString() ?? '';
+          final subjectName = subject['subject_name']?.toString() ?? '';
+          final component = subject['component']?.toString() ?? '';
 
-          if (!uniqueSubjects.containsKey(subjectCode)) {
-            uniqueSubjects[subjectCode] = {
-              'id': subjectCode,
-              'name': subjectName,
-            };
+          if (subjectId.isNotEmpty) {
+            subjectsList.add({
+              'id': subjectId,
+              'name': '$subjectName ($component)', // Show component in UI
+              'raw': subject, // Store raw subject if needed later
+            });
           }
         }
 
         setState(() {
-          _subjects = uniqueSubjects.values.toList();
+          _subjects = subjectsList;
+
+          // Set default selected subject
+          if (_subjects.isNotEmpty) {
+            selectedSubject = _subjects.first;
+            selectedSubjectId = _subjects.first['id'];
+            selectedSubjectName = _subjects.first['name'];
+          }
         });
       } else {
         setState(() {
@@ -100,25 +119,114 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
     }
   }
 
-  void _handleBackPressed() {
-    context.pop();
+  // Convert 12-hour time to 24-hour format
+  String _convertTo24HourFormat(String time12Hour) {
+    try {
+      final parts = time12Hour.split(' ');
+      final timePart = parts[0];
+      final period = parts[1].toUpperCase();
+
+      final timeComponents = timePart.split(':');
+      int hour = int.parse(timeComponents[0]);
+      final minute = timeComponents[1];
+
+      if (period == 'PM' && hour != 12) {
+        hour += 12;
+      } else if (period == 'AM' && hour == 12) {
+        hour = 0;
+      }
+
+      return '${hour.toString().padLeft(2, '0')}:$minute';
+    } catch (e) {
+      return '00:00';
+    }
+  }
+
+  // Parse time string to minutes since midnight
+  int _timeToMinutes(String time24Hour) {
+    try {
+      final parts = time24Hour.split(':');
+      final hour = int.parse(parts[0]);
+      final minute = int.parse(parts[1]);
+      return hour * 60 + minute;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  // Check if new time slot overlaps with existing slots
+  bool _hasTimeOverlap(
+    String newStartTime,
+    String newEndTime,
+    List<Map<String, dynamic>> existingSubjects,
+  ) {
+    final newStartMinutes = _timeToMinutes(newStartTime);
+    final newEndMinutes = _timeToMinutes(newEndTime);
+
+    // Validate that start time is before end time
+    if (newStartMinutes >= newEndMinutes) {
+      return true; // Invalid time range
+    }
+
+    for (final subject in existingSubjects) {
+      final existingStartTime = subject['start_time_24'];
+      final existingEndTime = subject['end_time_24'];
+
+      final existingStartMinutes = _timeToMinutes(existingStartTime);
+      final existingEndMinutes = _timeToMinutes(existingEndTime);
+
+      // Check for overlap: new slot starts before existing ends AND new slot ends after existing starts
+      if (newStartMinutes < existingEndMinutes &&
+          newEndMinutes > existingStartMinutes) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   void _addSubject() {
     if (selectedSubjectId == null || selectedSubjectName.isEmpty) return;
+
+    // Convert times to 24-hour format for validation
+    final start24 = _convertTo24HourFormat(startTime);
+    final end24 = _convertTo24HourFormat(endTime);
+
+    // Check for time overlap
+    if (_hasTimeOverlap(
+      start24,
+      end24,
+      addedSubjectsByDay[selectedDayIndex]!,
+    )) {
+      showErrorSnackBar(
+        context,
+        'Time overlap detected! Please choose a different time slot.',
+      );
+      return;
+    }
 
     setState(() {
       addedSubjectsByDay[selectedDayIndex]!.add({
         'subject': selectedSubjectName,
         'subject_id': selectedSubjectId!,
         'time': '$startTime - $endTime',
-        'class': selectedClass,
-        'type': selectedType,
+        'start_time_12': startTime,
+        'end_time_12': endTime,
+        'start_time_24': start24,
+        'end_time_24': end24,
+        'type': selectedComponent,
       });
 
-      // Reset form
-      selectedSubjectId = null;
-      selectedSubjectName = '';
+      // Reset form to first subject
+      if (_subjects.isNotEmpty) {
+        selectedSubjectId = _subjects.first['id'];
+        selectedSubjectName = _subjects.first['name'];
+      } else {
+        selectedSubjectId = null;
+        selectedSubjectName = '';
+      }
+
+      // Reset time to default
       startTime = '10:10 AM';
       endTime = '11:00 AM';
     });
@@ -231,7 +339,7 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
                 itemCount: days.length,
                 itemBuilder: (context, index) {
                   bool isSelected = index == selectedDayIndex;
-                  final hasSubjects = addedSubjectsByDay[index]!.isNotEmpty;
+                  // final hasSubjects = addedSubjectsByDay[index]!.isNotEmpty;
 
                   return GestureDetector(
                     onTap: () {
@@ -256,7 +364,7 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            days[index],
+                            days[index].substring(0, 3),
                             style: TextStyle(
                               fontSize: 12,
                               color: _getDayTextColor(index),
@@ -342,64 +450,26 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
                     ],
 
                     // Subject Dropdown
-                    _buildFormField(
-                      label: 'Subject',
-                      child: DropdownButtonFormField<String>(
-                        value: selectedSubjectId,
-                        decoration: InputDecoration(
-                          hintText: 'Select Subject',
-                          hintStyle: TextStyle(color: Colors.grey[500]),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: Colors.grey[300]!),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: Colors.grey[300]!),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(
-                              color: Color(0xFF3B5BDB),
-                              width: 2,
-                            ),
-                          ),
-                          filled: true,
-                          fillColor: Colors.white,
-                        ),
-                        items: _subjects.map((subject) {
-                          final subjectId = subject['id'] as String;
-                          final subjectName = subject['name'] as String;
-                          return DropdownMenuItem<String>(
-                            value: subjectId,
-                            child: Text(
-                              subjectName,
-                              style: const TextStyle(fontSize: 14),
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          if (value != null) {
-                            final selectedSubject = _subjects.firstWhere(
-                              (subject) => subject['id'] == value,
-                            );
-                            setState(() {
-                              selectedSubjectId = value;
-                              selectedSubjectName =
-                                  selectedSubject['name'] as String;
-                            });
-                          } else {
-                            setState(() {
-                              selectedSubjectId = null;
-                              selectedSubjectName = '';
-                            });
-                          }
-                        },
-                      ),
+                    Dropdown<Map<String, dynamic>>(
+                      label: "Subject",
+                      hint: "Select Subject",
+                      items: _subjects,
+                      value:
+                          selectedSubject ??
+                          (_subjects.isNotEmpty ? _subjects.first : null),
+                      displayText: (item) => item["name"],
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() {
+                            selectedSubject = value;
+                            selectedSubjectId = value['id'];
+                            selectedSubjectName = value['name'];
+
+                            selectedComponent =
+                                value['raw']['component']; // 'Lecture' or 'Lab'
+                          });
+                        }
+                      },
                     ),
 
                     const SizedBox(height: 16),
@@ -444,13 +514,7 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'to',
-                          style: TextStyle(
-                            color: Color.fromARGB(255, 119, 119, 119),
-                          ),
-                        ),
+
                         const SizedBox(width: 8),
                         Expanded(
                           child: _buildFormField(
@@ -494,123 +558,12 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
 
                     const SizedBox(height: 16),
 
-                    // Class and Type Row
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildFormField(
-                            label: 'Class',
-                            child: DropdownButtonFormField<String>(
-                              value: selectedClass,
-                              decoration: InputDecoration(
-                                hintText: 'Select',
-                                hintStyle: TextStyle(color: Colors.grey[500]),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 12,
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: Colors.grey[300]!,
-                                  ),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: Colors.grey[300]!,
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(
-                                    color: Color(0xFF3B5BDB),
-                                    width: 2,
-                                  ),
-                                ),
-                                filled: true,
-                                fillColor: Colors.white,
-                              ),
-                              items: ['SY', 'TY', 'FY'].map((String value) {
-                                return DropdownMenuItem<String>(
-                                  value: value,
-                                  child: Text(
-                                    value,
-                                    style: const TextStyle(fontSize: 14),
-                                  ),
-                                );
-                              }).toList(),
-                              onChanged: (value) {
-                                setState(() {
-                                  selectedClass = value ?? 'SY';
-                                });
-                              },
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: _buildFormField(
-                            label: 'Type',
-                            child: DropdownButtonFormField<String>(
-                              value: selectedType,
-                              decoration: InputDecoration(
-                                hintText: 'Select',
-                                hintStyle: TextStyle(color: Colors.grey[500]),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 12,
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: Colors.grey[300]!,
-                                  ),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: Colors.grey[300]!,
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(
-                                    color: Color(0xFF3B5BDB),
-                                    width: 2,
-                                  ),
-                                ),
-                                filled: true,
-                                fillColor: Colors.white,
-                              ),
-                              items: ['Lecture', 'Lab'].map((String value) {
-                                return DropdownMenuItem<String>(
-                                  value: value,
-                                  child: Text(
-                                    value,
-                                    style: const TextStyle(fontSize: 14),
-                                  ),
-                                );
-                              }).toList(),
-                              onChanged: (value) {
-                                setState(() {
-                                  selectedType = value ?? 'Lab';
-                                });
-                              },
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 24),
-
                     // Add More Subjects Button
                     Container(
                       width: double.infinity,
                       decoration: BoxDecoration(
                         border: Border.all(
-                          color: Color(0xFF3B5BDB),
+                          color: const Color(0xFF3B5BDB),
                           width: 1.5,
                         ),
                         borderRadius: BorderRadius.circular(12),
@@ -670,8 +623,7 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
                               subject,
                               index,
                             );
-                          })
-                          .toList(),
+                          }),
                     ] else ...[
                       Center(
                         child: Padding(
@@ -701,7 +653,7 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
                             : null,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _allDaysHaveSubjects
-                              ? Color(0xFF3B5BDB)
+                              ? const Color(0xFF3B5BDB)
                               : Colors.grey[300],
                           foregroundColor: _allDaysHaveSubjects
                               ? Colors.white
@@ -754,7 +706,7 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
 
   Widget _buildSubjectCard(
     int dayIndex,
-    Map<String, String> subject,
+    Map<String, dynamic> subject,
     int index,
   ) {
     final isLab = subject['type'] == 'Lab';
@@ -770,7 +722,7 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
       decoration: BoxDecoration(
         color: backgroundColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: borderColor.withOpacity(0.3)),
+        border: Border.all(color: borderColor.withAlpha(77)), // 0.3
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -790,7 +742,7 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    subject['subject']!,
+                    subject['subject'].toString(),
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -799,12 +751,12 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    '${subject['class']!} | ${subject['type']!}',
+                    subject['type'].toString(),
                     style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    subject['time']!,
+                    subject['time'].toString(),
                     style: TextStyle(fontSize: 13, color: Colors.grey[500]),
                   ),
                 ],
@@ -840,7 +792,11 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
 
     if (picked != null) {
       final period = picked.hour >= 12 ? 'PM' : 'AM';
-      final hour = picked.hour > 12 ? picked.hour - 12 : picked.hour;
+      final hour = picked.hour > 12
+          ? picked.hour - 12
+          : picked.hour == 0
+          ? 12
+          : picked.hour;
       final minute = picked.minute.toString().padLeft(2, '0');
       final timeString = '$hour:$minute $period';
 
@@ -855,16 +811,47 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
   }
 
   Future<void> _saveSchedule() async {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Schedule saved successfully!'),
-        backgroundColor: Colors.green,
-      ),
-    );
+    try {
+      // Prepare schedule
+      final Map<String, List<Map<String, dynamic>>> scheduleData = {};
 
-    // Navigate back after saving
-    Future.delayed(Duration(seconds: 1), () {
-      context.pop();
-    });
+      for (int i = 0; i < days.length; i++) {
+        final dayName = days[i];
+        final daySubjects = addedSubjectsByDay[i]!;
+
+        scheduleData[dayName] = daySubjects.map((subject) {
+          return {
+            'start_time': subject['start_time_24'],
+            'end_time': subject['end_time_24'],
+            'subject': subject['subject_id'],
+          };
+        }).toList();
+      }
+
+      final requestBody = {
+        'academic_year': '2025',
+        'program': 'MCA',
+        'semester': '2',
+        'schedule': scheduleData,
+      };
+
+      final clerkRepo = ref.read(clerkRepositoryProvider);
+      final result = await clerkRepo.createTimeTable(requestBody);
+
+      if (!mounted) return;
+
+      if (result['success'] == true) {
+        showSuccessSnackBar(context, result["message"]);
+        context.go('/clerk');
+      } else {
+        showErrorSnackBar(
+          context,
+          result['error'] ?? 'Failed to save timetable',
+        );
+      }
+    } catch (error) {
+      if (!mounted) return;
+      showErrorSnackBar(context, 'Error: $error');
+    }
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:markmeapp/data/repositories/auth_repository.dart';
 import 'package:markmeapp/presentation/widgets/ui/otp_field.dart';
+import 'package:markmeapp/core/utils/app_logger.dart';
 
 class ChangePasswordPage extends ConsumerStatefulWidget {
   const ChangePasswordPage({super.key});
@@ -52,7 +53,7 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
         _newPassword,
       );
 
-      print(result);
+      AppLogger.info(result.toString());
 
       if (!mounted) return;
 
@@ -176,14 +177,14 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
       appBar: AppBar(
         backgroundColor: primaryColor,
         elevation: 4,
-        shadowColor: Colors.blue.shade900.withOpacity(0.3),
+        shadowColor: Colors.blue.shade900.withAlpha(77), // 0.3
         leading: IconButton(
           onPressed: _handleBackPress,
           icon: Container(
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withAlpha(51), // 0.2
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Icon(
@@ -312,7 +313,7 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
                     boxShadow: _isFormValid && !_isLoading
                         ? [
                             BoxShadow(
-                              color: primaryColor.withOpacity(0.3),
+                              color: primaryColor.withAlpha(77), // 0.3
                               blurRadius: 15,
                               offset: const Offset(0, 8),
                             ),

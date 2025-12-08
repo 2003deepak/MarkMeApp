@@ -22,14 +22,15 @@ import 'package:markmeapp/presentation/pages/student/change_password.dart';
 // Student Pages
 import 'package:markmeapp/presentation/pages/student/student_dashboard.dart';
 import 'package:markmeapp/presentation/pages/student/profile_page.dart'
-    as StudentProfile;
+    as student_profile;
 import 'package:markmeapp/presentation/pages/student/edit_profile.dart';
 import 'package:markmeapp/presentation/pages/student/timetable.dart';
+import 'package:markmeapp/presentation/pages/student/notification_page.dart';
 
 // Clerk Pages
 import 'package:markmeapp/presentation/pages/clerk/dashboard_page.dart';
 import 'package:markmeapp/presentation/pages/clerk/profile_page.dart'
-    as ClerkProfile;
+    as clerk_profile;
 import 'package:markmeapp/presentation/pages/clerk/add_subject_page.dart';
 import 'package:markmeapp/presentation/pages/clerk/add_teacher_page.dart';
 import 'package:markmeapp/presentation/pages/teacher/attendance_camera_page.dart';
@@ -40,9 +41,9 @@ import 'package:markmeapp/presentation/pages/teacher/session_page.dart';
 // Teacher & Admin Pages
 import 'package:markmeapp/presentation/pages/teacher/teacher_dashboard_page.dart';
 import 'package:markmeapp/presentation/pages/teacher/profile_page.dart'
-    as TeacherProfile;
+    as teacher_profile;
 import 'package:markmeapp/presentation/pages/teacher/timetable.dart'
-    as TeacherTimeTable;
+    as teacher_time_table;
 
 // State
 import 'package:markmeapp/state/auth_state.dart';
@@ -164,7 +165,12 @@ class AppRouter {
             GoRoute(
               path: '/student/profile',
               name: 'student_profile',
-              builder: (context, state) => StudentProfile.ProfilePage(),
+              builder: (context, state) => student_profile.ProfilePage(),
+            ),
+            GoRoute(
+              path: '/student/notifications',
+              name: 'student_notifications',
+              builder: (context, state) => const NotificationPage(),
             ),
 
             // =======================
@@ -178,13 +184,13 @@ class AppRouter {
             GoRoute(
               path: '/teacher/profile',
               name: 'teacher_profile',
-              builder: (context, state) => const TeacherProfile.ProfilePage(),
+              builder: (context, state) => const teacher_profile.ProfilePage(),
             ),
             GoRoute(
               path: '/teacher/timetable',
               name: 'teacher_timetable',
               builder: (context, state) =>
-                  const TeacherTimeTable.TimeTablePage(),
+                  const teacher_time_table.TimeTablePage(),
             ),
 
             // =======================
@@ -198,7 +204,7 @@ class AppRouter {
             GoRoute(
               path: '/clerk/profile',
               name: 'clerk_profile',
-              builder: (context, state) => ClerkProfile.ProfilePage(),
+              builder: (context, state) => clerk_profile.ProfilePage(),
             ),
             GoRoute(
               path: '/clerk/student-list',

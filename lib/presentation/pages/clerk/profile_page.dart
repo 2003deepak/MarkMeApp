@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import 'package:markmeapp/core/theme/app_theme.dart';
 import 'package:markmeapp/state/auth_state.dart';
 
-/// Professional Profile Page for attendance management system
 class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
 

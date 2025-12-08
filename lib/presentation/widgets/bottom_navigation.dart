@@ -55,13 +55,13 @@ class _BottomNavigationState extends State<BottomNavigation> {
             label: 'Home',
           ),
           NavigationDestination(
-            route: '$baseRoute/students',
+            route: '$baseRoute/student-list',
             icon: Icons.people_outlined,
             activeIcon: Icons.people,
             label: 'Students',
           ),
           NavigationDestination(
-            route: '$baseRoute/teachers',
+            route: '$baseRoute/teacher-list',
             icon: Icons.person_outline,
             activeIcon: Icons.person,
             label: 'Teachers',

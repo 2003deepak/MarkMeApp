@@ -231,9 +231,15 @@ class OTPFieldState extends State<OTPField> {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(widget.length, (index) => _buildOTPField(index)),
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(
+          widget.length,
+          (index) => _buildOTPField(index),
+        ),
+      ),
     );
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:markmeapp/data/repositories/student_repository.dart';
 import 'package:markmeapp/presentation/skeleton/student_dashboard_skeleton.dart';
 import 'package:markmeapp/presentation/widgets/attendance_chart_widget.dart';
@@ -7,8 +8,11 @@ import 'package:markmeapp/presentation/widgets/subject_selector_widget.dart';
 import 'package:markmeapp/presentation/widgets/attendance_stats_widget.dart';
 import 'package:markmeapp/presentation/widgets/lectures_widget.dart';
 import 'package:markmeapp/presentation/widgets/recent_activity_widget.dart';
+import 'package:markmeapp/presentation/pages/student/weekly_bunk_safety_page.dart';
+import 'package:markmeapp/presentation/widgets/bunk_safety/tomorrow_bunk_safety_card.dart';
 import 'package:markmeapp/presentation/widgets/ui/error.dart';
 import 'package:markmeapp/core/utils/student_data_processor.dart';
+import 'package:markmeapp/state/student_state.dart';
 
 class StudentDashboard extends ConsumerStatefulWidget {
   const StudentDashboard({super.key});
@@ -28,11 +32,30 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
   bool isLoadingUpcoming = true;
   String upcomingErrorMessage = '';
 
+  // Bunk Safety State
+  bool isLoadingBunkSafety = true;
+  String bunkSafetyError = '';
+  Map<String, dynamic>? bunkSafetyData;
+
   @override
   void initState() {
     super.initState();
     _fetchAttendanceData();
     _fetchUpcomingSessions();
+    _fetchTomorrowBunkSafety();
+    _fetchProfileData();
+  }
+
+  Future<void> _fetchProfileData() async {
+    final state = ref.read(studentStoreProvider);
+
+    // 🔥 If profile already exists in state → do NOT fetch again
+    if (state.profile != null) {
+      return;
+    }
+
+    final studentStore = ref.read(studentStoreProvider.notifier);
+    await studentStore.loadProfile();
   }
 
   Future<void> _fetchAttendanceData() async {
@@ -90,6 +113,31 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
     }
   }
 
+  Future<void> _fetchTomorrowBunkSafety() async {
+    try {
+      final studentRepo = ref.read(studentRepositoryProvider);
+      final response = await studentRepo.fetchTomorrowBunkSafety();
+
+      if (response['success'] == true) {
+        setState(() {
+          bunkSafetyData = response['data'];
+          isLoadingBunkSafety = false;
+        });
+      } else {
+        setState(() {
+          bunkSafetyError =
+              response['error'] ?? 'Failed to load bunk safety info';
+          isLoadingBunkSafety = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        bunkSafetyError = 'An error occurred: $e';
+        isLoadingBunkSafety = false;
+      });
+    }
+  }
+
   Map<String, dynamic>? _getSelectedData() {
     final dataProcessor = StudentDataProcessor(
       subjectData: subjectData,
@@ -110,6 +158,8 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
       errorMessage = '';
     });
     _fetchAttendanceData();
+    _fetchUpcomingSessions();
+    _fetchTomorrowBunkSafety();
   }
 
   void _retryUpcomingFetch() {
@@ -164,6 +214,25 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
           attendances: attendancesList,
           selectedSubject: selectedSubject,
           onSubjectSelected: _onSubjectSelected,
+          isDesktop: isDesktop,
+        ),
+
+        const SizedBox(height: 24),
+
+        TomorrowBunkSafetyCard(
+          isLoading: isLoadingBunkSafety,
+          errorMessage: bunkSafetyError,
+          data: bunkSafetyData,
+          onRetry: () {
+            setState(() {
+              isLoadingBunkSafety = true;
+              bunkSafetyError = '';
+            });
+            _fetchTomorrowBunkSafety();
+          },
+          onViewDetails: () {
+            context.push("/student/weekly-bunk-safety");
+          },
           isDesktop: isDesktop,
         ),
 

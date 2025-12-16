@@ -34,11 +34,12 @@ class _BottomNavigationState extends State<BottomNavigation> {
             label: 'Schedule',
           ),
           NavigationDestination(
-            route: '$baseRoute/notifications',
-            icon: Icons.notifications_outlined,
-            activeIcon: Icons.notifications,
-            label: 'Notifications',
+            route: '$baseRoute/attendance-history',
+            icon: Icons.calendar_month_outlined,
+            activeIcon: Icons.calendar_month,
+            label: 'Attendance',
           ),
+
           NavigationDestination(
             route: '$baseRoute/profile',
             icon: Icons.person_outline,
@@ -90,10 +91,10 @@ class _BottomNavigationState extends State<BottomNavigation> {
             label: 'Schedule',
           ),
           NavigationDestination(
-            route: '$baseRoute/classes',
-            icon: Icons.class_outlined,
-            activeIcon: Icons.class_,
-            label: 'Classes',
+            route: '$baseRoute/attendance-history',
+            icon: Icons.calendar_month_outlined,
+            activeIcon: Icons.calendar_month,
+            label: 'Attendance',
           ),
           NavigationDestination(
             route: '$baseRoute/profile',
@@ -232,7 +233,7 @@ class _BottomNavigationState extends State<BottomNavigation> {
         );
 
         if (currentLocation != route) {
-          context.go(route);
+          context.push(route);
         }
       },
       child: AnimatedContainer(

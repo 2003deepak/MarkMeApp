@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:markmeapp/data/repositories/teacher_repository.dart';
 import 'package:markmeapp/core/utils/app_logger.dart';
+import 'package:markmeapp/presentation/widgets/ui/app_bar.dart';
 
 class ClassSelectionPage extends ConsumerStatefulWidget {
   const ClassSelectionPage({super.key});
@@ -31,10 +32,6 @@ class _ClassSelectionPageState extends ConsumerState<ClassSelectionPage> {
     'Practical': const Color(0xFFD1FAE5), // Light Green
     'Tutorial': const Color(0xFFF3E8FF), // Light Purple
   };
-
-  void _handleBackPressed() {
-    context.pop();
-  }
 
   @override
   void initState() {
@@ -127,35 +124,9 @@ class _ClassSelectionPageState extends ConsumerState<ClassSelectionPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF2563EB),
-        leading: IconButton(
-          icon: Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: Colors.white.withAlpha(51), // 0.2
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(
-              Icons.arrow_back_ios_new_rounded,
-              size: 18,
-              color: Colors.white,
-            ),
-          ),
-          onPressed: _handleBackPressed,
-        ),
-        title: const Text(
-          'Select Class',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        centerTitle: true,
-        elevation: 0,
-        systemOverlayStyle: SystemUiOverlayStyle.light,
+      appBar: MarkMeAppBar(
+        title: 'Select Class',
+        onBackPressed: () => context.pop(),
       ),
       body: SafeArea(
         child: Column(

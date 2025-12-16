@@ -6,6 +6,7 @@ import 'package:markmeapp/data/models/notification_model.dart'
 import 'package:markmeapp/data/repositories/teacher_repository.dart';
 import 'class_selection_page.dart';
 import 'student_selection_page.dart';
+import 'package:markmeapp/presentation/widgets/ui/app_bar.dart';
 
 class PushNotificationPage extends ConsumerStatefulWidget {
   const PushNotificationPage({super.key});
@@ -29,7 +30,7 @@ class _PushNotificationPageState extends ConsumerState<PushNotificationPage> {
   List<String> _selectedTargetIds = [];
 
   // Constants
-  static const _primaryColor = Color(0xFF2563EB);
+
   static const _backgroundColor = Color(0xFFF5F7FA);
   static const _cardColor = Colors.white;
   static const _animationDuration = Duration(milliseconds: 200);
@@ -73,13 +74,14 @@ class _PushNotificationPageState extends ConsumerState<PushNotificationPage> {
 
   void _updatePreview() => setState(() {});
 
-  void _handleBackPressed() => context.go("/teacher");
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _backgroundColor,
-      appBar: _buildAppBar(),
+      appBar: MarkMeAppBar(
+        title: 'Push Notification',
+        onBackPressed: () => context.go("/teacher"),
+      ),
       body: SafeArea(
         child: Column(
           children: [
@@ -111,38 +113,6 @@ class _PushNotificationPageState extends ConsumerState<PushNotificationPage> {
           ],
         ),
       ),
-    );
-  }
-
-  AppBar _buildAppBar() {
-    return AppBar(
-      backgroundColor: _primaryColor,
-      leading: IconButton(
-        icon: Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: const Color(0xFFF1F5F9),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: const Icon(
-            Icons.arrow_back_ios_new_rounded,
-            size: 18,
-            color: Color(0xFF475569),
-          ),
-        ),
-        onPressed: _handleBackPressed,
-      ),
-      title: const Text(
-        'Push Notification',
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      centerTitle: true,
-      elevation: 0,
     );
   }
 

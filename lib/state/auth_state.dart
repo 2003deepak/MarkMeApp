@@ -319,10 +319,10 @@ class AuthStore extends StateNotifier<AuthState> {
       final result = await _authRepo.forgotPassword(email, role);
 
       // Check if status is "success" (not true/false)
-      if (result['status'] == 'success') {
+      if (result['success'] == true) {
         state = state.copyWith(isLoading: false);
         return {
-          'status': 'success',
+          'success': true,
           'message': result['message'] ?? 'OTP sent to your email.',
         };
       } else {
@@ -355,10 +355,10 @@ class AuthStore extends StateNotifier<AuthState> {
       final result = await _authRepo.verifyOtp(email, role, otp);
 
       // Check if status is "success" (not true/false)
-      if (result['status'] == 'success') {
+      if (result['success'] == true) {
         state = state.copyWith(isLoading: false);
         return {
-          'status': 'success',
+          'success': true,
           'message': result['message'] ?? 'OTP verified successfully.',
         };
       } else {
@@ -391,10 +391,10 @@ class AuthStore extends StateNotifier<AuthState> {
       final result = await _authRepo.resetPassword(email, role, newPassword);
 
       // Check if status is "success" (not true/false)
-      if (result['status'] == 'success') {
+      if (result['success'] == true) {
         state = state.copyWith(isLoading: false);
         return {
-          'status': 'success',
+          'success': true,
           'message': result['message'] ?? 'Password reset successfully.',
         };
       } else {

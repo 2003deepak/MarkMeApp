@@ -12,7 +12,7 @@ class StudentRepository {
     try {
       AppLogger.info('🔵 [StudentRepository] Fetching student profile');
 
-      final response = await _dio.get('/student/me/');
+      final response = await _dio.get('/student/me');
       final responseBody = response.data;
 
       AppLogger.info("The response in repo is $responseBody");
@@ -380,6 +380,112 @@ class StudentRepository {
     } catch (e) {
       AppLogger.error('🔴 [StudentRepository] Exception: $e');
       return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> fetchTomorrowBunkSafety() async {
+    try {
+      final response = await _dio.get('/student/tomorrow-bunk-safety');
+      final responseBody = response.data;
+
+      if (response.statusCode == 200) {
+        AppLogger.info(
+          '🟢 [StudentRepository] Tomorrow bunk safety fetched successfully',
+        );
+        return {'success': true, 'data': responseBody['data']};
+      } else {
+        return {
+          'success': false,
+          'error':
+              responseBody['message'] ?? 'Failed to fetch bunk safety data',
+        };
+      }
+    } on DioException catch (e) {
+      AppLogger.error('🔴 [StudentRepository] DioException: ${e.message}');
+      return {'success': false, 'error': e.message ?? 'Network error'};
+    } catch (e) {
+      AppLogger.error('🔴 [StudentRepository] Exception: $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> fetchWeeklyBunkSafety() async {
+    try {
+      final response = await _dio.get('/student/weekly-bunk-safety');
+      final responseBody = response.data;
+
+      if (response.statusCode == 200) {
+        AppLogger.info(
+          '🟢 [StudentRepository] Weekly bunk safety fetched successfully',
+        );
+        return {'success': true, 'data': responseBody['data']};
+      } else {
+        return {
+          'success': false,
+          'error':
+              responseBody['message'] ??
+              'Failed to fetch weekly bunk safety data',
+        };
+      }
+    } on DioException catch (e) {
+      AppLogger.error('🔴 [StudentRepository] DioException: ${e.message}');
+      return {'success': false, 'error': e.message ?? 'Network error'};
+    } catch (e) {
+      AppLogger.error('🔴 [StudentRepository] Exception: $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> fetchAttendanceHistory({
+    required int month,
+    required int year,
+    String? subjectId,
+    String? program,
+    String? semester,
+    String? department,
+  }) async {
+    try {
+      AppLogger.info(
+        '🔵 [StudentRepository] Fetching attendance history for $month/$year${subjectId != null ? ' with subject $subjectId' : ''}',
+      );
+
+      final Map<String, dynamic> queryParams = {'month': month, 'year': year};
+
+      if (subjectId != null) queryParams['subject'] = subjectId;
+      if (program != null) queryParams['program'] = program;
+      if (semester != null) queryParams['semester'] = semester;
+      if (department != null) queryParams['department'] = department;
+
+      final response = await _dio.get(
+        '/attendance/history',
+        queryParameters: queryParams,
+      );
+      final responseBody = response.data;
+
+      if (response.statusCode == 200) {
+        AppLogger.info(
+          '🟢 [StudentRepository] Attendance history fetched successfully',
+        );
+        // The API returns the whole object as the response body
+        return responseBody;
+      } else {
+        return {
+          'success': false,
+          'message':
+              responseBody['message'] ?? 'Failed to fetch attendance history',
+          'records': [],
+        };
+      }
+    } on DioException catch (e) {
+      AppLogger.error('🔴 [StudentRepository] DioException: ${e.message}');
+      return {
+        'success': false,
+        'message': e.message ?? 'Network error',
+        'records': [],
+      };
+    } catch (e) {
+      AppLogger.error('🔴 [StudentRepository] Exception: $e');
+      return {'success': false, 'message': e.toString(), 'records': []};
     }
   }
 }

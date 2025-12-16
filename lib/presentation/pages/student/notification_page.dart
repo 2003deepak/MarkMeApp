@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:markmeapp/data/models/notification_model.dart';
 import 'package:markmeapp/data/repositories/notification_repository.dart';
 import 'package:go_router/go_router.dart';
+import 'package:markmeapp/presentation/widgets/ui/app_bar.dart';
 
 class NotificationPage extends StatefulWidget {
   const NotificationPage({super.key});
@@ -19,6 +20,10 @@ class _NotificationPageState extends State<NotificationPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA), // Light backgroundd
+      appBar: MarkMeAppBar(
+        title: 'Notifications',
+        onBackPressed: () => context.pop(),
+      ),
       body: ValueListenableBuilder(
         valueListenable: Hive.box<NotificationModel>(
           NotificationRepository.boxName,

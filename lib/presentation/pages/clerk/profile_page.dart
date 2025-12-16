@@ -327,13 +327,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       icon: Icons.bar_chart_rounded,
                       label: 'Attendance Summary',
                       subtitle: 'View your attendance statistics',
-                      onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Open Attendance Summary'),
-                          ),
-                        );
-                      },
+                      onTap: () => context.push('/clerk/attendance-history'),
                     ),
                     Container(
                       height: 1,

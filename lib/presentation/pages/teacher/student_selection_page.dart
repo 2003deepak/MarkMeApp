@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:markmeapp/data/repositories/teacher_repository.dart';
 import 'package:debounce_throttle/debounce_throttle.dart';
+import 'package:markmeapp/presentation/widgets/ui/app_bar.dart';
 
 class StudentSelectionPage extends ConsumerStatefulWidget {
   const StudentSelectionPage({super.key});
@@ -208,34 +209,10 @@ class _StudentSelectionPageState extends ConsumerState<StudentSelectionPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF2563EB),
-        leading: IconButton(
-          icon: Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(
-              Icons.arrow_back_ios_new_rounded,
-              size: 18,
-              color: Color(0xFF475569),
-            ),
-          ),
-          onPressed: _isLoading ? null : _handleBackPressed,
-        ),
-        title: const Text(
-          'Add Students',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        centerTitle: true,
-        elevation: 0,
+      appBar: MarkMeAppBar(
+        title: 'Add Students',
+        onBackPressed: _isLoading ? null : _handleBackPressed,
+        isLoading: _isLoading,
       ),
       body: SafeArea(
         child: Column(

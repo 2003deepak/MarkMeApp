@@ -172,7 +172,7 @@ class AuthRepository {
       final responseBody = response.data;
 
       if (response.statusCode == 200) {
-        if (responseBody['status'] == 'success') {
+        if (responseBody['success'] == true) {
           return {'success': true, 'message': responseBody['message']};
         } else {
           return {
@@ -210,7 +210,7 @@ class AuthRepository {
       final responseBody = response.data;
 
       if (response.statusCode == 200) {
-        if (responseBody['status'] == 'success') {
+        if (responseBody['success'] == true) {
           return {'success': true, 'message': responseBody['message']};
         } else {
           return {
@@ -248,7 +248,7 @@ class AuthRepository {
       final responseBody = response.data;
 
       if (response.statusCode == 200) {
-        if (responseBody['status'] == 'success') {
+        if (responseBody['success'] == true) {
           return {'success': true, 'message': responseBody['message']};
         } else {
           return {

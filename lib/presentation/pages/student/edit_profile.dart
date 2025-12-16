@@ -11,6 +11,7 @@ import 'package:markmeapp/presentation/widgets/student_gallery_section.dart';
 import 'package:markmeapp/presentation/widgets/student_personal_info_section.dart';
 import 'package:markmeapp/presentation/widgets/ui/profile_picture.dart';
 import 'package:markmeapp/state/student_state.dart';
+import 'package:markmeapp/presentation/widgets/ui/app_bar.dart';
 import 'package:flutter/foundation.dart';
 
 class EditProfilePage extends ConsumerStatefulWidget {
@@ -64,7 +65,6 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   void initState() {
     super.initState();
     _setupListeners();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _fetchProfileData());
   }
 
   void _setupListeners() {
@@ -93,7 +93,9 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       'last_name': nullIfEmpty(_lastNameCtrl.text),
       'email': nullIfEmpty(_emailCtrl.text),
       'phone': nullIfEmpty(_phoneCtrl.text),
-      'dob': _dob?.toIso8601String().split('T').first,
+      'dob': _dob != null
+          ? '${_dob!.day.toString().padLeft(2, '0')}/${_dob!.month.toString().padLeft(2, '0')}/${_dob!.year}'
+          : null,
       'roll_number': nullIfEmpty(_rollCtrl.text),
       'program': _program,
       'department': _department,
@@ -225,7 +227,20 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
 
   Future<void> _handleUpdateSuccess() async {
     _initialData = _getCurrentFormData();
+
+    // First fetch (might still show false)
     await _fetchProfileData();
+
+    // 🔥 Poll for 1–2 seconds until worker updates DB
+    for (int i = 0; i < 4; i++) {
+      await Future.delayed(Duration(seconds: 1));
+      await _fetchProfileData();
+
+      final profile = ref.read(studentStoreProvider).profile;
+      if (profile?['is_embeddings'] == true) {
+        break;
+      }
+    }
 
     if (mounted) {
       setState(() => _isFormDirty = false);
@@ -241,11 +256,25 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     }
   }
 
-  void _populateFormFromState() {
-    final state = ref.read(studentStoreProvider);
-    final profile = state.profile;
+  void _populateFormFromState(Map<String, dynamic> profile) {
+    // 🔥 Always update is_embeddings (because backend may change it later)
+    final newIsEmb = profile['is_embeddings'] ?? false;
 
-    if (profile != null && !_initialDataLoaded) {
+    if (newIsEmb != _isEmbeddings) {
+      setState(() {
+        _isEmbeddings = newIsEmb;
+
+        // if embeddings got created → clear gallery
+        if (_isEmbeddings) {
+          for (int i = 0; i < _gallery.length; i++) {
+            _gallery[i] = null;
+          }
+        }
+      });
+    }
+
+    // 🔒 Populate text fields ONLY on first load
+    if (!_initialDataLoaded) {
       setState(() {
         _firstNameCtrl.text = profile['first_name'] ?? '';
         _middleNameCtrl.text = profile['middle_name'] ?? '';
@@ -260,7 +289,6 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         _department = profile['department'] ?? 'BTECH';
         _semester = profile['semester'] ?? 1;
         _profilePicture = profile['profile_picture'];
-        _isEmbeddings = profile['is_embeddings'] ?? false;
 
         _populateGallery(profile);
         _populateDob(profile);
@@ -272,12 +300,13 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   }
 
   void _populateGallery(Map<String, dynamic> profile) {
-    if (!_isEmbeddings &&
-        profile['gallery'] != null &&
-        profile['gallery'] is List) {
-      final galleryList = profile['gallery'] as List;
-      for (int i = 0; i < _gallery.length && i < galleryList.length; i++) {
-        _gallery[i] = galleryList[i];
+    // Only populate gallery if is_embeddings is false
+    if (!_isEmbeddings) {
+      if (profile['gallery'] != null && profile['gallery'] is List) {
+        final galleryList = profile['gallery'] as List;
+        for (int i = 0; i < _gallery.length && i < galleryList.length; i++) {
+          _gallery[i] = galleryList[i];
+        }
       }
     }
   }
@@ -285,9 +314,25 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   void _populateDob(Map<String, dynamic> profile) {
     final dobString = profile['dob'];
     if (dobString != null) {
-      _dob = DateTime.tryParse(dobString);
-      if (_dob != null) {
-        _dobCtrl.text = _formatDateForDisplay(_dob!);
+      // Handle both formats: "01/01/2005" and ISO format
+      if (dobString.contains('/')) {
+        // Parse dd/MM/yyyy format
+        final parts = dobString.split('/');
+        if (parts.length == 3) {
+          final day = int.tryParse(parts[0]);
+          final month = int.tryParse(parts[1]);
+          final year = int.tryParse(parts[2]);
+          if (day != null && month != null && year != null) {
+            _dob = DateTime(year, month, day);
+            _dobCtrl.text = _formatDateForDisplay(_dob!);
+          }
+        }
+      } else {
+        // Try parsing ISO format
+        _dob = DateTime.tryParse(dobString);
+        if (_dob != null) {
+          _dobCtrl.text = _formatDateForDisplay(_dob!);
+        }
       }
     }
   }
@@ -459,8 +504,8 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   Widget build(BuildContext context) {
     final studentState = ref.watch(studentStoreProvider);
 
-    if (studentState.profile != null && !_initialDataLoaded) {
-      _populateFormFromState();
+    if (studentState.profile != null) {
+      _populateFormFromState(studentState.profile!);
     }
 
     if (_isUpdating) return _buildLoadingOverlay();
@@ -472,7 +517,14 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       data: AppTheme.theme,
       child: Scaffold(
         backgroundColor: const Color(0xFFF8FAFC),
-        appBar: _buildAppBar(),
+        appBar: MarkMeAppBar(
+          title: 'Edit Profile',
+          onBackPressed: _isUpdating ? null : _handleBackPressed,
+          isLoading: _isUpdating,
+          actions: _isFormDirty
+              ? _buildStatusBadge('Unsaved', const Color(0xFFEF4444))
+              : null,
+        ),
         body: Form(
           key: _formKey,
           autovalidateMode: AutovalidateMode.onUserInteraction,
@@ -490,7 +542,11 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       data: AppTheme.theme,
       child: Scaffold(
         backgroundColor: const Color(0xFFF8FAFC),
-        appBar: _buildAppBar(),
+        appBar: MarkMeAppBar(
+          title: 'Edit Profile',
+          onBackPressed: null, // Disable back button during loading
+          isLoading: true,
+        ),
         body: Stack(
           children: [
             ListView(
@@ -523,47 +579,6 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
           ],
         ),
       ),
-    );
-  }
-
-  AppBar _buildAppBar() {
-    return AppBar(
-      backgroundColor: const Color(0xFF2563EB),
-      elevation: 0,
-      leading: IconButton(
-        icon: Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: const Color(0xFFF1F5F9),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: const Icon(
-            Icons.arrow_back_ios_new_rounded,
-            size: 18,
-            color: Color(0xFF475569),
-          ),
-        ),
-        onPressed: _isUpdating ? null : _handleBackPressed,
-      ),
-      title: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text(
-            'Edit Profile',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-            ),
-          ),
-          if (_isFormDirty)
-            ..._buildStatusBadge('Unsaved', const Color(0xFFEF4444)),
-          if (_isUpdating)
-            ..._buildStatusBadge('Saving...', const Color(0xFF3B82F6)),
-        ],
-      ),
-      centerTitle: true,
     );
   }
 

@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:markmeapp/data/models/student_model.dart';
 import 'package:markmeapp/data/repositories/clerk_repository.dart';
+import 'package:markmeapp/presentation/widgets/ui/custom_bottom_sheet_layout.dart';
+import 'package:markmeapp/presentation/widgets/ui/filter_chip.dart';
 
 class StudentListPage extends ConsumerStatefulWidget {
   const StudentListPage({super.key});
@@ -375,7 +377,7 @@ class _StudentListPageState extends ConsumerState<StudentListPage> {
                   children: [
                     if (_selectedBatchYear != null &&
                         _selectedBatchYear != '2025')
-                      _buildFilterChip(
+                      FilterChipWidget(
                         label: 'Batch: $_selectedBatchYear',
                         onRemove: () {
                           setState(() {
@@ -387,7 +389,7 @@ class _StudentListPageState extends ConsumerState<StudentListPage> {
                       ),
 
                     if (_selectedProgram != null && _selectedProgram != 'MCA')
-                      _buildFilterChip(
+                      FilterChipWidget(
                         label: 'Program: $_selectedProgram',
                         onRemove: () {
                           setState(() {
@@ -399,7 +401,7 @@ class _StudentListPageState extends ConsumerState<StudentListPage> {
                       ),
 
                     if (_selectedSemester != null && _selectedSemester != '2')
-                      _buildFilterChip(
+                      FilterChipWidget(
                         label: 'Semester: $_selectedSemester',
                         onRemove: () {
                           setState(() {
@@ -411,7 +413,7 @@ class _StudentListPageState extends ConsumerState<StudentListPage> {
                       ),
 
                     if (_selectedFaceRegistration != null)
-                      _buildFilterChip(
+                      FilterChipWidget(
                         label: 'Face: $_selectedFaceRegistration',
                         onRemove: () {
                           setState(() {
@@ -527,40 +529,6 @@ class _StudentListPageState extends ConsumerState<StudentListPage> {
                   ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildFilterChip({
-    required String label,
-    required VoidCallback onRemove,
-    required bool isDark,
-  }) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(16),
-      onTap: onRemove, // <-- remove filter on any tap
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: isDark
-              ? const Color(0xFF3B5BDB).withValues(alpha: 0.2)
-              : const Color(0xFF3B5BDB).withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: const Color(0xFF3B5BDB).withValues(alpha: 0.3),
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              label,
-              style: const TextStyle(fontSize: 12, color: Color(0xFF3B5BDB)),
-            ),
-            const SizedBox(width: 4),
-            const Icon(Icons.close, size: 14, color: Color(0xFF3B5BDB)),
-          ],
-        ),
       ),
     );
   }
@@ -818,193 +786,93 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.7,
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1A1A2E) : Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: Column(
+    return CustomBottomSheetLayout(
+      title: 'Filter Students',
+      onReset: () {
+        setState(() {
+          _batchYear = '2025';
+          _program = 'MCA';
+          _semester = '2';
+          _faceRegistration = null;
+        });
+        widget.onReset();
+        Navigator.pop(context);
+      },
+      onApply: () {
+        widget.onApply(_batchYear, _program, _semester, _faceRegistration);
+        Navigator.pop(context);
+      },
+      content: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Handle
-          Center(
-            child: Container(
-              margin: const EdgeInsets.only(top: 12),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: isDark ? Colors.white24 : Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
+          // Batch Year
+          _buildLabel('Batch Year', isDark),
+          _buildDropdown(
+            value: _batchYear,
+            items: const ['2022', '2023', '2024', '2025', '2026'],
+            onChanged: (v) => setState(() => _batchYear = v),
+            isDark: isDark,
+          ),
+          const SizedBox(height: 20),
+
+          // Program
+          _buildLabel('Program', isDark),
+          _buildDropdown(
+            value: _program,
+            items: const ['MCA', 'MBA', 'BBA', 'BCOM', 'BTECH'],
+            onChanged: (v) => setState(() => _program = v),
+            isDark: isDark,
+          ),
+          const SizedBox(height: 20),
+
+          // Semester
+          _buildLabel('Semester', isDark),
+          _buildDropdown(
+            value: _semester,
+            items: const ['1', '2', '3', '4', '5', '6', '7', '8'],
+            onChanged: (v) => setState(() => _semester = v),
+            isDark: isDark,
+          ),
+          const SizedBox(height: 20),
+
+          // Face Registration Status
+          _buildLabel('Face Registration', isDark),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              _buildToggleButton(
+                label: 'Registered',
+                isSelected: _faceRegistration == 'Registered',
+                onTap: () => setState(() {
+                  _faceRegistration = _faceRegistration == 'Registered'
+                      ? null
+                      : 'Registered';
+                }),
+                isDark: isDark,
               ),
-            ),
-          ),
-
-          // Header
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Filter Students',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : Colors.black87,
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: Icon(
-                    Icons.close,
-                    color: isDark ? Colors.white70 : Colors.black54,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Batch Year
-                  _buildLabel('Batch Year', isDark),
-                  _buildDropdown(
-                    value: _batchYear,
-                    items: const ['2022', '2023', '2024', '2025', '2026'],
-                    onChanged: (v) => setState(() => _batchYear = v),
-                    isDark: isDark,
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Program
-                  _buildLabel('Program', isDark),
-                  _buildDropdown(
-                    value: _program,
-                    items: const ['MCA', 'MBA', 'BBA', 'BCOM', 'BTECH'],
-                    onChanged: (v) => setState(() => _program = v),
-                    isDark: isDark,
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Semester
-                  _buildLabel('Semester', isDark),
-                  _buildDropdown(
-                    value: _semester,
-                    items: const ['1', '2', '3', '4', '5', '6', '7', '8'],
-                    onChanged: (v) => setState(() => _semester = v),
-                    isDark: isDark,
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Face Registration Status
-                  _buildLabel('Face Registration', isDark),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: [
-                      _buildToggleButton(
-                        label: 'Registered',
-                        isSelected: _faceRegistration == 'Registered',
-                        onTap: () => setState(() {
-                          _faceRegistration = _faceRegistration == 'Registered'
-                              ? null
-                              : 'Registered';
-                        }),
-                        isDark: isDark,
-                      ),
-                      _buildToggleButton(
-                        label: 'Pending',
-                        isSelected: _faceRegistration == 'Pending',
-                        onTap: () => setState(() {
-                          _faceRegistration = _faceRegistration == 'Pending'
-                              ? null
-                              : 'Pending';
-                        }),
-                        isDark: isDark,
-                      ),
-                      _buildToggleButton(
-                        label: 'All',
-                        isSelected: _faceRegistration == null,
-                        onTap: () => setState(() {
-                          _faceRegistration = null;
-                        }),
-                        isDark: isDark,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 40),
-                ],
+              _buildToggleButton(
+                label: 'Pending',
+                isSelected: _faceRegistration == 'Pending',
+                onTap: () => setState(() {
+                  _faceRegistration = _faceRegistration == 'Pending'
+                      ? null
+                      : 'Pending';
+                }),
+                isDark: isDark,
               ),
-            ),
+              _buildToggleButton(
+                label: 'All',
+                isSelected: _faceRegistration == null,
+                onTap: () => setState(() {
+                  _faceRegistration = null;
+                }),
+                isDark: isDark,
+              ),
+            ],
           ),
-
-          // Buttons
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () {
-                      setState(() {
-                        _batchYear = '2025';
-                        _program = 'MCA';
-                        _semester = '2';
-                        _faceRegistration = null;
-                      });
-                      widget.onReset();
-                    },
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF3B5BDB),
-                      side: const BorderSide(color: Color(0xFF3B5BDB)),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text(
-                      'Reset',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      widget.onApply(
-                        _batchYear,
-                        _program,
-                        _semester,
-                        _faceRegistration,
-                      );
-                      // Close Modal
-                      Navigator.pop(context);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF3B5BDB),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: const Text(
-                      'Apply Filters',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          const SizedBox(height: 40),
         ],
       ),
     );

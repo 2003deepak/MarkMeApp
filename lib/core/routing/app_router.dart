@@ -17,6 +17,7 @@ import 'package:markmeapp/presentation/pages/auth/login_page.dart';
 import 'package:markmeapp/presentation/pages/auth/signup_page.dart';
 import 'package:markmeapp/presentation/pages/auth/forgot_password_page.dart';
 import 'package:markmeapp/presentation/pages/auth/reset_password_page.dart';
+import 'package:markmeapp/presentation/pages/student/attendance_history_page.dart';
 import 'package:markmeapp/presentation/pages/student/change_password.dart';
 
 // Student Pages
@@ -33,6 +34,7 @@ import 'package:markmeapp/presentation/pages/clerk/profile_page.dart'
     as clerk_profile;
 import 'package:markmeapp/presentation/pages/clerk/add_subject_page.dart';
 import 'package:markmeapp/presentation/pages/clerk/add_teacher_page.dart';
+import 'package:markmeapp/presentation/pages/student/weekly_bunk_safety_page.dart';
 import 'package:markmeapp/presentation/pages/teacher/attendance_camera_page.dart';
 import 'package:markmeapp/presentation/pages/teacher/attendance_marking_page.dart';
 import 'package:markmeapp/presentation/pages/teacher/push_notification_page.dart';
@@ -163,14 +165,14 @@ class AppRouter {
               builder: (context, state) => const TimeTablePage(),
             ),
             GoRoute(
+              path: '/student/attendance-history',
+              name: 'attendance-history',
+              builder: (context, state) => const AttendanceHistoryPage(),
+            ),
+            GoRoute(
               path: '/student/profile',
               name: 'student_profile',
               builder: (context, state) => student_profile.ProfilePage(),
-            ),
-            GoRoute(
-              path: '/student/notifications',
-              name: 'student_notifications',
-              builder: (context, state) => const NotificationPage(),
             ),
 
             // =======================
@@ -191,6 +193,11 @@ class AppRouter {
               name: 'teacher_timetable',
               builder: (context, state) =>
                   const teacher_time_table.TimeTablePage(),
+            ),
+            GoRoute(
+              path: '/teacher/attendance-history',
+              name: 'teacher-attendance-history',
+              builder: (context, state) => const AttendanceHistoryPage(),
             ),
 
             // =======================
@@ -247,6 +254,16 @@ class AppRouter {
               builder: (context, state) => const ChangePasswordPage(),
             ),
             GoRoute(
+              path: '/student/notifications',
+              name: 'student_notifications',
+              builder: (context, state) => const NotificationPage(),
+            ),
+            GoRoute(
+              path: '/student/weekly-bunk-safety',
+              name: 'student_weekly_bunk_safety',
+              builder: (context, state) => const WeeklyBunkSafetyPage(),
+            ),
+            GoRoute(
               path: '/clerk/add-teacher',
               name: 'add_teacher',
               builder: (context, state) => const AddTeacherPage(),
@@ -260,6 +277,11 @@ class AppRouter {
               path: '/clerk/add-time-table',
               name: 'time-table',
               builder: (context, state) => const AddTimeTablePage(),
+            ),
+            GoRoute(
+              path: '/clerk/attendance-history',
+              name: 'clerk-attendance-history',
+              builder: (context, state) => const AttendanceHistoryPage(),
             ),
             GoRoute(
               path: '/teacher/push-notification',

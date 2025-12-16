@@ -84,6 +84,7 @@ class ClerkRepository {
   Future<Map<String, dynamic>> fetchSubjects({
     String? program,
     int? semester,
+    String? mode = 'subject_teacher_listing',
   }) async {
     try {
       final Map<String, dynamic> query = {};
@@ -94,6 +95,10 @@ class ClerkRepository {
 
       if (semester != null) {
         query['semester'] = semester;
+      }
+
+      if (mode != null && mode.trim().isNotEmpty) {
+        query['mode'] = mode.trim();
       }
 
       final response = await _dio.get(
@@ -138,7 +143,7 @@ class ClerkRepository {
 
       AppLogger.info("Request body: $requestBody");
 
-      final response = await _dio.post('/clerk/teacher/', data: requestBody);
+      final response = await _dio.post('/clerk/teacher', data: requestBody);
 
       // Parse response safely
       Map<String, dynamic> responseData;

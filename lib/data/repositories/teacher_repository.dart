@@ -369,8 +369,6 @@ class TeacherRepository {
   Future<Map<String, dynamic>> saveAttendance(
     String attendanceId,
     String attendance,
-    List<dynamic> presentStudents,
-    List<dynamic> absentStudents,
   ) async {
     try {
       final url = '/teacher/attendance/mark-attendance';
@@ -378,12 +376,7 @@ class TeacherRepository {
 
       final response = await _dio.post(
         url,
-        data: {
-          'attendance_id': attendanceId,
-          'attendance_student': attendance,
-          'present_students': presentStudents,
-          'absent_students': absentStudents,
-        },
+        data: {'attendance_id': attendanceId, 'attendance_student': attendance},
       );
 
       AppLogger.info(

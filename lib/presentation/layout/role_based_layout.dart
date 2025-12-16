@@ -14,13 +14,11 @@ class RoleBasedLayout extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final auth = ref.watch(authStoreProvider);
+    final role = ref.watch(authStoreProvider.select((state) => state.role));
 
-    AppLogger.info(
-      '🎭 [RoleBasedLayout] Building layout for role: ${auth.role}',
-    );
+    AppLogger.info('🎭 [RoleBasedLayout] Building layout for role: $role');
 
-    switch (auth.role) {
+    switch (role) {
       case 'student':
         return StudentLayout(child: child);
       case 'teacher':

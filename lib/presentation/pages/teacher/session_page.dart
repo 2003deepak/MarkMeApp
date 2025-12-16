@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:camera/camera.dart';
 
 import 'package:markmeapp/core/utils/app_logger.dart';
+import 'package:markmeapp/presentation/widgets/ui/app_bar.dart';
 
 class SessionPage extends StatefulWidget {
   final Map<String, dynamic> sessionData;
@@ -38,7 +39,7 @@ class _SessionPageState extends State<SessionPage>
   String get component => widget.sessionData['component'] ?? 'Lecture';
   String get startTime => widget.sessionData['start_time'] ?? '';
   String get endTime => widget.sessionData['end_time'] ?? '';
-  String get sessionId => widget.sessionData['session_id'] ?? '';
+  String get attendanceId => widget.sessionData['attendance_id'] ?? '';
 
   // ✅ Get lecture type from session data
   String get lectureType => widget.sessionData['lecture_type'] ?? 'current';
@@ -49,7 +50,7 @@ class _SessionPageState extends State<SessionPage>
 
     // Log the received data for debugging
     AppLogger.info("🎯 Session Data Received: ${widget.sessionData}");
-    AppLogger.info("🆔 Session ID: $sessionId");
+    AppLogger.info("🆔 Session ID: $attendanceId");
     AppLogger.info("📋 Lecture Type: $lectureType");
 
     _pulseController = AnimationController(
@@ -204,34 +205,9 @@ class _SessionPageState extends State<SessionPage>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF2563EB), // Always blue
-        leading: IconButton(
-          icon: Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(
-              Icons.arrow_back_ios_new_rounded,
-              size: 18,
-              color: Color(0xFF475569),
-            ),
-          ),
-          onPressed: _handleBackPressed,
-        ),
-        title: const Text(
-          'Session Details',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        centerTitle: true,
-        elevation: 0,
+      appBar: MarkMeAppBar(
+        title: 'Session Details',
+        onBackPressed: _handleBackPressed,
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -736,6 +712,11 @@ class _SessionPageState extends State<SessionPage>
   /// Starts attendance marking (only for current sessions)
   Future<void> _startAttendance() async {
     if (_isStartingAttendance || lectureType != 'current') return;
+
+    if (attendanceId.isEmpty) {
+      _showErrorSnackBar('Attendance ID is empty');
+      return;
+    }
 
     setState(() {
       _isStartingAttendance = true;

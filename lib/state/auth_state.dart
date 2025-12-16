@@ -1,6 +1,4 @@
-import 'dart:convert';
 import 'package:dio/dio.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:markmeapp/state/clerk_state.dart';
@@ -10,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:markmeapp/data/repositories/auth_repository.dart';
 import 'package:markmeapp/data/models/user_model.dart';
+import 'package:markmeapp/core/utils/app_logger.dart';
 
 /// AuthState - Simple state container
 class AuthState {
@@ -85,13 +84,13 @@ class AuthStore extends StateNotifier<AuthState> {
   /// Auto Login Logic
   Future<void> loadUserData(WidgetRef ref, BuildContext context) async {
     try {
-      debugPrint('🟡 Loading user data from SharedPreferences');
+      AppLogger.info('🟡 Loading user data from SharedPreferences');
       final prefs = await SharedPreferences.getInstance();
       final storedRefreshToken = prefs.getString('refreshToken');
       final storedRole = prefs.getString('role');
 
       if (storedRefreshToken == null || storedRole == null) {
-        debugPrint('🟡 No stored session found');
+        AppLogger.info('🟡 No stored session found');
         state = state.copyWith(hasLoaded: true, isLoggedIn: false);
         return;
       }
@@ -100,7 +99,7 @@ class AuthStore extends StateNotifier<AuthState> {
       final refreshResult = await refreshAccessToken();
 
       if (refreshResult['success'] == true) {
-        debugPrint('🟢 Access token refreshed successfully');
+        AppLogger.info('🟢 Access token refreshed successfully');
 
         // Load profile (only for student)
         final profileResult = await loadProfileForRole(ref, storedRole);
@@ -113,16 +112,16 @@ class AuthStore extends StateNotifier<AuthState> {
             role: storedRole,
           );
 
-          debugPrint('🟢 Auto-login done for role: $storedRole');
+          AppLogger.info('🟢 Auto-login done for role: $storedRole');
         } else {
-          debugPrint('🔴 Profile fetch failed');
+          AppLogger.error('🔴 Profile fetch failed');
           await prefs.remove('refreshToken');
           await prefs.remove('role');
 
           state = const AuthState(hasLoaded: true, isLoggedIn: false);
         }
       } else {
-        debugPrint('🔴 Token refresh failed');
+        AppLogger.error('🔴 Token refresh failed');
         await prefs.remove('refreshToken');
         await prefs.remove('role');
 
@@ -131,7 +130,7 @@ class AuthStore extends StateNotifier<AuthState> {
         if (context.mounted) context.go('/login');
       }
     } catch (e) {
-      debugPrint('🔴 Error during auto-login: $e');
+      AppLogger.error('🔴 Error during auto-login: $e');
       state = state.copyWith(hasLoaded: true, isLoggedIn: false);
       if (context.mounted) context.go('/login');
     }
@@ -157,9 +156,9 @@ class AuthStore extends StateNotifier<AuthState> {
         hasLoaded: true,
       );
 
-      debugPrint('🟢 Login state saved');
+      AppLogger.info('🟢 Login state saved');
     } catch (e) {
-      debugPrint('🔴 Error saving login data: $e');
+      AppLogger.error('🔴 Error saving login data: $e');
       state = state.copyWith(isLoading: false, hasLoaded: true);
     }
   }
@@ -178,7 +177,7 @@ class AuthStore extends StateNotifier<AuthState> {
 
       state = const AuthState(hasLoaded: true);
     } catch (e) {
-      debugPrint('🔴 Logout error: $e');
+      AppLogger.error('🔴 Logout error: $e');
     }
   }
 
@@ -270,7 +269,7 @@ class AuthStore extends StateNotifier<AuthState> {
     try {
       final response = await _authRepo.registerUser(userModel);
 
-      print("Message from state = $response");
+      AppLogger.info("Message from state = $response");
 
       if (response['success'] == true) {
         return {
@@ -285,7 +284,9 @@ class AuthStore extends StateNotifier<AuthState> {
         };
       }
     } on DioException catch (e) {
-      debugPrint('🔴 [AuthRepository] Error response: ${e.response?.data}');
+      AppLogger.error(
+        '🔴 [AuthRepository] Error response: ${e.response?.data}',
+      );
       return {
         'status': 'fail',
         // ✅ Preserve backend message here
@@ -294,7 +295,7 @@ class AuthStore extends StateNotifier<AuthState> {
             'Registration failed. Please try again.',
       };
     } catch (e) {
-      debugPrint('🔴 [AuthRepository] Unexpected error: $e');
+      AppLogger.error('🔴 [AuthRepository] Unexpected error: $e');
       return {
         'status': 'fail',
         'message': 'Unexpected error occurred. Please try again.',
@@ -318,10 +319,10 @@ class AuthStore extends StateNotifier<AuthState> {
       final result = await _authRepo.forgotPassword(email, role);
 
       // Check if status is "success" (not true/false)
-      if (result['status'] == 'success') {
+      if (result['success'] == true) {
         state = state.copyWith(isLoading: false);
         return {
-          'status': 'success',
+          'success': true,
           'message': result['message'] ?? 'OTP sent to your email.',
         };
       } else {
@@ -330,7 +331,7 @@ class AuthStore extends StateNotifier<AuthState> {
         return {'status': 'fail', 'message': error};
       }
     } catch (e) {
-      debugPrint('🔴 [AuthStore] Forgot password error: $e');
+      AppLogger.error('🔴 [AuthStore] Forgot password error: $e');
       final errorMessage = 'Failed to send OTP. Please try again.';
       state = state.copyWith(isLoading: false);
       return {'status': 'fail', 'message': errorMessage};
@@ -354,10 +355,10 @@ class AuthStore extends StateNotifier<AuthState> {
       final result = await _authRepo.verifyOtp(email, role, otp);
 
       // Check if status is "success" (not true/false)
-      if (result['status'] == 'success') {
+      if (result['success'] == true) {
         state = state.copyWith(isLoading: false);
         return {
-          'status': 'success',
+          'success': true,
           'message': result['message'] ?? 'OTP verified successfully.',
         };
       } else {
@@ -366,7 +367,7 @@ class AuthStore extends StateNotifier<AuthState> {
         return {'status': 'fail', 'message': error};
       }
     } catch (e) {
-      debugPrint('🔴 [AuthStore] OTP verification error: $e');
+      AppLogger.error('🔴 [AuthStore] OTP verification error: $e');
       final errorMessage = 'OTP verification failed. Please try again.';
       state = state.copyWith(isLoading: false);
       return {'status': 'fail', 'message': errorMessage};
@@ -390,10 +391,10 @@ class AuthStore extends StateNotifier<AuthState> {
       final result = await _authRepo.resetPassword(email, role, newPassword);
 
       // Check if status is "success" (not true/false)
-      if (result['status'] == 'success') {
+      if (result['success'] == true) {
         state = state.copyWith(isLoading: false);
         return {
-          'status': 'success',
+          'success': true,
           'message': result['message'] ?? 'Password reset successfully.',
         };
       } else {
@@ -402,7 +403,7 @@ class AuthStore extends StateNotifier<AuthState> {
         return {'status': 'fail', 'message': error};
       }
     } catch (e) {
-      debugPrint('🔴 [AuthStore] Reset password error: $e');
+      AppLogger.error('🔴 [AuthStore] Reset password error: $e');
       final errorMessage = 'Password reset failed. Please try again.';
       state = state.copyWith(isLoading: false);
       return {'status': 'fail', 'message': errorMessage};

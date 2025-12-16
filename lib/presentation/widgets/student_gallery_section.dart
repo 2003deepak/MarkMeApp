@@ -8,11 +8,11 @@ class StudentGallerySection extends StatefulWidget {
   final BoxDecoration cardDecoration;
 
   const StudentGallerySection({
-    Key? key,
+    super.key,
     required this.gallery,
     required this.onPickGalleryImage,
     required this.cardDecoration,
-  }) : super(key: key);
+  });
 
   @override
   State<StudentGallerySection> createState() => _StudentGallerySectionState();

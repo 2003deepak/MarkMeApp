@@ -34,7 +34,7 @@ class AttendanceStatsWidget extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.blue.withOpacity(0.3),
+            color: Colors.blue.withValues(alpha: 0.3),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -70,8 +70,11 @@ class AttendanceStatsWidget extends StatelessWidget {
     );
   }
 
-  Widget _divider() =>
-      Container(width: 1, height: 50, color: Colors.white.withOpacity(0.3));
+  Widget _divider() => Container(
+    width: 1,
+    height: 50,
+    color: Colors.white.withValues(alpha: 0.3),
+  );
 
   Widget _buildStatItem(String label, String value, IconData icon) {
     return Column(
@@ -90,7 +93,7 @@ class AttendanceStatsWidget extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: isDesktop ? 14 : 12,
-            color: Colors.white.withOpacity(0.8),
+            color: Colors.white.withValues(alpha: 0.8),
           ),
           textAlign: TextAlign.center,
         ),

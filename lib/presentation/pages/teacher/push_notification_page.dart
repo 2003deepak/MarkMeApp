@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:markmeapp/data/models/notification_model.dart'
-    as NotificationModel;
+    as notification_model;
 import 'package:markmeapp/data/repositories/teacher_repository.dart';
 import 'class_selection_page.dart';
 import 'student_selection_page.dart';
+import 'package:markmeapp/presentation/widgets/ui/app_bar.dart';
 
 class PushNotificationPage extends ConsumerStatefulWidget {
-  const PushNotificationPage({Key? key}) : super(key: key);
+  const PushNotificationPage({super.key});
 
   @override
   ConsumerState<PushNotificationPage> createState() =>
@@ -29,7 +30,7 @@ class _PushNotificationPageState extends ConsumerState<PushNotificationPage> {
   List<String> _selectedTargetIds = [];
 
   // Constants
-  static const _primaryColor = Color(0xFF2563EB);
+
   static const _backgroundColor = Color(0xFFF5F7FA);
   static const _cardColor = Colors.white;
   static const _animationDuration = Duration(milliseconds: 200);
@@ -73,13 +74,14 @@ class _PushNotificationPageState extends ConsumerState<PushNotificationPage> {
 
   void _updatePreview() => setState(() {});
 
-  void _handleBackPressed() => context.go("/teacher");
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _backgroundColor,
-      appBar: _buildAppBar(),
+      appBar: MarkMeAppBar(
+        title: 'Push Notification',
+        onBackPressed: () => context.go("/teacher"),
+      ),
       body: SafeArea(
         child: Column(
           children: [
@@ -114,38 +116,6 @@ class _PushNotificationPageState extends ConsumerState<PushNotificationPage> {
     );
   }
 
-  AppBar _buildAppBar() {
-    return AppBar(
-      backgroundColor: _primaryColor,
-      leading: IconButton(
-        icon: Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: const Color(0xFFF1F5F9),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: const Icon(
-            Icons.arrow_back_ios_new_rounded,
-            size: 18,
-            color: Color(0xFF475569),
-          ),
-        ),
-        onPressed: _handleBackPressed,
-      ),
-      title: const Text(
-        'Push Notification',
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      centerTitle: true,
-      elevation: 0,
-    );
-  }
-
   Widget _buildHeaderSection() {
     return Container(
       padding: const EdgeInsets.all(24),
@@ -158,7 +128,7 @@ class _PushNotificationPageState extends ConsumerState<PushNotificationPage> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.blue.withOpacity(0.3),
+            color: Colors.blue.withValues(alpha: 0.3),
             blurRadius: 15,
             offset: const Offset(0, 8),
           ),
@@ -170,7 +140,7 @@ class _PushNotificationPageState extends ConsumerState<PushNotificationPage> {
             width: 60,
             height: 60,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(16),
             ),
             child: const Icon(Icons.campaign, color: Colors.white, size: 28),
@@ -211,7 +181,7 @@ class _PushNotificationPageState extends ConsumerState<PushNotificationPage> {
         border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -262,7 +232,7 @@ class _PushNotificationPageState extends ConsumerState<PushNotificationPage> {
         border: Border.all(color: Colors.grey.shade300),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -472,7 +442,7 @@ class _PushNotificationPageState extends ConsumerState<PushNotificationPage> {
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: Colors.blue.withOpacity(0.1),
+                color: Colors.blue.withValues(alpha: 0.1),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -531,7 +501,7 @@ class _PushNotificationPageState extends ConsumerState<PushNotificationPage> {
           ),
         ),
         const SizedBox(height: 12),
-        ..._audienceOptions.map(_buildAudienceOption).toList(),
+        ..._audienceOptions.map(_buildAudienceOption),
       ],
     );
   }
@@ -687,7 +657,7 @@ class _PushNotificationPageState extends ConsumerState<PushNotificationPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.blue.withOpacity(0.4),
+            color: Colors.blue.withValues(alpha: 0.4),
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),
@@ -752,12 +722,12 @@ class _PushNotificationPageState extends ConsumerState<PushNotificationPage> {
   }
 
   // FIXED: Corrected _createNotification method without copyWith
-  NotificationModel.AppNotification _createNotification() {
+  notification_model.AppNotification _createNotification() {
     switch (_selectedAudience) {
       case 'specific_class':
         final filters = _selectedFilters
             .map(
-              (f) => NotificationModel.NotificationFilter(
+              (f) => notification_model.NotificationFilter(
                 dept: f['dept'],
                 program: f['program'],
                 semester: f['semester'],
@@ -766,7 +736,7 @@ class _PushNotificationPageState extends ConsumerState<PushNotificationPage> {
             )
             .toList();
 
-        return NotificationModel.AppNotification(
+        return notification_model.AppNotification(
           user: 'student',
           title: _titleController.text,
           message: _messageController.text,
@@ -774,7 +744,7 @@ class _PushNotificationPageState extends ConsumerState<PushNotificationPage> {
         );
 
       case 'selective_students':
-        return NotificationModel.AppNotification(
+        return notification_model.AppNotification(
           user: 'student',
           title: _titleController.text,
           message: _messageController.text,
@@ -782,7 +752,7 @@ class _PushNotificationPageState extends ConsumerState<PushNotificationPage> {
         );
 
       default:
-        return NotificationModel.AppNotification(
+        return notification_model.AppNotification(
           user: 'student',
           title: _titleController.text,
           message: _messageController.text,

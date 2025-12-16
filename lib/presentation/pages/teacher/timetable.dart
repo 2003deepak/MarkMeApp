@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:markmeapp/data/repositories/teacher_repository.dart';
 
 class TimeTablePage extends ConsumerStatefulWidget {
-  const TimeTablePage({Key? key}) : super(key: key);
+  const TimeTablePage({super.key});
 
   @override
   ConsumerState<TimeTablePage> createState() => _TimeTableState();
@@ -73,6 +73,7 @@ class _TimeTableState extends ConsumerState<TimeTablePage> {
   }
 
   // Convert API day name to index (0=Monday, 1=Tuesday, etc.)
+  /*
   int _getDayIndex(String dayName) {
     switch (dayName.toLowerCase()) {
       case 'monday':
@@ -93,6 +94,7 @@ class _TimeTableState extends ConsumerState<TimeTablePage> {
         return 0;
     }
   }
+  */
 
   // Get the full day name from index
   String _getFullDayName(int index) {
@@ -489,7 +491,7 @@ class _TimeTableState extends ConsumerState<TimeTablePage> {
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.4),
+            color: color.withAlpha(102), // 0.4
             blurRadius: 3,
             spreadRadius: 1,
           ),
@@ -582,7 +584,7 @@ class _TimeTableState extends ConsumerState<TimeTablePage> {
           borderRadius: BorderRadius.circular(8),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withAlpha(13), // 0.05
               blurRadius: 4,
               offset: const Offset(0, 2),
             ),

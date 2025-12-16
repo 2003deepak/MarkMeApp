@@ -9,13 +9,13 @@ class BatchYearSelector extends StatefulWidget {
   final String? hintText;
 
   const BatchYearSelector({
-    Key? key,
+    super.key,
     required this.controller,
     this.validator,
     required this.label,
     this.isRequired = false,
     this.hintText,
-  }) : super(key: key);
+  });
 
   @override
   State<BatchYearSelector> createState() => _BatchYearSelectorState();
@@ -50,14 +50,14 @@ class _BatchYearSelectorState extends State<BatchYearSelector> {
                   ),
                   const SizedBox(height: 16),
                   Expanded(
-                      child: YearPicker(
-                        firstDate: DateTime(now.year - 20),
-                        lastDate: DateTime(now.year + 1),
-                        selectedDate: DateTime(tempYear),
-                        onChanged: (DateTime dateTime) {
-                          Navigator.of(context).pop(dateTime.year);
-                        },
-                      ),
+                    child: YearPicker(
+                      firstDate: DateTime(now.year - 20),
+                      lastDate: DateTime(now.year + 1),
+                      selectedDate: DateTime(tempYear),
+                      onChanged: (DateTime dateTime) {
+                        Navigator.of(context).pop(dateTime.year);
+                      },
+                    ),
                   ),
                   const SizedBox(height: 16),
                   Row(

@@ -4,9 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:markmeapp/data/repositories/teacher_repository.dart';
 import 'package:debounce_throttle/debounce_throttle.dart';
+import 'package:markmeapp/presentation/widgets/ui/app_bar.dart';
 
 class StudentSelectionPage extends ConsumerStatefulWidget {
-  const StudentSelectionPage({Key? key}) : super(key: key);
+  const StudentSelectionPage({super.key});
 
   @override
   ConsumerState<StudentSelectionPage> createState() =>
@@ -208,34 +209,10 @@ class _StudentSelectionPageState extends ConsumerState<StudentSelectionPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF2563EB),
-        leading: IconButton(
-          icon: Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(
-              Icons.arrow_back_ios_new_rounded,
-              size: 18,
-              color: Color(0xFF475569),
-            ),
-          ),
-          onPressed: _isLoading ? null : _handleBackPressed,
-        ),
-        title: const Text(
-          'Add Students',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        centerTitle: true,
-        elevation: 0,
+      appBar: MarkMeAppBar(
+        title: 'Add Students',
+        onBackPressed: _isLoading ? null : _handleBackPressed,
+        isLoading: _isLoading,
       ),
       body: SafeArea(
         child: Column(
@@ -258,7 +235,7 @@ class _StudentSelectionPageState extends ConsumerState<StudentSelectionPage> {
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.blue.withOpacity(0.1),
+              color: Colors.blue.withValues(alpha: 0.1),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -417,7 +394,7 @@ class _StudentSelectionPageState extends ConsumerState<StudentSelectionPage> {
     required IconData icon,
     required ValueChanged<String?> onChanged,
   }) {
-    return Container(
+    return SizedBox(
       width: 150,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -537,8 +514,8 @@ class _StudentSelectionPageState extends ConsumerState<StudentSelectionPage> {
                 boxShadow: [
                   BoxShadow(
                     color: isSelected
-                        ? Colors.blue.withOpacity(0.1)
-                        : Colors.black.withOpacity(0.05),
+                        ? Colors.blue.withValues(alpha: 0.1)
+                        : Colors.black.withValues(alpha: 0.05),
                     blurRadius: isSelected ? 8 : 4,
                     offset: const Offset(0, 2),
                   ),
@@ -731,7 +708,7 @@ class _StudentSelectionPageState extends ConsumerState<StudentSelectionPage> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, -2),
           ),

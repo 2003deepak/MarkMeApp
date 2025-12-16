@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:markmeapp/state/auth_state.dart';
+import 'package:markmeapp/core/utils/app_logger.dart';
 
 final Provider<Dio> dioProvider = Provider<Dio>((ref) {
   final dio = Dio(
@@ -20,7 +21,7 @@ final Provider<Dio> dioProvider = Provider<Dio>((ref) {
   dio.interceptors.add(
     InterceptorsWrapper(
       onRequest: (options, handler) async {
-        print("🚀 [Request] ${options.method} → ${options.path}");
+        AppLogger.info("🚀 [Request] ${options.method} → ${options.path}");
 
         final authStore = ref.read(authStoreProvider.notifier);
         final token = authStore.accessToken;
@@ -59,7 +60,7 @@ final Provider<Dio> dioProvider = Provider<Dio>((ref) {
         final refreshToken = await authStore.getRefreshToken();
 
         if (refreshToken == null) {
-          print("⚠️ No refresh token → logging out");
+          AppLogger.warning("⚠️ No refresh token → logging out");
           await authStore.setLogOut();
           return handler.reject(error);
         }
@@ -77,7 +78,7 @@ final Provider<Dio> dioProvider = Provider<Dio>((ref) {
               throw Exception('Token refresh failed while waiting');
             }
           } catch (e) {
-            print("🚨 Waiting request failed to refresh: $e");
+            AppLogger.error("🚨 Waiting request failed to refresh: $e");
             return handler.reject(error);
           }
         }
@@ -89,14 +90,16 @@ final Provider<Dio> dioProvider = Provider<Dio>((ref) {
 
         while (refreshAttemptCount < 2) {
           refreshAttemptCount++;
-          print("🔁 Attempt #$refreshAttemptCount to refresh token...");
+          AppLogger.info(
+            "🔁 Attempt #$refreshAttemptCount to refresh token...",
+          );
 
           try {
             final refreshResult = await authStore.refreshAccessToken();
 
             if (refreshResult['success'] == true) {
               final newAccessToken = refreshResult['data']['access_token'];
-              print(
+              AppLogger.info(
                 "✅ Token refresh succeeded on attempt #$refreshAttemptCount",
               );
 
@@ -107,12 +110,12 @@ final Provider<Dio> dioProvider = Provider<Dio>((ref) {
               handler.resolve(retryResponse);
               break; // ✅ Exit loop after success
             } else {
-              print(
+              AppLogger.warning(
                 "⚠️ Token refresh attempt #$refreshAttemptCount failed: ${refreshResult['message']}",
               );
             }
           } catch (refreshError) {
-            print(
+            AppLogger.error(
               "🚨 Exception during token refresh (attempt #$refreshAttemptCount): $refreshError",
             );
           }
@@ -123,7 +126,7 @@ final Provider<Dio> dioProvider = Provider<Dio>((ref) {
 
         // If both attempts failed
         if (!refreshCompleter!.isCompleted) {
-          print(
+          AppLogger.error(
             "❌ Both token refresh attempts failed → logging out & rejecting request",
           );
           refreshCompleter!.completeError(

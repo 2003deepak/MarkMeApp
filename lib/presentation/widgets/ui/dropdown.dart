@@ -12,7 +12,7 @@ class Dropdown<T> extends StatefulWidget {
   final bool enabled;
 
   const Dropdown({
-    Key? key,
+    super.key,
     required this.label,
     required this.hint,
     required this.items,
@@ -22,7 +22,7 @@ class Dropdown<T> extends StatefulWidget {
     this.isRequired = false,
     this.displayText,
     this.enabled = true,
-  }) : super(key: key);
+  });
 
   @override
   State<Dropdown<T>> createState() => _DropdownState<T>();
@@ -73,14 +73,14 @@ class _DropdownState<T> extends State<Dropdown<T>> {
             border: Border.all(color: const Color(0xFFD1D5DB), width: 1.5),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.04),
+                color: Colors.black.withValues(alpha: 0.04),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
             ],
           ),
           child: DropdownButtonFormField<T>(
-            value: widget.value,
+            initialValue: widget.value,
             hint: Text(
               widget.hint,
               style: TextStyle(

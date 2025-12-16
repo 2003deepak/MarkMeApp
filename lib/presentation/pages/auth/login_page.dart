@@ -11,6 +11,7 @@ import 'package:markmeapp/data/models/user_model.dart';
 import 'package:markmeapp/presentation/widgets/ui/input_field.dart';
 import 'package:markmeapp/presentation/widgets/ui/otp_field.dart';
 import 'package:markmeapp/state/auth_state.dart';
+import 'package:markmeapp/core/utils/app_logger.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -38,9 +39,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       // Skip permission initialization on desktop platforms
       if (!Platform.isWindows && !Platform.isMacOS && !Platform.isLinux) {
         await appPermissions.initialize(context);
-        print("✅ Permissions initialized for mobile platform");
+        AppLogger.info("✅ Permissions initialized for mobile platform");
       } else {
-        print("🖥️ Skipping permissions on desktop platform");
+        AppLogger.info("🖥️ Skipping permissions on desktop platform");
       }
       setState(() {
         _permissionsInitialized = true;
@@ -58,19 +59,19 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     setState(() {
       _enteredPassword = password;
     });
-    debugPrint('✅ Password Entered: $password');
+    AppLogger.info('✅ Password Entered: $password');
   }
 
   Future<void> _handleLogin() async {
-    debugPrint('🔵 [LoginPage] _handleLogin called');
+    AppLogger.info('🔵 [LoginPage] _handleLogin called');
 
     if (!mounted) {
-      debugPrint('🔴 [LoginPage] Widget not mounted, returning');
+      AppLogger.warning('🔴 [LoginPage] Widget not mounted, returning');
       return;
     }
 
     if (_formKey.currentState!.validate()) {
-      debugPrint('🟢 [LoginPage] Form validation passed');
+      AppLogger.info('🟢 [LoginPage] Form validation passed');
 
       if (_enteredPassword.isEmpty || _enteredPassword.length != 6) {
         _showSnackBar('Please enter a 6-digit password', isError: true);
@@ -83,14 +84,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         // Only get FCM token on mobile platforms
         if (Platform.isAndroid || Platform.isIOS) {
           fcmToken = await FirebaseMessaging.instance.getToken();
-          print("📱 FCM Token: $fcmToken");
+          AppLogger.info("📱 FCM Token: $fcmToken");
         } else {
           // Desktop platforms - generate mock token
           fcmToken = "desktop-token-${DateTime.now().millisecondsSinceEpoch}";
-          print("🖥️ Using mock FCM token for desktop");
+          AppLogger.info("🖥️ Using mock FCM token for desktop");
         }
       } catch (e) {
-        print("⚠️ Error getting FCM token: $e");
+        AppLogger.error("⚠️ Error getting FCM token: $e");
         fcmToken = "error-token-${DateTime.now().millisecondsSinceEpoch}";
       }
 
@@ -114,16 +115,18 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         deviceInfo: deviceInfo,
       );
 
-      debugPrint(
+      AppLogger.info(
         '🔵 [LoginPage] Attempting login with email: ${user.email}, role: $_selectedRole, platform: $platformType',
       );
 
       final authStore = ref.read(authStoreProvider.notifier);
 
+      if (!mounted) return;
+
       // ✅ Await here
       final result = await authStore.loginUser(user, _selectedRole, context);
 
-      debugPrint('🟢 [LoginPage] The response from state is = $result');
+      AppLogger.info('🟢 [LoginPage] The response from state is = $result');
 
       if (result['success'] == true) {
         _showSnackBar(result['message'] ?? 'Login successful!', isError: false);
@@ -136,7 +139,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         _showSnackBar(result['message'] ?? 'Login failed', isError: true);
       }
     } else {
-      debugPrint('🔴 [LoginPage] Form validation failed');
+      AppLogger.warning('🔴 [LoginPage] Form validation failed');
     }
   }
 
@@ -204,7 +207,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 border: Border.all(color: Colors.blue.shade200, width: 1),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.blue.withOpacity(0.1),
+                    color: Colors.blue.withAlpha(26), // 0.1
                     blurRadius: 6,
                     offset: const Offset(0, 2),
                   ),
@@ -216,32 +219,26 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     child: GestureDetector(
                       onTap: () => setState(() => _selectedRole = 'student'),
                       child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
+                        duration: const Duration(milliseconds: 150),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         decoration: BoxDecoration(
-                          gradient: _selectedRole == 'student'
-                              ? LinearGradient(
-                                  colors: [
-                                    Colors.blue.shade600,
-                                    Colors.blue.shade500,
-                                  ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                )
-                              : null,
-                          color: _selectedRole == 'student'
-                              ? null
-                              : Colors.transparent,
+                          gradient: LinearGradient(
+                            colors: _selectedRole == 'student'
+                                ? [Colors.blue.shade600, Colors.blue.shade500]
+                                : [Colors.transparent, Colors.transparent],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
                           borderRadius: BorderRadius.circular(11),
                           boxShadow: _selectedRole == 'student'
                               ? [
                                   BoxShadow(
-                                    color: Colors.blue.withOpacity(0.3),
+                                    color: Colors.blue.withAlpha(77), // 0.3
                                     blurRadius: 6,
                                     offset: const Offset(0, 2),
                                   ),
                                 ]
-                              : null,
+                              : [],
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -275,32 +272,26 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     child: GestureDetector(
                       onTap: () => setState(() => _selectedRole = 'teacher'),
                       child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
+                        duration: const Duration(milliseconds: 150),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         decoration: BoxDecoration(
-                          gradient: _selectedRole != 'student'
-                              ? LinearGradient(
-                                  colors: [
-                                    Colors.blue.shade600,
-                                    Colors.blue.shade500,
-                                  ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                )
-                              : null,
-                          color: _selectedRole != 'student'
-                              ? null
-                              : Colors.transparent,
+                          gradient: LinearGradient(
+                            colors: _selectedRole != 'student'
+                                ? [Colors.blue.shade600, Colors.blue.shade500]
+                                : [Colors.transparent, Colors.transparent],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
                           borderRadius: BorderRadius.circular(11),
                           boxShadow: _selectedRole != 'student'
                               ? [
                                   BoxShadow(
-                                    color: Colors.blue.withOpacity(0.3),
+                                    color: Colors.blue.withAlpha(77), // 0.3
                                     blurRadius: 6,
                                     offset: const Offset(0, 2),
                                   ),
                                 ]
-                              : null,
+                              : [],
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -333,53 +324,70 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               ),
             ),
 
-            // Staff Role Selection (only shown for staff)
-            if (_selectedRole != 'student') ...[
-              const SizedBox(height: 20),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.blue.shade200),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Select Your Role',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.blue.shade800,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 400),
+              reverseDuration: const Duration(milliseconds: 300),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInCubic,
+              transitionBuilder: (child, animation) {
+                return SizeTransition(
+                  sizeFactor: animation,
+                  axisAlignment: -1.0,
+                  child: FadeTransition(opacity: animation, child: child),
+                );
+              },
+              child: _selectedRole != 'student'
+                  ? Column(
+                      key: const ValueKey('staff_options'),
                       children: [
-                        _buildRoleOption(
-                          value: 'teacher',
-                          label: 'Teacher',
-                          icon: Icons.school,
-                        ),
-                        const SizedBox(width: 12),
-                        _buildRoleOption(
-                          value: 'clerk',
-                          label: 'Clerk',
-                          icon: Icons.assignment_ind,
-                        ),
-                        const SizedBox(width: 12),
-                        _buildRoleOption(
-                          value: 'admin',
-                          label: 'Admin',
-                          icon: Icons.admin_panel_settings,
+                        const SizedBox(height: 20),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.blue.shade200),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Select Your Role',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.blue.shade800,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  _buildRoleOption(
+                                    value: 'teacher',
+                                    label: 'Teacher',
+                                    icon: Icons.school,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  _buildRoleOption(
+                                    value: 'clerk',
+                                    label: 'Clerk',
+                                    icon: Icons.assignment_ind,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  _buildRoleOption(
+                                    value: 'admin',
+                                    label: 'Admin',
+                                    icon: Icons.admin_panel_settings,
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
+                    )
+                  : const SizedBox.shrink(key: ValueKey('empty_options')),
+            ),
 
             const SizedBox(height: 32),
 
@@ -514,7 +522,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           ? []
                           : [
                               BoxShadow(
-                                color: primaryColor.withOpacity(0.3),
+                                color: primaryColor.withAlpha(77), // 0.3
                                 blurRadius: 12,
                                 offset: const Offset(0, 6),
                               ),

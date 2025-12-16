@@ -18,7 +18,7 @@ class OTPField extends StatefulWidget {
   final List<TextInputFormatter>? inputFormatters;
 
   const OTPField({
-    Key? key,
+    super.key,
     this.length = 6,
     required this.onCompleted,
     this.autoFocus = false,
@@ -33,7 +33,7 @@ class OTPField extends StatefulWidget {
     this.borderRadius = const BorderRadius.all(Radius.circular(12)),
     this.keyboardType = TextInputType.number,
     this.inputFormatters,
-  }) : super(key: key);
+  });
 
   @override
   State<OTPField> createState() => OTPFieldState();
@@ -129,8 +129,8 @@ class OTPFieldState extends State<OTPField> {
     }
   }
 
-  void _onKeyPressed(RawKeyEvent event, int index) {
-    if (event is RawKeyDownEvent) {
+  void _onKeyPressed(KeyEvent event, int index) {
+    if (event is KeyDownEvent) {
       if (event.logicalKey == LogicalKeyboardKey.backspace) {
         if (_controllers[index].text.isEmpty && index > 0) {
           // Move to previous field if current is empty
@@ -147,9 +147,9 @@ class OTPFieldState extends State<OTPField> {
       width: widget.fieldWidth,
       height: widget.fieldHeight,
       margin: const EdgeInsets.symmetric(horizontal: 5),
-      child: RawKeyboardListener(
-        focusNode: FocusNode(),
-        onKey: (event) => _onKeyPressed(event, index),
+      child: KeyboardListener(
+        focusNode: FocusNode(), // This internal focus node captures key events
+        onKeyEvent: (event) => _onKeyPressed(event, index),
         child: TextFormField(
           controller: _controllers[index],
           focusNode: _focusNodes[index],
@@ -231,9 +231,15 @@ class OTPFieldState extends State<OTPField> {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(widget.length, (index) => _buildOTPField(index)),
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(
+          widget.length,
+          (index) => _buildOTPField(index),
+        ),
+      ),
     );
   }
 }

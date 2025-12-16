@@ -44,7 +44,7 @@ class DashboardSkeleton extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 12,
             offset: const Offset(0, 3),
           ),
@@ -131,7 +131,7 @@ class DashboardSkeleton extends StatelessWidget {
         border: Border.all(color: const Color(0xFFE5E7EB)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),
@@ -249,9 +249,17 @@ class DashboardSkeleton extends StatelessWidget {
       child: Row(
         children: [
           Expanded(child: _buildStatItemSkeleton()),
-          Container(width: 1, height: 50, color: Colors.white.withOpacity(0.5)),
+          Container(
+            width: 1,
+            height: 50,
+            color: Colors.white.withValues(alpha: 0.5),
+          ),
           Expanded(child: _buildStatItemSkeleton()),
-          Container(width: 1, height: 50, color: Colors.white.withOpacity(0.5)),
+          Container(
+            width: 1,
+            height: 50,
+            color: Colors.white.withValues(alpha: 0.5),
+          ),
           Expanded(child: _buildStatItemSkeleton()),
         ],
       ),
@@ -299,7 +307,7 @@ class DashboardSkeleton extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 12,
             offset: const Offset(0, 3),
           ),
@@ -387,7 +395,7 @@ class DashboardSkeleton extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 12,
             offset: const Offset(0, 3),
           ),

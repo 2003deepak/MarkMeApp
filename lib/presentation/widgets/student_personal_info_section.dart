@@ -19,7 +19,7 @@ class StudentPersonalInfoSection extends StatelessWidget {
   final String? Function(String?)? validatePhone;
 
   const StudentPersonalInfoSection({
-    Key? key,
+    super.key,
     required this.firstNameCtrl,
     required this.middleNameCtrl,
     required this.lastNameCtrl,
@@ -33,7 +33,7 @@ class StudentPersonalInfoSection extends StatelessWidget {
     this.validateLastName,
     this.validateEmail,
     this.validatePhone,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

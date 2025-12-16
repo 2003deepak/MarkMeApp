@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:markmeapp/data/repositories/student_repository.dart';
+import 'package:markmeapp/core/utils/app_logger.dart';
 
 @immutable
 class StudentState {
@@ -44,7 +45,7 @@ class StudentStore extends StateNotifier<StudentState> {
   Future<Map<String, dynamic>> loadProfile() async {
     try {
       final result = await _studentRepo.fetchProfile();
-      print("The result in state is $result");
+      AppLogger.info("The result in state is $result");
 
       if (result['success'] == true) {
         state = state.copyWith(profile: result['data']);
@@ -57,7 +58,7 @@ class StudentStore extends StateNotifier<StudentState> {
         };
       }
     } catch (e) {
-      print("Error loading profile: $e");
+      AppLogger.error("Error loading profile: $e");
       return {"success": false, "message": "Error loading profile: $e"};
     }
   }
@@ -74,7 +75,7 @@ class StudentStore extends StateNotifier<StudentState> {
       return result;
     } catch (e) {
       // Handle error silently or rethrow if needed
-      print("Error updating profile: $e");
+      AppLogger.error("Error updating profile: $e");
       return {"success": false, "message": "Error in updating profile"};
     }
   }

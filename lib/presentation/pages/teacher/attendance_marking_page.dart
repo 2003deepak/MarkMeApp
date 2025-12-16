@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:markmeapp/core/utils/app_logger.dart';
 import 'package:markmeapp/data/repositories/teacher_repository.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
@@ -124,12 +125,8 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
       }
     });
 
-    print("🎯 Present IDs: $present");
-    print("🎯 Absent IDs:  $absent");
-
-    // Attach to state
-    widget.sessionData['present_students'] = present;
-    widget.sessionData['absent_students'] = absent;
+    AppLogger.info("🎯 Present IDs: $present");
+    AppLogger.info("🎯 Absent IDs:  $absent");
   }
 
   // ========== LOAD ALL STUDENTS ==========
@@ -142,12 +139,16 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
       final semester = int.tryParse(widget.sessionData['semester'].toString());
 
       if (batchYear == null || program == null || semester == null) {
-        print("❌ sessionData incomplete: $batchYear, $program, $semester");
+        AppLogger.info(
+          "❌ sessionData incomplete: $batchYear, $program, $semester",
+        );
         setState(() => _isLoadingStudents = false);
         return;
       }
 
-      print("📌 Fetching students for $batchYear $program Sem-$semester");
+      AppLogger.info(
+        "📌 Fetching students for $batchYear $program Sem-$semester",
+      );
 
       final result = await teacherRepository.fetchStudentsForAttendance(
         batchYear: batchYear,
@@ -192,11 +193,11 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
         });
       } else {
         setState(() => _isLoadingStudents = false);
-        print('Error loading students: ${result['error']}');
+        AppLogger.info('Error loading students: ${result['error']}');
       }
     } catch (e) {
       setState(() => _isLoadingStudents = false);
-      print('Exception loading students: $e');
+      AppLogger.info('Exception loading students: $e');
     }
   }
 
@@ -231,7 +232,7 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
   }
 
   void _handleSSEData(Map<String, dynamic> data) {
-    print('Received SSE data: $data');
+    AppLogger.info('Received SSE data: $data');
 
     // Handle student recognition events
     if (data['student_id'] != null && data['name'] != null) {
@@ -337,17 +338,17 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
       _attendanceBitString = bitString.toString();
     });
 
-    print('📊 Generated BitString: $_attendanceBitString');
-    print('📊 Total Students: ${sortedStudents.length}');
-    print(
+    AppLogger.info('📊 Generated BitString: $_attendanceBitString');
+    AppLogger.info('📊 Total Students: ${sortedStudents.length}');
+    AppLogger.info(
       '📊 Present Count: ${_attendanceMap.values.where((present) => present).length}',
     );
 
-    // Print roll numbers with attendance status for verification
+    // AppLogger.info roll numbers with attendance status for verification
     for (int i = 0; i < sortedStudents.length; i++) {
       final student = sortedStudents[i];
       final status = _attendanceBitString[i];
-      print(
+      AppLogger.info(
         '🎯 Roll: ${student['roll_number']} - ${status == '1' ? 'Present' : 'Absent'}',
       );
     }
@@ -950,13 +951,13 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
     _generatePresentAbsentLists();
 
     // Include the bitstring in your submission if needed
-    print('🎯 Submitting attendance with bitstring: $_attendanceBitString');
+    AppLogger.info(
+      '🎯 Submitting attendance with bitstring: $_attendanceBitString',
+    );
 
     final resp = await teacherRepository.saveAttendance(
       widget.attendanceId,
       _attendanceBitString,
-      widget.sessionData['present_students'],
-      widget.sessionData['absent_students'],
     );
 
     if (resp['success'] != true) {

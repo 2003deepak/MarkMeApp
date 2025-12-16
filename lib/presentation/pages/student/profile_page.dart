@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:markmeapp/core/theme/app_theme.dart';
 import 'package:markmeapp/state/auth_state.dart';
+import 'package:markmeapp/state/student_state.dart';
 
 /// Professional Profile Page for attendance management system
 class ProfilePage extends ConsumerStatefulWidget {
@@ -26,8 +28,23 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   final _batchYearCtrl = TextEditingController();
 
   String? _program;
-  String? _dept;
   int? _semester;
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  String formatMemberSince(String? isoString) {
+    if (isoString == null || isoString.isEmpty) return 'N/A';
+
+    try {
+      final date = DateTime.parse(isoString);
+      return DateFormat('MMM yyyy').format(date);
+    } catch (e) {
+      return 'N/A';
+    }
+  }
 
   Future<void> _handleLogout() async {
     await ref.read(authStoreProvider.notifier).setLogOut();
@@ -52,7 +69,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     borderRadius: BorderRadius.circular(16),
     boxShadow: [
       BoxShadow(
-        color: Colors.black.withOpacity(0.05),
+        color: Colors.black.withAlpha(13), // 0.05
         blurRadius: 20,
         offset: const Offset(0, 4),
       ),
@@ -78,7 +95,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     required IconData icon,
     required String label,
     String? subtitle,
-    Color? textColor,
     VoidCallback? onTap,
     bool isLogout = false,
   }) {
@@ -162,6 +178,85 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     );
   }
 
+  // Helper method to get full name
+  String _getFullName(Map<String, dynamic> profile) {
+    final firstName = profile['first_name'] ?? '';
+    final lastName = profile['last_name'] ?? '';
+
+    // Combine names, skipping empty ones
+    final names = [
+      firstName,
+      lastName,
+    ].where((name) => name.isNotEmpty).toList();
+    return names.join(' ');
+  }
+
+  // Helper method to display profile picture or default avatar
+  Widget _buildProfilePicture(String? profilePictureUrl) {
+    if (profilePictureUrl != null && profilePictureUrl.isNotEmpty) {
+      return Container(
+        width: 64,
+        height: 64,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white, width: 2),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(14),
+          child: Image.network(
+            profilePictureUrl,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return Container(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(Icons.person, color: Colors.white, size: 32),
+              );
+            },
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) return child;
+              return Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF3F4F6),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Center(
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Color(0xFF6366F1),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+    }
+
+    // Default avatar if no profile picture
+    return Container(
+      width: 64,
+      height: 64,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
+        ),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: const Icon(Icons.person, color: Colors.white, size: 32),
+    );
+  }
+
   @override
   void dispose() {
     _rollCtrl.dispose();
@@ -178,15 +273,15 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
+    final studentState = ref.watch(studentStoreProvider);
+    final profile = studentState.profile;
     final w = MediaQuery.of(context).size.width;
     final hPad = w < 380 ? 16.0 : 20.0;
 
     return Theme(
       data: AppTheme.theme,
       child: Scaffold(
-        backgroundColor: const Color(
-          0xFFF8FAFC,
-        ), // Light background similar to dashboard
+        backgroundColor: const Color(0xFFF8FAFC),
         body: SingleChildScrollView(
           padding: EdgeInsets.fromLTRB(hPad, 16, hPad, 32),
           child: Column(
@@ -198,30 +293,37 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 padding: const EdgeInsets.all(20),
                 child: Row(
                   children: [
-                    Container(
-                      width: 64,
-                      height: 64,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: const Icon(
-                        Icons.person,
-                        color: Colors.white,
-                        size: 32,
-                      ),
-                    ),
+                    // Profile picture
+                    profile != null
+                        ? _buildProfilePicture(profile['profile_picture'])
+                        : Container(
+                            width: 64,
+                            height: 64,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
+                              ),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: const Icon(
+                              Icons.person,
+                              color: Colors.white,
+                              size: 32,
+                            ),
+                          ),
+
                     const SizedBox(width: 16),
+
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '${_firstNameCtrl.text.isEmpty ? 'Indar' : _firstNameCtrl.text} ${_lastNameCtrl.text.isEmpty ? 'Vishnoi' : _lastNameCtrl.text}',
+                            profile != null
+                                ? _getFullName(profile)
+                                : 'Loading...',
                             style: GoogleFonts.inter(
                               fontSize: 18,
                               fontWeight: FontWeight.w600,
@@ -229,51 +331,44 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                               height: 1.3,
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _rollCtrl.text.isEmpty
-                                ? 'FE4590025'
-                                : _rollCtrl.text,
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
-                              color: const Color(0xFF6B7280),
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
+
+                          const SizedBox(height: 8),
+
                           Wrap(
                             spacing: 8,
                             runSpacing: 8,
                             children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFEEF2FF),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(
-                                      Icons.school,
-                                      size: 14,
-                                      color: Color(0xFF4F46E5),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      _program ?? 'MCA',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
-                                        color: const Color(0xFF4F46E5),
+                              if (profile != null)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFEEF2FF),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.school,
+                                        size: 14,
+                                        color: Color(0xFF4F46E5),
                                       ),
-                                    ),
-                                  ],
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        profile['program'] ?? 'MCA',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w500,
+                                          color: const Color(0xFF4F46E5),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
+
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 12,
@@ -284,7 +379,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
-                                  'Sem ${_semester ?? 1}',
+                                  'Sem ${profile != null ? (profile['semester']?.toString() ?? '1') : '1'}',
                                   style: GoogleFonts.inter(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w500,
@@ -297,6 +392,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                         ],
                       ),
                     ),
+
                     Container(
                       width: 36,
                       height: 36,
@@ -458,7 +554,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                '2023',
+                                profile != null
+                                    ? formatMemberSince(profile['created_at'])
+                                    : 'N/A',
+
                                 style: GoogleFonts.inter(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w500,
@@ -503,6 +602,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 8),
                   ],
                 ),
               ),

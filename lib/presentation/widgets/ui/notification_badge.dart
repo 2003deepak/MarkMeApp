@@ -6,6 +6,7 @@ class NotificationBadge extends StatelessWidget {
   final Color borderColor;
 
   const NotificationBadge({
+    super.key,
     required this.count,
     required this.backgroundColor,
     required this.borderColor,
@@ -36,7 +37,7 @@ class NotificationBadge extends StatelessWidget {
           ),
           shadows: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.12),
+              color: Colors.black.withValues(alpha: 0.12),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),

@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:markmeapp/core/utils/app_logger.dart';
 
 /// Custom Bottom Navigation Bar for GoRouter-based navigation
 class BottomNavigation extends StatefulWidget {
   final String userRole; // 'student', 'clerk', 'teacher', 'admin'
 
-  const BottomNavigation({Key? key, required this.userRole}) : super(key: key);
+  const BottomNavigation({super.key, required this.userRole});
 
   @override
   State<BottomNavigation> createState() => _BottomNavigationState();
@@ -33,11 +34,12 @@ class _BottomNavigationState extends State<BottomNavigation> {
             label: 'Schedule',
           ),
           NavigationDestination(
-            route: '$baseRoute/notifications',
-            icon: Icons.notifications_outlined,
-            activeIcon: Icons.notifications,
-            label: 'Notifications',
+            route: '$baseRoute/attendance-history',
+            icon: Icons.calendar_month_outlined,
+            activeIcon: Icons.calendar_month,
+            label: 'Attendance',
           ),
+
           NavigationDestination(
             route: '$baseRoute/profile',
             icon: Icons.person_outline,
@@ -89,10 +91,10 @@ class _BottomNavigationState extends State<BottomNavigation> {
             label: 'Schedule',
           ),
           NavigationDestination(
-            route: '$baseRoute/classes',
-            icon: Icons.class_outlined,
-            activeIcon: Icons.class_,
-            label: 'Classes',
+            route: '$baseRoute/attendance-history',
+            icon: Icons.calendar_month_outlined,
+            activeIcon: Icons.calendar_month,
+            label: 'Attendance',
           ),
           NavigationDestination(
             route: '$baseRoute/profile',
@@ -160,7 +162,7 @@ class _BottomNavigationState extends State<BottomNavigation> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withAlpha(26), // 0.1
             blurRadius: 16,
             offset: const Offset(0, -4),
           ),
@@ -226,12 +228,12 @@ class _BottomNavigationState extends State<BottomNavigation> {
         final route = destination.route;
         final currentLocation = GoRouterState.of(context).uri.toString();
 
-        print(
+        AppLogger.info(
           'BottomNavigation: Navigating to: $route, current: $currentLocation, role: ${widget.userRole}',
         );
 
         if (currentLocation != route) {
-          context.go(route);
+          context.push(route);
         }
       },
       child: AnimatedContainer(
@@ -239,7 +241,7 @@ class _BottomNavigationState extends State<BottomNavigation> {
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
         decoration: BoxDecoration(
           color: isSelected
-              ? const Color(0xFF2563EB).withOpacity(0.1)
+              ? const Color(0xFF2563EB).withAlpha(26) // 0.1
               : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),

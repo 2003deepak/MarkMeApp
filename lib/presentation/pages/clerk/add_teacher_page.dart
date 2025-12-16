@@ -4,9 +4,12 @@ import 'package:go_router/go_router.dart';
 import 'package:markmeapp/data/repositories/clerk_repository.dart';
 import 'package:markmeapp/presentation/widgets/ui/dropdown.dart';
 import 'package:markmeapp/presentation/widgets/ui/input_field.dart';
+import 'package:markmeapp/presentation/widgets/ui/snackbar.dart';
+import 'package:markmeapp/core/utils/app_logger.dart';
+import 'package:markmeapp/presentation/widgets/ui/app_bar.dart';
 
 class AddTeacherPage extends ConsumerStatefulWidget {
-  const AddTeacherPage({Key? key}) : super(key: key);
+  const AddTeacherPage({super.key});
 
   @override
   ConsumerState<AddTeacherPage> createState() => _AddTeacherPageState();
@@ -20,9 +23,7 @@ class _AddTeacherPageState extends ConsumerState<AddTeacherPage> {
   final _emailIdController = TextEditingController();
 
   // Dynamic subject assignments
-  List<Map<String, String?>> _subjectAssignments = [
-    {'subject': null},
-  ];
+  final List<Map<String, String?>> _subjectAssignments = [];
 
   // Dynamic subjects from API
   List<Map<String, dynamic>> _subjects = [];
@@ -71,6 +72,17 @@ class _AddTeacherPageState extends ConsumerState<AddTeacherPage> {
         _subjectsError == null;
   }
 
+  void _resetForm() {
+    _formKey.currentState?.reset();
+    _firstNameController.clear();
+    _lastNameController.clear();
+    _mobileNumberController.clear();
+    _emailIdController.clear();
+    setState(() {
+      _subjectAssignments.clear();
+    });
+  }
+
   Future<void> _fetchSubjects() async {
     setState(() {
       _isFetchingSubjects = true;
@@ -79,32 +91,35 @@ class _AddTeacherPageState extends ConsumerState<AddTeacherPage> {
 
     try {
       final clerkRepo = ref.read(clerkRepositoryProvider);
-      final result = await clerkRepo.fetchSubjects();
+      final result = await clerkRepo.fetchSubjects(mode: 'subject_listing');
 
       if (result['success'] == true) {
-        final subjectsData = result['data']['subjects'] as List<dynamic>;
+        final subjectsData = result['data'] as List<dynamic>;
 
-        // Extract unique subjects by subject_code to avoid duplicates
-        final uniqueSubjects = <String, Map<String, dynamic>>{};
+        // Transform data for UI
+        final List<Map<String, dynamic>> processedSubjects = [];
 
         for (var subject in subjectsData) {
-          final subjectCode = subject['subject_code'];
+          final subjectId = subject['subject_id'];
           final subjectName = subject['subject_name'];
+          final component = subject['component'];
 
-          if (!uniqueSubjects.containsKey(subjectCode)) {
-            uniqueSubjects[subjectCode] = {
-              'subject_code': subjectCode,
-              'subject_name': subjectName,
-            };
+          if (subjectId != null && subjectName != null) {
+            processedSubjects.add({
+              'id': subjectId,
+              'name': subjectName,
+              'component': component ?? '',
+              'display': '$subjectName ($component)',
+            });
           }
         }
 
         setState(() {
-          _subjects = uniqueSubjects.values.toList();
+          _subjects = processedSubjects;
         });
       } else {
         setState(() {
-          _subjectsError = result['error'];
+          _subjectsError = result['error'] ?? 'Unknown error';
         });
       }
     } catch (error) {
@@ -121,155 +136,251 @@ class _AddTeacherPageState extends ConsumerState<AddTeacherPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF2563EB),
-        leading: IconButton(
-          icon: Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(
-              Icons.arrow_back_ios_new_rounded,
-              size: 18,
-              color: Color(0xFF475569),
-            ),
-          ),
-          onPressed: _isLoading ? null : () => context.go("/clerk"),
-        ),
-        title: const Text(
-          'Add Teacher',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        centerTitle: true,
-        elevation: 0,
+      backgroundColor: const Color(0xFFF8FAFC),
+      appBar: MarkMeAppBar(
+        title: 'Add Teacher',
+        onBackPressed: _isLoading ? null : () => context.go("/clerk"),
+        isLoading: _isLoading,
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 20),
-
-                // First Name
-                InputField(
-                  label: "First Name",
-                  hintText: "Enter teacher's first name",
-                  controller: _firstNameController,
-                  keyboardType: TextInputType.text,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter first name';
-                    }
-                    if (value.length < 2) {
-                      return 'First name must be at least 2 characters long';
-                    }
-                    if (value.length > 50) {
-                      return 'First name must be less than 50 characters';
-                    }
-                    if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value)) {
-                      return 'First name can only contain letters and spaces';
-                    }
-                    return null;
-                  },
-                  isRequired: true,
-                  textInputAction: TextInputAction.next,
+        child: CustomScrollView(
+          slivers: [
+            // Content
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 24,
                 ),
+                child: Column(
+                  children: [
+                    // Header Card
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFFEFF6FF), Color(0xFFF0F9FF)],
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: const Color(0xFFE0F2FE),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 48,
+                                height: 48,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: const [
+                                    BoxShadow(
+                                      color: Color(0x0A3B82F6),
+                                      blurRadius: 10,
+                                      offset: Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(
+                                  Icons.person_add_rounded,
+                                  color: Color(0xFF2563EB),
+                                  size: 24,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Add New Teacher',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFF0F172A),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Enter teacher details and assign subjects',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: const Color(0xFF64748B),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
 
-                const SizedBox(height: 20),
+                    const SizedBox(height: 32),
 
-                // Last Name
-                InputField(
-                  label: "Last Name",
-                  hintText: "Enter teacher's last name",
-                  controller: _lastNameController,
-                  keyboardType: TextInputType.text,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter last name';
-                    }
-                    if (value.length < 2) {
-                      return 'Last name must be at least 2 characters long';
-                    }
-                    if (value.length > 50) {
-                      return 'Last name must be less than 50 characters';
-                    }
-                    if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value)) {
-                      return 'Last name can only contain letters and spaces';
-                    }
-                    return null;
-                  },
-                  isRequired: true,
-                  textInputAction: TextInputAction.next,
+                    // Form
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x08000000),
+                            blurRadius: 20,
+                            offset: Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Teacher Information',
+                              style: TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF0F172A),
+                                letterSpacing: -0.3,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Personal details and contact info',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: const Color(0xFF64748B),
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+
+                            // First Name
+                            InputField(
+                              label: "First Name",
+                              hintText: "Enter teacher's first name",
+                              controller: _firstNameController,
+                              keyboardType: TextInputType.text,
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Please enter first name';
+                                }
+                                if (value.length < 2) {
+                                  return 'Must be at least 2 characters';
+                                }
+                                if (value.length > 50) {
+                                  return 'Must be less than 50 characters';
+                                }
+                                if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value)) {
+                                  return 'Only letters and spaces allowed';
+                                }
+                                return null;
+                              },
+                              isRequired: true,
+                              textInputAction: TextInputAction.next,
+                            ),
+
+                            const SizedBox(height: 20),
+
+                            // Last Name
+                            InputField(
+                              label: "Last Name",
+                              hintText: "Enter teacher's last name",
+                              controller: _lastNameController,
+                              keyboardType: TextInputType.text,
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Please enter last name';
+                                }
+                                if (value.length < 2) {
+                                  return 'Must be at least 2 characters';
+                                }
+                                if (value.length > 50) {
+                                  return 'Must be less than 50 characters';
+                                }
+                                if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value)) {
+                                  return 'Only letters and spaces allowed';
+                                }
+                                return null;
+                              },
+                              isRequired: true,
+                              textInputAction: TextInputAction.next,
+                            ),
+
+                            const SizedBox(height: 20),
+
+                            // Mobile Number
+                            InputField(
+                              label: "Mobile Number",
+                              hintText: "Enter mobile number",
+                              controller: _mobileNumberController,
+                              keyboardType: TextInputType.phone,
+                              inputFormatters: [],
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Please enter mobile number';
+                                }
+                                if (!RegExp(r'^[0-9]{10}$').hasMatch(value)) {
+                                  return 'Enter a valid 10-digit number';
+                                }
+                                return null;
+                              },
+                              isRequired: true,
+                              textInputAction: TextInputAction.next,
+                            ),
+
+                            const SizedBox(height: 20),
+
+                            // Email ID
+                            InputField(
+                              label: "Email ID",
+                              hintText: "Enter teacher email",
+                              controller: _emailIdController,
+                              keyboardType: TextInputType.emailAddress,
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Please enter email ID';
+                                }
+                                if (!RegExp(
+                                  r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                                ).hasMatch(value)) {
+                                  return 'Enter a valid email address';
+                                }
+                                return null;
+                              },
+                              isRequired: true,
+                              textInputAction: TextInputAction.next,
+                            ),
+
+                            const SizedBox(height: 32),
+
+                            // Subject Assignment Section
+                            _buildSubjectAssignmentSection(),
+
+                            const SizedBox(height: 32),
+
+                            // Save Button
+                            _buildSaveTeacherButton(),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 40),
+                  ],
                 ),
-
-                const SizedBox(height: 20),
-
-                // Mobile Number
-                InputField(
-                  label: "Mobile Number",
-                  hintText: "Enter mobile number",
-                  controller: _mobileNumberController,
-                  keyboardType: TextInputType.phone,
-                  inputFormatters: [],
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter mobile number';
-                    }
-                    if (!RegExp(r'^[0-9]{10}$').hasMatch(value)) {
-                      return 'Enter a valid 10-digit number';
-                    }
-                    return null;
-                  },
-                  isRequired: true,
-                  textInputAction: TextInputAction.next,
-                ),
-
-                const SizedBox(height: 20),
-
-                // Email ID
-                InputField(
-                  label: "Email ID",
-                  hintText: "Enter teacher email",
-                  controller: _emailIdController,
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter email ID';
-                    }
-                    if (!RegExp(
-                      r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                    ).hasMatch(value)) {
-                      return 'Enter a valid email address';
-                    }
-                    return null;
-                  },
-                  isRequired: true,
-                  textInputAction: TextInputAction.next,
-                ),
-
-                const SizedBox(height: 20),
-
-                // Subject Assignment Section
-                _buildSubjectAssignmentSection(),
-
-                const SizedBox(height: 20),
-
-                // Save Button
-                _buildSaveTeacherButton(),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -279,15 +390,48 @@ class _AddTeacherPageState extends ConsumerState<AddTeacherPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Subject Assignment',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-            color: Colors.black87,
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Subject Assignment',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF0F172A),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Assign subjects to teacher',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: const Color(0xFF64748B),
+                  ),
+                ),
+              ],
+            ),
+            if (!_isFetchingSubjects && _subjectsError == null)
+              TextButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _subjectAssignments.add({'subject': null});
+                  });
+                  _updateFormState();
+                },
+                icon: const Icon(Icons.add_circle_outline, size: 18),
+                label: const Text('Add Subject'),
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFF2563EB),
+                  textStyle: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ),
+          ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
 
         if (_isFetchingSubjects) _buildLoadingIndicator(),
 
@@ -300,84 +444,156 @@ class _AddTeacherPageState extends ConsumerState<AddTeacherPage> {
   }
 
   Widget _buildLoadingIndicator() {
-    return const Center(
+    return Center(
       child: Padding(
-        padding: EdgeInsets.symmetric(vertical: 20),
-        child: CircularProgressIndicator(),
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        child: SizedBox(
+          height: 24,
+          width: 24,
+          child: CircularProgressIndicator(
+            strokeWidth: 2.5,
+            valueColor: AlwaysStoppedAnimation<Color>(
+              const Color(0xFF2563EB).withOpacity(0.8),
+            ),
+          ),
+        ),
       ),
     );
   }
 
   Widget _buildErrorWidget() {
-    return Column(
-      children: [
-        Text(
-          'Failed to load subjects: $_subjectsError',
-          style: const TextStyle(color: Colors.red),
-        ),
-        const SizedBox(height: 10),
-        ElevatedButton(onPressed: _fetchSubjects, child: const Text('Retry')),
-      ],
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFEF2F2),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFFCA5A5)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.error_outline, color: Color(0xFFDC2626)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Failed to load subjects: $_subjectsError',
+                  style: const TextStyle(
+                    color: Color(0xFF991B1B),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: _fetchSubjects,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFFDC2626),
+                side: const BorderSide(color: Color(0xFFFCA5A5)),
+              ),
+              child: const Text('Retry'),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildSubjectAssignmentsList() {
-    return Column(
-      children: [
-        ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: _subjectAssignments.length,
-          itemBuilder: (context, index) {
-            final assignment = _subjectAssignments[index];
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12.0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _buildSubjectDropdown(
-                      value: assignment['subject'],
-                      onChanged: (newValue) {
-                        setState(() {
-                          assignment['subject'] = newValue;
-                        });
-                        _updateFormState();
-                      },
-                    ),
-                  ),
-                  if (_subjectAssignments.length > 1)
-                    IconButton(
-                      onPressed: () {
-                        setState(() {
-                          _subjectAssignments.removeAt(index);
-                        });
-                        _updateFormState();
-                      },
-                      icon: Icon(
-                        Icons.delete_outline,
-                        color: Colors.red.shade400,
-                      ),
-                    ),
-                ],
-              ),
-            );
-          },
+    if (_subjectAssignments.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
         ),
-        const SizedBox(height: 12),
-        TextButton.icon(
-          onPressed: () {
-            setState(() {
-              _subjectAssignments.add({'subject': null});
-            });
-            _updateFormState();
-          },
-          icon: const Icon(Icons.add, color: Color(0xFF2563EB)),
-          label: const Text(
-            'Add More Subjects',
-            style: TextStyle(color: Color(0xFF2563EB)),
+        child: Center(
+          child: Column(
+            children: [
+              Icon(
+                Icons.library_books_outlined,
+                size: 32,
+                color: Colors.grey.shade400,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'No subjects assigned yet',
+                style: TextStyle(color: Colors.grey.shade500),
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    _subjectAssignments.add({'subject': null});
+                  });
+                  _updateFormState();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: const Color(0xFF2563EB),
+                  elevation: 0,
+                  side: const BorderSide(color: Color(0xFFE2E8F0)),
+                ),
+                child: const Text('Assign Subject'),
+              ),
+            ],
           ),
         ),
-      ],
+      );
+    }
+
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: _subjectAssignments.length,
+      itemBuilder: (context, index) {
+        final assignment = _subjectAssignments[index];
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12.0),
+          child: Row(
+            children: [
+              Expanded(
+                child: _buildSubjectDropdown(
+                  value: assignment['subject'],
+                  onChanged: (newValue) {
+                    setState(() {
+                      assignment['subject'] = newValue;
+                    });
+                    _updateFormState();
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                margin: const EdgeInsets.only(
+                  top: 28,
+                ), // Align with input field
+                child: IconButton(
+                  onPressed: () {
+                    setState(() {
+                      _subjectAssignments.removeAt(index);
+                    });
+                    _updateFormState();
+                  },
+                  icon: const Icon(Icons.delete_outline),
+                  color: Colors.red.shade400,
+                  style: IconButton.styleFrom(
+                    backgroundColor: const Color(0xFFFEF2F2),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -388,9 +604,7 @@ class _AddTeacherPageState extends ConsumerState<AddTeacherPage> {
     return Dropdown<String>(
       label: "Subject",
       hint: "Select Subject",
-      items: _subjects
-          .map((subject) => subject['subject_name'] as String)
-          .toList(),
+      items: _subjects.map((subject) => subject['display'] as String).toList(),
       value: value,
       onChanged: onChanged,
       validator: (val) => val == null ? "Please select subject" : null,
@@ -406,26 +620,38 @@ class _AddTeacherPageState extends ConsumerState<AddTeacherPage> {
         style: ElevatedButton.styleFrom(
           backgroundColor: _isFormValid && !_isLoading
               ? const Color(0xFF2563EB)
-              : Colors.grey.shade400,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16),
+              : const Color(0xFFE2E8F0),
+          foregroundColor: _isFormValid && !_isLoading
+              ? Colors.white
+              : const Color(0xFF94A3B8),
+          padding: const EdgeInsets.symmetric(vertical: 18),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(14),
           ),
-          elevation: 4,
+          elevation: 2,
+          shadowColor: const Color(0x3D3B82F6),
+          disabledBackgroundColor: const Color(0xFFF1F5F9),
         ),
         child: _isLoading
-            ? const SizedBox(
-                height: 20,
-                width: 20,
+            ? SizedBox(
+                height: 24,
+                width: 24,
                 child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  strokeWidth: 2.5,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    Colors.white.withOpacity(0.9),
+                  ),
                 ),
               )
-            : const Text(
-                'Save Teacher Details',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            : const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(width: 10),
+                  Text(
+                    'Save Teacher Details',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                ],
               ),
       ),
     );
@@ -433,6 +659,9 @@ class _AddTeacherPageState extends ConsumerState<AddTeacherPage> {
 
   Future<void> _saveTeacherDetails() async {
     if (_formKey.currentState!.validate() && _isFormValid) {
+      // Hide keyboard
+      FocusScope.of(context).unfocus();
+
       setState(() {
         _isLoading = true;
       });
@@ -440,13 +669,13 @@ class _AddTeacherPageState extends ConsumerState<AddTeacherPage> {
       try {
         final clerkRepo = ref.read(clerkRepositoryProvider);
 
-        // Get subject codes for selected subject names
+        // Get subject IDs for selected subject assignments
         final subjectsAssigned = _subjectAssignments.map((assignment) {
-          final subjectName = assignment['subject'];
+          final displayString = assignment['subject'];
           final subject = _subjects.firstWhere(
-            (s) => s['subject_name'] == subjectName,
+            (s) => s['display'] == displayString,
           );
-          return subject['subject_code'] as String;
+          return subject['id'] as String;
         }).toList();
 
         final teacherData = {
@@ -457,72 +686,37 @@ class _AddTeacherPageState extends ConsumerState<AddTeacherPage> {
           'subjects_assigned': subjectsAssigned,
         };
 
-        print('Teacher Data: $teacherData');
+        AppLogger.info('Teacher Data: $teacherData');
 
         final result = await clerkRepo.createTeacher(teacherData);
 
+        if (!mounted) return;
+
         if (result['success'] == true) {
           // Show success snackbar
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                result['message'] ?? 'Teacher created successfully!',
-                style: const TextStyle(color: Colors.white),
-              ),
-              backgroundColor: Colors.green.shade600,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              duration: const Duration(seconds: 3),
-              action: SnackBarAction(
-                label: 'OK',
-                textColor: Colors.white,
-                onPressed: () {
-                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                },
-              ),
-            ),
-          );
+          showSuccessSnackBar(context, 'Teacher created successfully!');
 
-          // Navigate back to clerk page after a short delay
+          // Reset form after a short delay
           await Future.delayed(const Duration(milliseconds: 500));
-          if (mounted) {
-            context.go('/clerk');
-          }
+          _resetForm();
+
+          // Clear focus
+          FocusScope.of(context).requestFocus(FocusNode());
         } else {
-          // Show error snackbar from API response
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                result['error'] ?? 'Failed to create teacher',
-                style: const TextStyle(color: Colors.white),
-              ),
-              backgroundColor: Colors.red.shade600,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              duration: const Duration(seconds: 3),
-            ),
+          // Show error snackbar
+          showErrorSnackBar(
+            context,
+            '${result['error'] ?? 'Failed to create teacher'}',
           );
         }
       } catch (error) {
         // Show error snackbar for network/other errors
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Failed to save teacher: ${error.toString()}',
-              style: const TextStyle(color: Colors.white),
-            ),
-            backgroundColor: Colors.red.shade600,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            duration: const Duration(seconds: 3),
-          ),
-        );
+        if (mounted) {
+          showErrorSnackBar(
+            context,
+            'Failed to save teacher: ${error.toString()}',
+          );
+        }
       } finally {
         if (mounted) {
           setState(() {

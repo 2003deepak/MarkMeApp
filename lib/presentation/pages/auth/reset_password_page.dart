@@ -3,14 +3,14 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:markmeapp/state/auth_state.dart';
 import 'package:markmeapp/presentation/widgets/ui/otp_field.dart';
+import 'package:markmeapp/presentation/widgets/ui/app_bar.dart';
 import 'dart:async';
 
 class ResetPasswordPage extends ConsumerStatefulWidget {
   final String email;
   final String role;
 
-  const ResetPasswordPage({Key? key, required this.email, required this.role})
-    : super(key: key);
+  const ResetPasswordPage({super.key, required this.email, required this.role});
 
   @override
   ConsumerState<ResetPasswordPage> createState() => _ResetPasswordPageState();
@@ -27,6 +27,10 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
   String _errorMessage = '';
   bool _passwordsMatch = false;
   bool _isLoading = false;
+
+  // Constants for styling
+  static const _primaryColor = Color(0xFF2563EB);
+  static const _backgroundColor = Color(0xFFF5F7FA);
 
   @override
   void initState() {
@@ -112,7 +116,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
           context,
         );
 
-        if (response['status'] == 'success') {
+        if (response['success'] == true) {
           _showSnackBar(response['message'] ?? 'OTP verified successfully');
           if (mounted) {
             setState(() {
@@ -163,8 +167,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
           _newPassword,
           context,
         );
-
-        if (response['status'] == 'success') {
+        if (response['success'] == true) {
           _showSnackBar(response['message'] ?? 'Password reset successfully');
           _showSuccessDialog();
         } else {
@@ -262,7 +265,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
     authNotifier
         .forgotPassword(widget.email, widget.role.toLowerCase(), context)
         .then((response) {
-          if (response['status'] == 'success') {
+          if (response['success'] == true) {
             _showSnackBar('OTP resent successfully');
           } else {
             _showSnackBar('Failed to resend OTP', isError: true);
@@ -270,84 +273,200 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
         });
   }
 
-  Widget _buildOtpInput() {
-    final primaryColor = Colors.blue.shade600;
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: _backgroundColor,
+      appBar: MarkMeAppBar(
+        title: _isOtpStep ? 'Verify OTP' : 'Reset PIN',
+        onBackPressed: () => context.go('/login'),
+        isLoading: _isLoading,
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            children: [
+              _buildHeaderCard(),
+              const SizedBox(height: 24),
+              _buildFormContainer(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
+  Widget _buildHeaderCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.blue.withValues(alpha: 0.1),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEFF6FF),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.blue.withValues(alpha: 0.1),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Icon(
+              _isOtpStep ? Icons.lock_clock : Icons.lock_reset,
+              size: 40,
+              color: _primaryColor,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            _isOtpStep ? 'Enter OTP' : 'Create New PIN',
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            _isOtpStep
+                ? 'We\'ve sent a 6-digit OTP to ${widget.email}. Please enter it below to reset your PIN.'
+                : 'Please create a 6-digit PIN that you will remember.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 14,
+              color: Colors.grey,
+              height: 1.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFormContainer() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade100),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          if (_isOtpStep) _buildOtpInput() else _buildPasswordReset(),
+
+          if (_errorMessage.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.red.shade200),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.error_outline, color: Colors.red, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _errorMessage,
+                      style: const TextStyle(color: Colors.red, fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 20),
+          TextButton(
+            onPressed: _isLoading ? null : () => context.go('/login'),
+            child: Text(
+              'Back to Login',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOtpInput() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: 80,
-          height: 80,
-          decoration: BoxDecoration(
-            color: primaryColor.withOpacity(0.1),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(Icons.lock_reset, color: primaryColor, size: 40),
-        ),
-        const SizedBox(height: 32),
         const Text(
           'Enter OTP',
           style: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: Colors.black87,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: Color(0xFF374151),
           ),
         ),
-        const SizedBox(height: 12),
-        Text(
-          'We\'ve sent a 6-digit OTP to ${widget.email}. Please enter it below to reset your PIN.',
-          style: TextStyle(color: Colors.grey[600], fontSize: 16, height: 1.4),
+        const SizedBox(height: 8),
+        Center(
+          child: OTPField(
+            onCompleted: _onOtpCompleted,
+            autoFocus: false,
+            borderColor: Colors.grey.shade400,
+            focusedBorderColor: _primaryColor,
+            cursorColor: _primaryColor,
+            fieldWidth: 40,
+            fieldHeight: 50,
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
-        const SizedBox(height: 32),
-
-        // OTP Field
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Enter OTP',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 8),
-            OTPField(
-              onCompleted: _onOtpCompleted,
-              autoFocus: false,
-              borderColor: Colors.grey.shade400,
-              focusedBorderColor: primaryColor,
-              cursorColor: primaryColor,
-              fieldWidth: 50,
-              fieldHeight: 60,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            if (_enteredOtp.isNotEmpty && _enteredOtp.length == 6)
-              Padding(
-                padding: const EdgeInsets.only(top: 8.0),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.check_circle,
-                      color: Colors.green.shade600,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'OTP entered successfully',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.green.shade600,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
+        if (_enteredOtp.isNotEmpty && _enteredOtp.length == 6)
+          Padding(
+            padding: const EdgeInsets.only(top: 12.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.check_circle,
+                  color: Colors.green.shade600,
+                  size: 16,
                 ),
-              ),
-          ],
-        ),
+                const SizedBox(width: 6),
+                Text(
+                  'OTP entered successfully',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.green.shade600,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
 
         const SizedBox(height: 24),
         Row(
@@ -357,7 +476,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
               _countdown > 0
                   ? 'Resend OTP in ${_countdown}s'
                   : 'Didn\'t receive OTP?',
-              style: TextStyle(color: Colors.grey[600]),
+              style: TextStyle(color: Colors.grey[600], fontSize: 13),
             ),
             if (_countdown == 0) ...[
               const SizedBox(width: 8),
@@ -366,8 +485,9 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                 child: Text(
                   'Resend',
                   style: TextStyle(
-                    color: _isLoading ? Colors.grey : primaryColor,
+                    color: _isLoading ? Colors.grey : _primaryColor,
                     fontWeight: FontWeight.w600,
+                    fontSize: 13,
                   ),
                 ),
               ),
@@ -377,21 +497,24 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
         const SizedBox(height: 32),
         SizedBox(
           width: double.infinity,
+          height: 52,
           child: ElevatedButton(
             onPressed: (_enteredOtp.length == 6 && !_isLoading)
                 ? _verifyOtp
                 : null,
             style: ElevatedButton.styleFrom(
-              backgroundColor: primaryColor,
-              padding: const EdgeInsets.symmetric(vertical: 16),
+              backgroundColor: _primaryColor,
+              foregroundColor: Colors.white,
+              elevation: 2,
+              shadowColor: Colors.blue.withValues(alpha: 0.3),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
             child: _isLoading
                 ? const SizedBox(
-                    width: 20,
-                    height: 20,
+                    width: 24,
+                    height: 24,
                     child: CircularProgressIndicator(
                       color: Colors.white,
                       strokeWidth: 2,
@@ -399,7 +522,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                   )
                 : const Text(
                     'Verify OTP',
-                    style: TextStyle(color: Colors.white, fontSize: 16),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
           ),
         ),
@@ -408,132 +531,102 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
   }
 
   Widget _buildPasswordReset() {
-    final primaryColor = Colors.blue.shade600;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: 80,
-          height: 80,
-          decoration: BoxDecoration(
-            color: primaryColor.withOpacity(0.1),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(Icons.lock_outline, color: primaryColor, size: 40),
-        ),
-        const SizedBox(height: 32),
         const Text(
-          'Create New PIN',
+          'New PIN',
           style: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: Colors.black87,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: Color(0xFF374151),
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
+        Center(
+          child: OTPField(
+            onCompleted: _onNewPasswordCompleted,
+            autoFocus: false,
+            borderColor: Colors.grey.shade300,
+            focusedBorderColor: _primaryColor,
+            cursorColor: _primaryColor,
+            fieldWidth: 40,
+            fieldHeight: 50,
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+
+        const SizedBox(height: 24),
+
         const Text(
-          'Please create a 6-digit PIN that you will remember.',
-          style: TextStyle(color: Colors.grey, fontSize: 16, height: 1.4),
+          'Confirm PIN',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: Color(0xFF374151),
+          ),
         ),
-        const SizedBox(height: 32),
-
-        // New Password Field
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'New PIN',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 8),
-            OTPField(
-              onCompleted: _onNewPasswordCompleted,
-              autoFocus: false,
-              borderColor: Colors.grey.shade400,
-              focusedBorderColor: primaryColor,
-              cursorColor: primaryColor,
-              fieldWidth: 50,
-              fieldHeight: 60,
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ],
+        const SizedBox(height: 8),
+        Center(
+          child: OTPField(
+            onCompleted: _onConfirmPasswordCompleted,
+            autoFocus: false,
+            borderColor: Colors.grey.shade300,
+            focusedBorderColor: _primaryColor,
+            cursorColor: _primaryColor,
+            fieldWidth: 40,
+            fieldHeight: 50,
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
 
-        const SizedBox(height: 20),
-
-        // Confirm Password Field
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Confirm PIN',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 8),
-            OTPField(
-              onCompleted: _onConfirmPasswordCompleted,
-              autoFocus: false,
-              borderColor: Colors.grey.shade400,
-              focusedBorderColor: primaryColor,
-              cursorColor: primaryColor,
-              fieldWidth: 50,
-              fieldHeight: 60,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            if (_newPassword.isNotEmpty && _confirmPassword.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 8.0),
-                child: Row(
-                  children: [
-                    Icon(
-                      _passwordsMatch ? Icons.check_circle : Icons.cancel,
-                      color: _passwordsMatch
-                          ? Colors.green.shade600
-                          : Colors.red.shade600,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      _passwordsMatch ? 'PINs match' : 'PINs do not match',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: _passwordsMatch
-                            ? Colors.green.shade600
-                            : Colors.red.shade600,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
+        if (_newPassword.isNotEmpty && _confirmPassword.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 12.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  _passwordsMatch ? Icons.check_circle : Icons.cancel,
+                  color: _passwordsMatch
+                      ? Colors.green.shade600
+                      : Colors.red.shade600,
+                  size: 16,
                 ),
-              ),
-          ],
-        ),
+                const SizedBox(width: 6),
+                Text(
+                  _passwordsMatch ? 'PINs match' : 'PINs do not match',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: _passwordsMatch
+                        ? Colors.green.shade600
+                        : Colors.red.shade600,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
 
         const SizedBox(height: 32),
         SizedBox(
           width: double.infinity,
+          height: 52,
           child: ElevatedButton(
             onPressed: (_passwordsMatch && !_isLoading) ? _resetPassword : null,
             style: ElevatedButton.styleFrom(
-              backgroundColor: primaryColor,
-              padding: const EdgeInsets.symmetric(vertical: 16),
+              backgroundColor: _primaryColor,
+              foregroundColor: Colors.white,
+              elevation: 2,
+              shadowColor: Colors.blue.withValues(alpha: 0.3),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
             child: _isLoading
                 ? const SizedBox(
-                    width: 20,
-                    height: 20,
+                    width: 24,
+                    height: 24,
                     child: CircularProgressIndicator(
                       color: Colors.white,
                       strokeWidth: 2,
@@ -541,79 +634,11 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                   )
                 : const Text(
                     'Reset PIN',
-                    style: TextStyle(color: Colors.white, fontSize: 16),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
           ),
         ),
       ],
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_isOtpStep ? 'Verify OTP' : 'Reset PIN'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/login'),
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _isOtpStep ? _buildOtpInput() : _buildPasswordReset(),
-
-            if (_errorMessage.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.red.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.red.shade200),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.error_outline,
-                      color: Colors.red,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _errorMessage,
-                        style: const TextStyle(color: Colors.red, fontSize: 14),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-
-            const SizedBox(height: 24),
-            Center(
-              child: GestureDetector(
-                onTap: () => context.go('/login'),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.arrow_back, color: Colors.grey[600], size: 16),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Back to Login page',
-                      style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

@@ -4,12 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:camera/camera.dart';
-import 'package:markmeapp/presentation/pages/teacher/attendance_camera_page.dart';
+
+import 'package:markmeapp/core/utils/app_logger.dart';
+import 'package:markmeapp/presentation/widgets/ui/app_bar.dart';
 
 class SessionPage extends StatefulWidget {
   final Map<String, dynamic> sessionData;
 
-  const SessionPage({Key? key, required this.sessionData}) : super(key: key);
+  const SessionPage({super.key, required this.sessionData});
 
   @override
   State<SessionPage> createState() => _SessionPageState();
@@ -37,7 +39,7 @@ class _SessionPageState extends State<SessionPage>
   String get component => widget.sessionData['component'] ?? 'Lecture';
   String get startTime => widget.sessionData['start_time'] ?? '';
   String get endTime => widget.sessionData['end_time'] ?? '';
-  String get sessionId => widget.sessionData['session_id'] ?? '';
+  String get attendanceId => widget.sessionData['attendance_id'] ?? '';
 
   // ✅ Get lecture type from session data
   String get lectureType => widget.sessionData['lecture_type'] ?? 'current';
@@ -47,9 +49,9 @@ class _SessionPageState extends State<SessionPage>
     super.initState();
 
     // Log the received data for debugging
-    debugPrint("🎯 Session Data Received: ${widget.sessionData}");
-    debugPrint("🆔 Session ID: $sessionId");
-    debugPrint("📋 Lecture Type: $lectureType");
+    AppLogger.info("🎯 Session Data Received: ${widget.sessionData}");
+    AppLogger.info("🆔 Session ID: $attendanceId");
+    AppLogger.info("📋 Lecture Type: $lectureType");
 
     _pulseController = AnimationController(
       duration: const Duration(milliseconds: 2000),
@@ -95,9 +97,9 @@ class _SessionPageState extends State<SessionPage>
   Future<void> _initializeCameras() async {
     try {
       _cameras = await availableCameras();
-      debugPrint('📷 Cameras initialized: ${_cameras?.length ?? 0} found');
+      AppLogger.info('📷 Cameras initialized: ${_cameras?.length ?? 0} found');
     } catch (e) {
-      debugPrint('❌ Error initializing cameras: $e');
+      AppLogger.error('❌ Error initializing cameras: $e');
       _showErrorSnackBar('Failed to initialize camera: $e');
     }
   }
@@ -175,7 +177,7 @@ class _SessionPageState extends State<SessionPage>
         _timeUntilStart = _formatDuration(_timeRemaining);
       }
     } catch (e) {
-      debugPrint('Error calculating time remaining: $e');
+      AppLogger.error('Error calculating time remaining: $e');
       _timeUntilStart = 'Time not available';
     }
   }
@@ -203,34 +205,9 @@ class _SessionPageState extends State<SessionPage>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF2563EB), // Always blue
-        leading: IconButton(
-          icon: Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(
-              Icons.arrow_back_ios_new_rounded,
-              size: 18,
-              color: Color(0xFF475569),
-            ),
-          ),
-          onPressed: _handleBackPressed,
-        ),
-        title: const Text(
-          'Session Details',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        centerTitle: true,
-        elevation: 0,
+      appBar: MarkMeAppBar(
+        title: 'Session Details',
+        onBackPressed: _handleBackPressed,
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -269,7 +246,7 @@ class _SessionPageState extends State<SessionPage>
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withAlpha(20), // 0.08
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -293,7 +270,7 @@ class _SessionPageState extends State<SessionPage>
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.blue.withOpacity(0.3),
+                      color: Colors.blue.withAlpha(77), // 0.3
                       blurRadius: 12,
                       offset: const Offset(0, 6),
                     ),
@@ -336,7 +313,7 @@ class _SessionPageState extends State<SessionPage>
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: _getStatusColor().withOpacity(0.1),
+                  color: _getStatusColor().withAlpha(26), // 0.1
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
@@ -528,12 +505,12 @@ class _SessionPageState extends State<SessionPage>
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.blue.withOpacity(0.4),
+                          color: Colors.blue.withAlpha(102), // 0.4
                           blurRadius: 30,
                           offset: const Offset(0, 15),
                         ),
                         BoxShadow(
-                          color: Colors.blue.withOpacity(0.2),
+                          color: Colors.blue.withAlpha(51), // 0.2
                           blurRadius: 60,
                           offset: const Offset(0, 30),
                         ),
@@ -607,7 +584,7 @@ class _SessionPageState extends State<SessionPage>
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.grey.withOpacity(0.4),
+                        color: Colors.grey.withAlpha(102), // 0.4
                         blurRadius: 30,
                         offset: const Offset(0, 15),
                       ),
@@ -703,7 +680,7 @@ class _SessionPageState extends State<SessionPage>
 
           const SizedBox(height: 12),
 
-          ..._getInstructions().map(_buildInstructionItem).toList(),
+          ..._getInstructions().map(_buildInstructionItem),
         ],
       ),
     );
@@ -735,6 +712,11 @@ class _SessionPageState extends State<SessionPage>
   /// Starts attendance marking (only for current sessions)
   Future<void> _startAttendance() async {
     if (_isStartingAttendance || lectureType != 'current') return;
+
+    if (attendanceId.isEmpty) {
+      _showErrorSnackBar('Attendance ID is empty');
+      return;
+    }
 
     setState(() {
       _isStartingAttendance = true;

@@ -13,7 +13,7 @@ class Calendar extends StatefulWidget {
   final Function(DateTime?)? onDateSelected;
 
   const Calendar({
-    Key? key,
+    super.key,
     required this.controller,
     required this.label,
     this.validator,
@@ -23,7 +23,7 @@ class Calendar extends StatefulWidget {
     this.isRequired = false,
     this.hintText,
     this.onDateSelected,
-  }) : super(key: key);
+  });
 
   @override
   State<Calendar> createState() => _CalendarState();

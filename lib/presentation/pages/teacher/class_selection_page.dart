@@ -3,16 +3,18 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:markmeapp/data/repositories/teacher_repository.dart';
+import 'package:markmeapp/core/utils/app_logger.dart';
+import 'package:markmeapp/presentation/widgets/ui/app_bar.dart';
 
 class ClassSelectionPage extends ConsumerStatefulWidget {
-  const ClassSelectionPage({Key? key}) : super(key: key);
+  const ClassSelectionPage({super.key});
 
   @override
   ConsumerState<ClassSelectionPage> createState() => _ClassSelectionPageState();
 }
 
 class _ClassSelectionPageState extends ConsumerState<ClassSelectionPage> {
-  List<String> _selectedClassIds = [];
+  final List<String> _selectedClassIds = [];
   List<Map<String, dynamic>> _classes = [];
   bool _isLoading = true;
   String _errorMessage = '';
@@ -31,10 +33,6 @@ class _ClassSelectionPageState extends ConsumerState<ClassSelectionPage> {
     'Tutorial': const Color(0xFFF3E8FF), // Light Purple
   };
 
-  void _handleBackPressed() {
-    context.pop();
-  }
-
   @override
   void initState() {
     super.initState();
@@ -51,7 +49,7 @@ class _ClassSelectionPageState extends ConsumerState<ClassSelectionPage> {
       final teacherRepo = ref.read(teacherRepositoryProvider);
       final response = await teacherRepo.fetchClassForNotification();
 
-      debugPrint("📦 Class Fetch Response: $response");
+      AppLogger.info("📦 Class Fetch Response: $response");
 
       if (response['success'] == true) {
         final apiData = response['data'] as List<dynamic>;
@@ -126,35 +124,9 @@ class _ClassSelectionPageState extends ConsumerState<ClassSelectionPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF2563EB),
-        leading: IconButton(
-          icon: Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(
-              Icons.arrow_back_ios_new_rounded,
-              size: 18,
-              color: Colors.white,
-            ),
-          ),
-          onPressed: _handleBackPressed,
-        ),
-        title: const Text(
-          'Select Class',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        centerTitle: true,
-        elevation: 0,
-        systemOverlayStyle: SystemUiOverlayStyle.light,
+      appBar: MarkMeAppBar(
+        title: 'Select Class',
+        onBackPressed: () => context.pop(),
       ),
       body: SafeArea(
         child: Column(
@@ -301,7 +273,7 @@ class _ClassSelectionPageState extends ConsumerState<ClassSelectionPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.blue.withOpacity(0.4),
+            color: Colors.blue.withAlpha(102), // 0.4
             blurRadius: 15,
             offset: const Offset(0, 6),
           ),
@@ -313,7 +285,7 @@ class _ClassSelectionPageState extends ConsumerState<ClassSelectionPage> {
             width: 60,
             height: 60,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withAlpha(51), // 0.2
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(Icons.school_rounded, color: Colors.white, size: 28),
@@ -339,7 +311,7 @@ class _ClassSelectionPageState extends ConsumerState<ClassSelectionPage> {
                       : '${_classes.length} ${_classes.length == 1 ? 'class' : 'classes'} available for selection',
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.white.withOpacity(0.9),
+                    color: Colors.white.withAlpha(230), // 0.9
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -370,7 +342,7 @@ class _ClassSelectionPageState extends ConsumerState<ClassSelectionPage> {
           ),
         ),
         const SizedBox(height: 16),
-        ..._classes.map((classData) => _buildClassCard(classData)).toList(),
+        ..._classes.map((classData) => _buildClassCard(classData)),
       ],
     );
   }
@@ -422,7 +394,7 @@ class _ClassSelectionPageState extends ConsumerState<ClassSelectionPage> {
         child: Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: isSelected ? cardColor.withOpacity(0.05) : Colors.white,
+            color: isSelected ? cardColor.withAlpha(13) : Colors.white, // 0.05
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isSelected ? cardColor : Colors.grey.shade200,
@@ -431,8 +403,8 @@ class _ClassSelectionPageState extends ConsumerState<ClassSelectionPage> {
             boxShadow: [
               BoxShadow(
                 color: isSelected
-                    ? cardColor.withOpacity(0.15)
-                    : Colors.black.withOpacity(0.05),
+                    ? cardColor.withAlpha(38) // 0.15
+                    : Colors.black.withAlpha(13), // 0.05
                 blurRadius: isSelected ? 16 : 8,
                 offset: const Offset(0, 3),
               ),
@@ -449,14 +421,14 @@ class _ClassSelectionPageState extends ConsumerState<ClassSelectionPage> {
                     height: 50,
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [cardColor.withOpacity(0.8), cardColor],
+                        colors: [cardColor.withAlpha(204), cardColor], // 0.8
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: cardColor.withOpacity(0.3),
+                          color: cardColor.withAlpha(77), // 0.3
                           blurRadius: 8,
                           offset: const Offset(0, 3),
                         ),
@@ -633,7 +605,6 @@ class _ClassSelectionPageState extends ConsumerState<ClassSelectionPage> {
             final component = subjectMap['component']?.toString() ?? 'Unknown';
             final subjectName =
                 subjectMap['subject_name']?.toString() ?? 'Unknown';
-            final subjectCode = subjectMap['subject_code']?.toString() ?? '';
 
             final bgColor = componentColors[component] ?? Colors.grey.shade600;
             final lightColor =
@@ -644,10 +615,10 @@ class _ClassSelectionPageState extends ConsumerState<ClassSelectionPage> {
               decoration: BoxDecoration(
                 color: lightColor,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: bgColor.withOpacity(0.3)),
+                border: Border.all(color: bgColor.withAlpha(77)), // 0.3
                 boxShadow: [
                   BoxShadow(
-                    color: bgColor.withOpacity(0.1),
+                    color: bgColor.withAlpha(26), // 0.1
                     blurRadius: 2,
                     offset: const Offset(0, 1),
                   ),
@@ -704,7 +675,7 @@ class _ClassSelectionPageState extends ConsumerState<ClassSelectionPage> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withAlpha(26), // 0.1
             blurRadius: 15,
             offset: const Offset(0, -3),
           ),
@@ -719,14 +690,14 @@ class _ClassSelectionPageState extends ConsumerState<ClassSelectionPage> {
         height: 56,
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [cardColor, cardColor.withOpacity(0.8)],
+            colors: [cardColor, cardColor.withAlpha(204)], // 0.8
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
           ),
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-              color: cardColor.withOpacity(0.4),
+              color: cardColor.withAlpha(102), // 0.4
               blurRadius: 12,
               offset: const Offset(0, 6),
             ),

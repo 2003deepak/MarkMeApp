@@ -5,7 +5,8 @@ class StudentDashboardContent extends StatefulWidget {
   const StudentDashboardContent({super.key});
 
   @override
-  State<StudentDashboardContent> createState() => _StudentDashboardContentState();
+  State<StudentDashboardContent> createState() =>
+      _StudentDashboardContentState();
 }
 
 class _StudentDashboardContentState extends State<StudentDashboardContent>
@@ -53,19 +54,15 @@ class _StudentDashboardContentState extends State<StudentDashboardContent>
   @override
   void initState() {
     super.initState();
-    
+
     _scaleController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
 
-    _scaleAnimation = Tween<double>(
-      begin: 1.0,
-      end: 1.05,
-    ).animate(CurvedAnimation(
-      parent: _scaleController,
-      curve: Curves.elasticOut,
-    ));
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(
+      CurvedAnimation(parent: _scaleController, curve: Curves.elasticOut),
+    );
   }
 
   @override
@@ -87,7 +84,7 @@ class _StudentDashboardContentState extends State<StudentDashboardContent>
       final attended = data['attendedLectures'] as int;
       final total = data['totalLectures'] as int;
       final missed = total - attended;
-      
+
       return [
         PieChartSectionData(
           color: _getAttendanceColor(data['percentage']),
@@ -108,15 +105,15 @@ class _StudentDashboardContentState extends State<StudentDashboardContent>
       // Show overall attendance for all subjects
       int totalLectures = 0;
       int totalAttended = 0;
-      
+
       for (var subject in subjectData.values) {
         totalLectures += subject['totalLectures'] as int;
         totalAttended += subject['attendedLectures'] as int;
       }
-      
+
       final overallPercentage = (totalAttended / totalLectures) * 100;
       final missed = totalLectures - totalAttended;
-      
+
       return [
         PieChartSectionData(
           color: _getAttendanceColor(overallPercentage),
@@ -140,7 +137,7 @@ class _StudentDashboardContentState extends State<StudentDashboardContent>
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth > 600;
-    
+
     return SingleChildScrollView(
       padding: EdgeInsets.all(isDesktop ? 24.0 : 16.0),
       child: Column(
@@ -168,7 +165,7 @@ class _StudentDashboardContentState extends State<StudentDashboardContent>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -179,8 +176,9 @@ class _StudentDashboardContentState extends State<StudentDashboardContent>
         child: Row(
           children: [
             _buildSubjectChip('All Subjects', null, isDesktop),
-            ...subjectData.keys.map((subject) => 
-              _buildSubjectChip(subject, subject, isDesktop)),
+            ...subjectData.keys.map(
+              (subject) => _buildSubjectChip(subject, subject, isDesktop),
+            ),
           ],
         ),
       ),
@@ -189,7 +187,7 @@ class _StudentDashboardContentState extends State<StudentDashboardContent>
 
   Widget _buildSubjectChip(String label, String? value, bool isDesktop) {
     final isSelected = selectedSubject == value;
-    
+
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -232,12 +230,12 @@ class _StudentDashboardContentState extends State<StudentDashboardContent>
     } else {
       int totalLectures = 0;
       int totalAttended = 0;
-      
+
       for (var subject in subjectData.values) {
         totalLectures += subject['totalLectures'] as int;
         totalAttended += subject['attendedLectures'] as int;
       }
-      
+
       currentData = {
         'totalLectures': totalLectures,
         'attendedLectures': totalAttended,
@@ -252,7 +250,7 @@ class _StudentDashboardContentState extends State<StudentDashboardContent>
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -283,10 +281,10 @@ class _StudentDashboardContentState extends State<StudentDashboardContent>
             ],
           ),
           const SizedBox(height: 16),
-          
+
           // Pie Chart with Center Info
           Center(
-            child: Container(
+            child: SizedBox(
               height: isDesktop ? 240 : 200,
               width: isDesktop ? 240 : 200,
               child: Stack(
@@ -301,83 +299,89 @@ class _StudentDashboardContentState extends State<StudentDashboardContent>
                         child: SizedBox(
                           height: isDesktop ? 220 : 180,
                           width: isDesktop ? 220 : 180,
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 800),
-                          curve: Curves.easeInOutCubic,
-                          child: PieChart(
-                            PieChartData(
-                              pieTouchData: PieTouchData(
-                                touchCallback: (FlTouchEvent event, pieTouchResponse) {
-                                  setState(() {
-                                    if (!event.isInterestedForInteractions ||
-                                        pieTouchResponse == null ||
-                                        pieTouchResponse.touchedSection == null) {
-                                      touchedIndex = -1;
-                                      _scaleController.reverse();
-                                      return;
-                                    }
-                                    touchedIndex = pieTouchResponse
-                                        .touchedSection!.touchedSectionIndex;
-                                    _scaleController.forward();
-                                  });
-                                },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 800),
+                            curve: Curves.easeInOutCubic,
+                            child: PieChart(
+                              PieChartData(
+                                pieTouchData: PieTouchData(
+                                  touchCallback:
+                                      (FlTouchEvent event, pieTouchResponse) {
+                                        setState(() {
+                                          if (!event
+                                                  .isInterestedForInteractions ||
+                                              pieTouchResponse == null ||
+                                              pieTouchResponse.touchedSection ==
+                                                  null) {
+                                            touchedIndex = -1;
+                                            _scaleController.reverse();
+                                            return;
+                                          }
+                                          touchedIndex = pieTouchResponse
+                                              .touchedSection!
+                                              .touchedSectionIndex;
+                                          _scaleController.forward();
+                                        });
+                                      },
+                                ),
+                                borderData: FlBorderData(show: false),
+                                sectionsSpace: 2,
+                                centerSpaceRadius: isDesktop ? 30 : 20,
+                                sections: _getPieChartSections(),
                               ),
-                              borderData: FlBorderData(show: false),
-                              sectionsSpace: 2,
-                              centerSpaceRadius: isDesktop ? 30 : 20,
-                              sections: _getPieChartSections(),
                             ),
                           ),
                         ),
-                      ),
-                    );
-                  },
-                ),
-                
+                      );
+                    },
+                  ),
+
                   // Center Information
                   Container(
                     width: isDesktop ? 110 : 90,
                     height: isDesktop ? 110 : 90,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        '${currentData['percentage'].toStringAsFixed(1)}%',
-                        style: TextStyle(
-                          fontSize: isDesktop ? 24 : 20,
-                          fontWeight: FontWeight.w800,
-                          color: _getAttendanceColor(currentData['percentage']),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
                         ),
-                      ),
-                      Text(
-                        'Attendance',
-                        style: TextStyle(
-                          fontSize: isDesktop ? 12 : 10,
-                          color: Colors.grey.shade600,
-                          fontWeight: FontWeight.w500,
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          '${currentData['percentage'].toStringAsFixed(1)}%',
+                          style: TextStyle(
+                            fontSize: isDesktop ? 24 : 20,
+                            fontWeight: FontWeight.w800,
+                            color: _getAttendanceColor(
+                              currentData['percentage'],
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
+                        Text(
+                          'Attendance',
+                          style: TextStyle(
+                            fontSize: isDesktop ? 12 : 10,
+                            color: Colors.grey.shade600,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // Lecture Count Information
           Container(
             padding: const EdgeInsets.all(16),
@@ -410,11 +414,7 @@ class _StudentDashboardContentState extends State<StudentDashboardContent>
                     ],
                   ),
                 ),
-                Container(
-                  width: 1,
-                  height: 40,
-                  color: Colors.grey.shade300,
-                ),
+                Container(width: 1, height: 40, color: Colors.grey.shade300),
                 Expanded(
                   child: Column(
                     children: [
@@ -437,11 +437,7 @@ class _StudentDashboardContentState extends State<StudentDashboardContent>
                     ],
                   ),
                 ),
-                Container(
-                  width: 1,
-                  height: 40,
-                  color: Colors.grey.shade300,
-                ),
+                Container(width: 1, height: 40, color: Colors.grey.shade300),
                 Expanded(
                   child: Column(
                     children: [
@@ -472,29 +468,27 @@ class _StudentDashboardContentState extends State<StudentDashboardContent>
     );
   }
 
-
-
   Widget _buildAttendanceStats(bool isDesktop) {
     Map<String, dynamic> stats;
-    
+
     if (selectedSubject != null) {
       stats = subjectData[selectedSubject]!;
     } else {
       int totalLectures = 0;
       int totalAttended = 0;
-      
+
       for (var subject in subjectData.values) {
         totalLectures += subject['totalLectures'] as int;
         totalAttended += subject['attendedLectures'] as int;
       }
-      
+
       stats = {
         'totalLectures': totalLectures,
         'attendedLectures': totalAttended,
         'percentage': (totalAttended / totalLectures) * 100,
       };
     }
-    
+
     return Container(
       padding: EdgeInsets.all(isDesktop ? 24 : 20),
       decoration: BoxDecoration(
@@ -506,7 +500,7 @@ class _StudentDashboardContentState extends State<StudentDashboardContent>
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.blue.withOpacity(0.3),
+            color: Colors.blue.withValues(alpha: 0.3),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -525,7 +519,7 @@ class _StudentDashboardContentState extends State<StudentDashboardContent>
           Container(
             width: 1,
             height: 50,
-            color: Colors.white.withOpacity(0.3),
+            color: Colors.white.withValues(alpha: 0.3),
           ),
           Expanded(
             child: _buildStatItem(
@@ -538,7 +532,7 @@ class _StudentDashboardContentState extends State<StudentDashboardContent>
           Container(
             width: 1,
             height: 50,
-            color: Colors.white.withOpacity(0.3),
+            color: Colors.white.withValues(alpha: 0.3),
           ),
           Expanded(
             child: _buildStatItem(
@@ -553,14 +547,15 @@ class _StudentDashboardContentState extends State<StudentDashboardContent>
     );
   }
 
-  Widget _buildStatItem(String label, String value, IconData icon, bool isDesktop) {
+  Widget _buildStatItem(
+    String label,
+    String value,
+    IconData icon,
+    bool isDesktop,
+  ) {
     return Column(
       children: [
-        Icon(
-          icon,
-          color: Colors.white,
-          size: isDesktop ? 28 : 24,
-        ),
+        Icon(icon, color: Colors.white, size: isDesktop ? 28 : 24),
         const SizedBox(height: 8),
         Text(
           value,
@@ -574,7 +569,7 @@ class _StudentDashboardContentState extends State<StudentDashboardContent>
           label,
           style: TextStyle(
             fontSize: isDesktop ? 14 : 12,
-            color: Colors.white.withOpacity(0.8),
+            color: Colors.white.withValues(alpha: 0.8),
           ),
           textAlign: TextAlign.center,
         ),
@@ -597,27 +592,53 @@ class _StudentDashboardContentState extends State<StudentDashboardContent>
         const SizedBox(height: 16),
         Row(
           children: [
-            Expanded(child: _buildLectureCard('Mathematics', '09:00 AM - 10:30 AM', Colors.blue, isDesktop)),
+            Expanded(
+              child: _buildLectureCard(
+                'Mathematics',
+                '09:00 AM - 10:30 AM',
+                Colors.blue,
+                isDesktop,
+              ),
+            ),
             const SizedBox(width: 12),
-            Expanded(child: _buildLectureCard('Physics', '10:30 AM - 12:00 PM', Colors.green, isDesktop)),
+            Expanded(
+              child: _buildLectureCard(
+                'Physics',
+                '10:30 AM - 12:00 PM',
+                Colors.green,
+                isDesktop,
+              ),
+            ),
             const SizedBox(width: 12),
-            Expanded(child: _buildLectureCard('Chemistry', '12:00 PM - 01:30 PM', Colors.orange, isDesktop)),
+            Expanded(
+              child: _buildLectureCard(
+                'Chemistry',
+                '12:00 PM - 01:30 PM',
+                Colors.orange,
+                isDesktop,
+              ),
+            ),
           ],
         ),
       ],
     );
   }
 
-  Widget _buildLectureCard(String subject, String time, Color color, bool isDesktop) {
+  Widget _buildLectureCard(
+    String subject,
+    String time,
+    Color color,
+    bool isDesktop,
+  ) {
     return Container(
       padding: EdgeInsets.all(isDesktop ? 16 : 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -629,7 +650,7 @@ class _StudentDashboardContentState extends State<StudentDashboardContent>
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
@@ -716,10 +737,10 @@ class _StudentDashboardContentState extends State<StudentDashboardContent>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -730,14 +751,10 @@ class _StudentDashboardContentState extends State<StudentDashboardContent>
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(
-              icon,
-              color: color,
-              size: isDesktop ? 24 : 20,
-            ),
+            child: Icon(icon, color: color, size: isDesktop ? 24 : 20),
           ),
           const SizedBox(width: 16),
           Expanded(

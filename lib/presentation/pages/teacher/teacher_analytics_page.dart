@@ -70,32 +70,24 @@ class _TeacherAnalyticsPageState extends State<TeacherAnalyticsPage>
   @override
   void initState() {
     super.initState();
-    
+
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 1200),
       vsync: this,
     );
-    
+
     _chartController = AnimationController(
       duration: const Duration(milliseconds: 1500),
       vsync: this,
     );
 
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
 
-    _chartAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _chartController,
-      curve: Curves.easeOutCubic,
-    ));
+    _chartAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _chartController, curve: Curves.easeOutCubic),
+    );
 
     _animationController.forward();
     Future.delayed(const Duration(milliseconds: 300), () {
@@ -188,7 +180,7 @@ class _TeacherAnalyticsPageState extends State<TeacherAnalyticsPage>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -222,7 +214,12 @@ class _TeacherAnalyticsPageState extends State<TeacherAnalyticsPage>
                 child: _buildDropdown(
                   'Subject',
                   selectedSubject,
-                  ['All Subjects', 'Data Structures', 'Algorithms', 'Database Systems'],
+                  [
+                    'All Subjects',
+                    'Data Structures',
+                    'Algorithms',
+                    'Database Systems',
+                  ],
                   (value) => setState(() => selectedSubject = value!),
                   isDesktop,
                 ),
@@ -344,7 +341,7 @@ class _TeacherAnalyticsPageState extends State<TeacherAnalyticsPage>
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 10,
                   offset: const Offset(0, 2),
                 ),
@@ -358,7 +355,7 @@ class _TeacherAnalyticsPageState extends State<TeacherAnalyticsPage>
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: color.withOpacity(0.1),
+                        color: color.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
@@ -411,7 +408,7 @@ class _TeacherAnalyticsPageState extends State<TeacherAnalyticsPage>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -459,8 +456,12 @@ class _TeacherAnalyticsPageState extends State<TeacherAnalyticsPage>
                     ),
                     titlesData: FlTitlesData(
                       show: true,
-                      rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                      topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      rightTitles: AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
+                      topTitles: AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
                       bottomTitles: AxisTitles(
                         sideTitles: SideTitles(
                           showTitles: true,
@@ -533,17 +534,17 @@ class _TeacherAnalyticsPageState extends State<TeacherAnalyticsPage>
                       LineChartBarData(
                         spots: attendanceData[selectedPeriod]!
                             .take(7)
-                            .map((spot) => FlSpot(
-                                  spot.x,
-                                  spot.y * _chartAnimation.value + 70 * (1 - _chartAnimation.value),
-                                ))
+                            .map(
+                              (spot) => FlSpot(
+                                spot.x,
+                                spot.y * _chartAnimation.value +
+                                    70 * (1 - _chartAnimation.value),
+                              ),
+                            )
                             .toList(),
                         isCurved: true,
                         gradient: LinearGradient(
-                          colors: [
-                            Colors.blue.shade400,
-                            Colors.blue.shade600,
-                          ],
+                          colors: [Colors.blue.shade400, Colors.blue.shade600],
                         ),
                         barWidth: 3,
                         isStrokeCapRound: true,
@@ -562,8 +563,8 @@ class _TeacherAnalyticsPageState extends State<TeacherAnalyticsPage>
                           show: true,
                           gradient: LinearGradient(
                             colors: [
-                              Colors.blue.shade100.withOpacity(0.3),
-                              Colors.blue.shade50.withOpacity(0.1),
+                              Colors.blue.shade100.withValues(alpha: 0.3),
+                              Colors.blue.shade50.withValues(alpha: 0.1),
                             ],
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
@@ -589,7 +590,7 @@ class _TeacherAnalyticsPageState extends State<TeacherAnalyticsPage>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -618,12 +619,8 @@ class _TeacherAnalyticsPageState extends State<TeacherAnalyticsPage>
           ),
           const SizedBox(height: 20),
           ...subjectStats.entries.map((entry) {
-            return _buildSubjectCard(
-              entry.key,
-              entry.value,
-              isDesktop,
-            );
-          }).toList(),
+            return _buildSubjectCard(entry.key, entry.value, isDesktop);
+          }),
         ],
       ),
     );
@@ -711,17 +708,13 @@ class _TeacherAnalyticsPageState extends State<TeacherAnalyticsPage>
         vertical: isDesktop ? 6 : 4,
       ),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon,
-            size: isDesktop ? 14 : 12,
-            color: color,
-          ),
+          Icon(icon, size: isDesktop ? 14 : 12, color: color),
           const SizedBox(width: 4),
           Text(
             text,
@@ -744,7 +737,7 @@ class _TeacherAnalyticsPageState extends State<TeacherAnalyticsPage>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -831,11 +824,26 @@ class _TeacherAnalyticsPageState extends State<TeacherAnalyticsPage>
                 flex: 3,
                 child: Column(
                   children: [
-                    _buildLegendItem('Excellent (>85%)', Colors.green, '81 Students', isDesktop),
+                    _buildLegendItem(
+                      'Excellent (>85%)',
+                      Colors.green,
+                      '81 Students',
+                      isDesktop,
+                    ),
                     const SizedBox(height: 12),
-                    _buildLegendItem('Good (70-85%)', Colors.yellow.shade600, '31 Students', isDesktop),
+                    _buildLegendItem(
+                      'Good (70-85%)',
+                      Colors.yellow.shade600,
+                      '31 Students',
+                      isDesktop,
+                    ),
                     const SizedBox(height: 12),
-                    _buildLegendItem('Poor (<70%)', Colors.red, '13 Students', isDesktop),
+                    _buildLegendItem(
+                      'Poor (<70%)',
+                      Colors.red,
+                      '13 Students',
+                      isDesktop,
+                    ),
                   ],
                 ),
               ),
@@ -846,16 +854,18 @@ class _TeacherAnalyticsPageState extends State<TeacherAnalyticsPage>
     );
   }
 
-  Widget _buildLegendItem(String label, Color color, String count, bool isDesktop) {
+  Widget _buildLegendItem(
+    String label,
+    Color color,
+    String count,
+    bool isDesktop,
+  ) {
     return Row(
       children: [
         Container(
           width: isDesktop ? 16 : 12,
           height: isDesktop ? 16 : 12,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 8),
         Expanded(

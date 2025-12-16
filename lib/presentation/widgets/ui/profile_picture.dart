@@ -12,14 +12,14 @@ class ProfilePicture extends StatefulWidget {
   final double cameraIconSize;
 
   const ProfilePicture({
-    Key? key,
+    super.key,
     required this.profilePicture,
     required this.onProfilePictureChanged,
     required this.cardDecoration,
     this.showChangeText = true,
     this.imageSize = 100,
     this.cameraIconSize = 36,
-  }) : super(key: key);
+  });
 
   @override
   State<ProfilePicture> createState() => _ProfilePictureState();
@@ -186,7 +186,7 @@ class _ProfilePictureState extends State<ProfilePicture> {
                       border: Border.all(color: Colors.white, width: 3),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
+                          color: Colors.black.withValues(alpha: 0.2),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),

@@ -15,7 +15,7 @@ class LectureCardWidget extends StatelessWidget {
   final String lectureType;
 
   const LectureCardWidget({
-    Key? key,
+    super.key,
     required this.subject,
     required this.time,
     required this.color,
@@ -27,19 +27,19 @@ class LectureCardWidget extends StatelessWidget {
     this.sessionId,
     required this.sessionData,
     required this.lectureType,
-  }) : super(key: key);
+  });
 
   // 🎯 Handle click
   void _handleCardClick(BuildContext context) {
     // ❌ If user is NOT teacher → block navigation
     if (entityType.toLowerCase() != 'teacher') {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Only teachers can start or view this session'),
-          backgroundColor: Colors.red.shade600,
-          duration: const Duration(seconds: 2),
-        ),
-      );
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   SnackBar(
+      //     content: const Text('Only teachers can start or view this session'),
+      //     backgroundColor: Colors.red.shade600,
+      //     duration: const Duration(seconds: 2),
+      //   ),
+      // );
       return;
     }
 
@@ -89,10 +89,10 @@ class LectureCardWidget extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: color.withOpacity(0.2)),
+              border: Border.all(color: color.withAlpha(51)), // 0.2
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withAlpha(13), // 0.05
                   blurRadius: 10,
                   offset: const Offset(0, 2),
                 ),
@@ -107,7 +107,7 @@ class LectureCardWidget extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: color.withOpacity(0.1),
+                        color: color.withAlpha(26), // 0.1
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
@@ -125,7 +125,7 @@ class LectureCardWidget extends StatelessWidget {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: color.withOpacity(0.1),
+                          color: color.withAlpha(26), // 0.1
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
@@ -227,16 +227,16 @@ class LectureCardWidget extends StatelessWidget {
   }
 
   // 🎨 Optional helper
-  Color _getLectureTypeColor() {
-    switch (lectureType.toLowerCase()) {
-      case 'current':
-        return Colors.green;
-      case 'upcoming':
-        return Colors.orange;
-      case 'past':
-        return Colors.grey;
-      default:
-        return Colors.blue;
-    }
-  }
+  // Color _getLectureTypeColor() {
+  //   switch (lectureType.toLowerCase()) {
+  //     case 'current':
+  //       return Colors.green;
+  //     case 'upcoming':
+  //       return Colors.orange;
+  //     case 'past':
+  //       return Colors.grey;
+  //     default:
+  //       return Colors.blue;
+  //   }
+  // }
 }

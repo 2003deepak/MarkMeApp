@@ -91,27 +91,23 @@ class _TeacherReportsPageState extends State<TeacherReportsPage>
   @override
   void initState() {
     super.initState();
-    
+
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 1200),
       vsync: this,
     );
 
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
 
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOutCubic,
-    ));
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _animationController,
+            curve: Curves.easeOutCubic,
+          ),
+        );
 
     _animationController.forward();
   }
@@ -199,7 +195,7 @@ class _TeacherReportsPageState extends State<TeacherReportsPage>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -257,14 +253,19 @@ class _TeacherReportsPageState extends State<TeacherReportsPage>
                 child: _buildFilterDropdown(
                   'Subject',
                   selectedSubject,
-                  ['All Subjects', 'Data Structures', 'Algorithms', 'Database Systems'],
+                  [
+                    'All Subjects',
+                    'Data Structures',
+                    'Algorithms',
+                    'Database Systems',
+                  ],
                   (value) => setState(() => selectedSubject = value!),
                   isDesktop,
                 ),
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: Container(
+                child: SizedBox(
                   height: isDesktop ? 48 : 44,
                   child: ElevatedButton.icon(
                     onPressed: _generateReport,
@@ -275,10 +276,7 @@ class _TeacherReportsPageState extends State<TeacherReportsPage>
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    icon: Icon(
-                      Icons.refresh,
-                      size: isDesktop ? 20 : 18,
-                    ),
+                    icon: Icon(Icons.refresh, size: isDesktop ? 20 : 18),
                     label: Text(
                       'Generate Report',
                       style: TextStyle(
@@ -358,7 +356,7 @@ class _TeacherReportsPageState extends State<TeacherReportsPage>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.blue.withOpacity(0.3),
+            color: Colors.blue.withValues(alpha: 0.3),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -389,7 +387,7 @@ class _TeacherReportsPageState extends State<TeacherReportsPage>
               Container(
                 width: 1,
                 height: 50,
-                color: Colors.white.withOpacity(0.3),
+                color: Colors.white.withValues(alpha: 0.3),
               ),
               Expanded(
                 child: _buildSummaryItem(
@@ -402,7 +400,7 @@ class _TeacherReportsPageState extends State<TeacherReportsPage>
               Container(
                 width: 1,
                 height: 50,
-                color: Colors.white.withOpacity(0.3),
+                color: Colors.white.withValues(alpha: 0.3),
               ),
               Expanded(
                 child: _buildSummaryItem(
@@ -419,14 +417,15 @@ class _TeacherReportsPageState extends State<TeacherReportsPage>
     );
   }
 
-  Widget _buildSummaryItem(String label, String value, IconData icon, bool isDesktop) {
+  Widget _buildSummaryItem(
+    String label,
+    String value,
+    IconData icon,
+    bool isDesktop,
+  ) {
     return Column(
       children: [
-        Icon(
-          icon,
-          color: Colors.white,
-          size: isDesktop ? 28 : 24,
-        ),
+        Icon(icon, color: Colors.white, size: isDesktop ? 28 : 24),
         const SizedBox(height: 8),
         Text(
           value,
@@ -440,7 +439,7 @@ class _TeacherReportsPageState extends State<TeacherReportsPage>
           label,
           style: TextStyle(
             fontSize: isDesktop ? 12 : 10,
-            color: Colors.white.withOpacity(0.8),
+            color: Colors.white.withValues(alpha: 0.8),
           ),
           textAlign: TextAlign.center,
         ),
@@ -455,7 +454,7 @@ class _TeacherReportsPageState extends State<TeacherReportsPage>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -527,7 +526,7 @@ class _TeacherReportsPageState extends State<TeacherReportsPage>
       scrollDirection: Axis.horizontal,
       child: DataTable(
         columnSpacing: isDesktop ? 40 : 20,
-        headingRowColor: MaterialStateProperty.all(Colors.grey.shade100),
+        headingRowColor: WidgetStateProperty.all(Colors.grey.shade100),
         columns: [
           DataColumn(
             label: Text(
@@ -646,7 +645,9 @@ class _TeacherReportsPageState extends State<TeacherReportsPage>
                     vertical: isDesktop ? 4 : 2,
                   ),
                   decoration: BoxDecoration(
-                    color: _getStatusColor(report['status']).withOpacity(0.1),
+                    color: _getStatusColor(
+                      report['status'],
+                    ).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -671,7 +672,7 @@ class _TeacherReportsPageState extends State<TeacherReportsPage>
       scrollDirection: Axis.horizontal,
       child: DataTable(
         columnSpacing: isDesktop ? 40 : 20,
-        headingRowColor: MaterialStateProperty.all(Colors.grey.shade100),
+        headingRowColor: WidgetStateProperty.all(Colors.grey.shade100),
         columns: [
           DataColumn(
             label: Text(
@@ -772,7 +773,9 @@ class _TeacherReportsPageState extends State<TeacherReportsPage>
                     vertical: isDesktop ? 4 : 2,
                   ),
                   decoration: BoxDecoration(
-                    color: _getStatusColor(report['performance']).withOpacity(0.1),
+                    color: _getStatusColor(
+                      report['performance'],
+                    ).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -853,11 +856,7 @@ class _TeacherReportsPageState extends State<TeacherReportsPage>
       SnackBar(
         content: Row(
           children: [
-            const Icon(
-              Icons.check_circle,
-              color: Colors.white,
-              size: 20,
-            ),
+            const Icon(Icons.check_circle, color: Colors.white, size: 20),
             const SizedBox(width: 8),
             Text('Report generated for $selectedReportType'),
           ],
@@ -875,11 +874,7 @@ class _TeacherReportsPageState extends State<TeacherReportsPage>
       SnackBar(
         content: Row(
           children: [
-            const Icon(
-              Icons.download_done,
-              color: Colors.white,
-              size: 20,
-            ),
+            const Icon(Icons.download_done, color: Colors.white, size: 20),
             const SizedBox(width: 8),
             const Text('Report exported successfully!'),
           ],

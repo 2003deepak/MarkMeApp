@@ -8,8 +8,12 @@ import 'package:markmeapp/presentation/layout/guest_layout.dart';
 import 'package:markmeapp/presentation/layout/role_based_layout.dart';
 import 'package:markmeapp/presentation/layout/protected_layout.dart';
 import 'package:markmeapp/presentation/pages/clerk/add_time_table_page.dart';
+import 'package:markmeapp/presentation/pages/clerk/attendance_detail_page.dart';
 import 'package:markmeapp/presentation/pages/clerk/student_list_page.dart';
 import 'package:markmeapp/presentation/pages/clerk/teacher_list_page.dart';
+import 'package:markmeapp/presentation/pages/clerk/teacher_overview_page.dart';
+import 'package:markmeapp/presentation/pages/clerk/subject_analytics_detail_page.dart';
+import 'package:markmeapp/presentation/pages/clerk/teacher_menu_page.dart';
 
 // Auth Pages
 import 'package:markmeapp/presentation/pages/splash/splash_page.dart';
@@ -284,6 +288,14 @@ class AppRouter {
               builder: (context, state) => const AttendanceHistoryPage(),
             ),
             GoRoute(
+              path: '/clerk/attendance-detail/:id',
+              name: 'attendance-detail',
+              builder: (context, state) {
+                final attendanceId = state.pathParameters['id']!;
+                return AttendanceDetailPage(attendanceId: attendanceId);
+              },
+            ),
+            GoRoute(
               path: '/teacher/push-notification',
               name: 'push_notification',
               builder: (context, state) => const PushNotificationPage(),
@@ -322,6 +334,51 @@ class AppRouter {
                   attendanceId: attendanceId,
                   sessionData: sessionData,
                   images: images,
+                );
+              },
+            ),
+
+            // Clerk Analytics Routes
+
+            // 1. Menu Page (Landing)
+            GoRoute(
+              path: '/clerk/teacher/:teacherId',
+              name: 'clerk_teacher_menu',
+              builder: (context, state) {
+                final teacherId = state.pathParameters['teacherId']!;
+                final teacherName = state.extra as String? ?? 'Teacher Actions';
+                return TeacherMenuPage(
+                  teacherId: teacherId,
+                  teacherName: teacherName,
+                );
+              },
+            ),
+
+            // 2. Performance Overview (Analysis)
+            GoRoute(
+              path: '/clerk/teacher/:teacherId/performance',
+              name: 'clerk_teacher_performance',
+              builder: (context, state) {
+                final teacherId = state.pathParameters['teacherId']!;
+                final teacherName =
+                    state.extra as String? ?? 'Performance Analysis';
+                return TeacherOverviewPage(
+                  teacherId: teacherId,
+                  teacherName: teacherName,
+                );
+              },
+            ),
+
+            // 3. Subject Detail
+            GoRoute(
+              path: '/clerk/teacher/:teacherId/subject/:subjectId',
+              name: 'clerk_subject_analytics',
+              builder: (context, state) {
+                final teacherId = state.pathParameters['teacherId']!;
+                final subjectId = state.pathParameters['subjectId']!;
+                return SubjectAnalyticsDetailPage(
+                  teacherId: teacherId,
+                  subjectId: subjectId,
                 );
               },
             ),

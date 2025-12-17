@@ -27,9 +27,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   final _roll3Ctrl = TextEditingController();
   final _batchYearCtrl = TextEditingController();
 
-  String? _program;
-  int? _semester;
-
   @override
   void initState() {
     super.initState();

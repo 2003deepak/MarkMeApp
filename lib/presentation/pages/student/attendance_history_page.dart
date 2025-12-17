@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:markmeapp/core/theme/app_theme.dart';
 import 'package:markmeapp/data/models/attendance_history_model.dart';
 import 'package:markmeapp/data/repositories/clerk_repository.dart';
@@ -466,7 +467,7 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
       chips.add(
         FilterChipWidget(
           label:
-              'Prog: ${_selectedPrograms.length > 1 ? "${_selectedPrograms.length} selected" : _selectedPrograms.first}',
+              'Program: ${_selectedPrograms.length > 1 ? "${_selectedPrograms.length} selected" : _selectedPrograms.first}',
           onRemove: () {
             setState(() {
               _selectedPrograms = [];
@@ -900,7 +901,6 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final percentage = record.attendancePercentage ?? 0.0;
 
-    // Determine color based on percentage (e.g., < 75% is red/warning)
     final Color statusColor = percentage < 75
         ? const Color(0xFFEF4444)
         : const Color(0xFF10B981);
@@ -909,103 +909,109 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
         ? statusColor.withOpacity(0.2)
         : statusColor.withOpacity(0.1);
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: _statusCardDecoration.copyWith(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          decoration: BoxDecoration(
-            border: Border(left: BorderSide(color: statusColor, width: 6)),
-          ),
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header: Subject & Percentage Badge
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          record.subject,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: isDark
-                                ? const Color(0xFFF8FAFC)
-                                : const Color(0xFF1E293B),
-                          ),
-                        ),
-                        if (record.componentType != null)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 4),
-                            child: Text(
-                              record.componentType!,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                color: isDark
-                                    ? Colors.grey[400]
-                                    : Colors.grey[600],
-                              ),
+    return GestureDetector(
+      onTap: () {
+        // 🚀 NAVIGATION HERE
+        context.push('/clerk/attendance-detail/${record.attendanceId}');
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: _statusCardDecoration.copyWith(
+          color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border(left: BorderSide(color: statusColor, width: 6)),
+            ),
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            record.subject,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: isDark
+                                  ? const Color(0xFFF8FAFC)
+                                  : const Color(0xFF1E293B),
                             ),
                           ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: backgroundColor,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      '${percentage.toStringAsFixed(1)}%',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: statusColor,
+                          if (record.componentType != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text(
+                                record.componentType!,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isDark
+                                      ? Colors.grey[400]
+                                      : Colors.grey[600],
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: backgroundColor,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '${percentage.toStringAsFixed(1)}%',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: statusColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
 
-              // Stats Row: Present | Absent
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildStatItem(
-                      label: 'Present',
-                      value: '${record.presentCount ?? 0}',
-                      color: const Color(0xFF10B981),
-                      icon: Icons.check_circle_outline,
-                      isDark: isDark,
+                const SizedBox(height: 16),
+
+                // Stats Row
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildStatItem(
+                        label: 'Present',
+                        value: '${record.presentCount ?? 0}',
+                        color: const Color(0xFF10B981),
+                        icon: Icons.check_circle_outline,
+                        isDark: isDark,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildStatItem(
-                      label: 'Absent',
-                      value: '${record.absentCount ?? 0}',
-                      color: const Color(0xFFEF4444),
-                      icon: Icons.cancel_outlined,
-                      isDark: isDark,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildStatItem(
+                        label: 'Absent',
+                        value: '${record.absentCount ?? 0}',
+                        color: const Color(0xFFEF4444),
+                        icon: Icons.cancel_outlined,
+                        isDark: isDark,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

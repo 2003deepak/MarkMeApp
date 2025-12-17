@@ -1,4 +1,5 @@
 class Teacher {
+  final String id;
   final String teacherId;
   final String firstName;
   final String? middleName;
@@ -11,6 +12,7 @@ class Teacher {
   final List<Subject> subjectsAssigned;
 
   Teacher({
+    required this.id,
     required this.teacherId,
     required this.firstName,
     this.middleName,
@@ -25,6 +27,7 @@ class Teacher {
 
   factory Teacher.fromJson(Map<String, dynamic> json) {
     return Teacher(
+      id: json['_id'] ?? '',
       teacherId: json['teacher_id'] ?? '',
       firstName: json['first_name'] ?? '',
       middleName: json['middle_name'],
@@ -44,6 +47,7 @@ class Teacher {
 
   Map<String, dynamic> toJson() {
     return {
+      '_id': id,
       'teacher_id': teacherId,
       'first_name': firstName,
       'middle_name': middleName,

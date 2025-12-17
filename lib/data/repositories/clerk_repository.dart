@@ -326,6 +326,34 @@ class ClerkRepository {
     }
   }
 
+  Future<Map<String, dynamic>> fetchAttendanceDetail(
+    String attendanceId,
+  ) async {
+    try {
+      final response = await _dio.get('/attendance/$attendanceId');
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'data': response.data,
+          'message': response.data['message'],
+        };
+      } else {
+        return {
+          'success': false,
+          'error': response.data['message'] ?? 'Failed to fetch details',
+        };
+      }
+    } on DioException catch (e) {
+      return {
+        'success': false, // Ensure success is boolean false
+        'error': e.response?.data?['message'] ?? e.message ?? 'Network error',
+      };
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
   Future<Map<String, dynamic>> createTimeTable(
     Map<String, dynamic> data,
   ) async {
@@ -364,6 +392,90 @@ class ClerkRepository {
       };
     } catch (e) {
       AppLogger.error("Other error: $e");
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  // --- Analytics Methods ---
+
+  Future<Map<String, dynamic>> fetchTeacherSubjectPerformance(
+    String teacherId,
+  ) async {
+    try {
+      final response = await _dio.get(
+        '/clerk/teacher/$teacherId/subject-performance',
+      );
+
+      if (response.statusCode == 200) {
+        return response.data;
+      } else {
+        return {
+          'success': false,
+          'error':
+              response.data['message'] ?? 'Failed to fetch performance data',
+        };
+      }
+    } on DioException catch (e) {
+      return {
+        'success': false,
+        'error': e.response?.data?['message'] ?? e.message ?? 'Network error',
+      };
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> fetchSubjectPerformanceDetail(
+    String teacherId,
+    String subjectId,
+  ) async {
+    try {
+      final response = await _dio.get(
+        '/clerk/teacher/$teacherId/subjects/$subjectId/performance',
+      );
+
+      if (response.statusCode == 200) {
+        return response.data;
+      } else {
+        return {
+          'success': false,
+          'error':
+              response.data['message'] ?? 'Failed to fetch subject details',
+        };
+      }
+    } on DioException catch (e) {
+      return {
+        'success': false,
+        'error': e.response?.data?['message'] ?? e.message ?? 'Network error',
+      };
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> fetchSubjectInsights(
+    String teacherId,
+    String subjectId,
+  ) async {
+    try {
+      final response = await _dio.get(
+        '/clerk/teacher/$teacherId/subjects/$subjectId/insights',
+      );
+
+      if (response.statusCode == 200) {
+        return response.data;
+      } else {
+        return {
+          'success': false,
+          'error': response.data['message'] ?? 'Failed to fetch insights',
+        };
+      }
+    } on DioException catch (e) {
+      return {
+        'success': false,
+        'error': e.response?.data?['message'] ?? e.message ?? 'Network error',
+      };
+    } catch (e) {
       return {'success': false, 'error': e.toString()};
     }
   }

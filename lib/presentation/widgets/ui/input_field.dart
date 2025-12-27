@@ -13,6 +13,7 @@ class InputField extends StatefulWidget {
   final VoidCallback? onTap;
   final Widget? suffixIcon;
   final int? maxLength;
+  final int? maxLines; // Added
   final bool showCounter;
   final bool isRequired;
   final FocusNode? focusNode;
@@ -33,6 +34,7 @@ class InputField extends StatefulWidget {
     this.onTap,
     this.suffixIcon,
     this.maxLength,
+    this.maxLines = 1, // Default to 1
     this.showCounter = false,
     this.isRequired = false,
     this.focusNode,
@@ -102,6 +104,7 @@ class _InputFieldState extends State<InputField> {
           validator: widget.validator,
           onTap: widget.onTap,
           maxLength: widget.maxLength,
+          maxLines: widget.maxLines, // Pass maxLines
           textInputAction: widget.textInputAction,
           onChanged: widget.onChanged,
           onFieldSubmitted: widget.onFieldSubmitted,

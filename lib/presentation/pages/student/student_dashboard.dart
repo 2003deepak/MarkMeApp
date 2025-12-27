@@ -8,7 +8,6 @@ import 'package:markmeapp/presentation/widgets/subject_selector_widget.dart';
 import 'package:markmeapp/presentation/widgets/attendance_stats_widget.dart';
 import 'package:markmeapp/presentation/widgets/lectures_widget.dart';
 import 'package:markmeapp/presentation/widgets/recent_activity_widget.dart';
-import 'package:markmeapp/presentation/pages/student/weekly_bunk_safety_page.dart';
 import 'package:markmeapp/presentation/widgets/bunk_safety/tomorrow_bunk_safety_card.dart';
 import 'package:markmeapp/presentation/widgets/ui/error.dart';
 import 'package:markmeapp/core/utils/student_data_processor.dart';

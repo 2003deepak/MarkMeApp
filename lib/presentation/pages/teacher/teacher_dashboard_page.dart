@@ -114,33 +114,6 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
           color: Colors.blue.shade600,
           index: 0,
         ),
-        DashboardActionCard(
-          icon: Icons.assessment_outlined,
-          title: "View Reports",
-          onTap: () {
-            context.go('/clerk/add-teacher');
-          },
-          color: Colors.green.shade600,
-          index: 1,
-        ),
-        DashboardActionCard(
-          icon: Icons.assignment_outlined,
-          title: "Add Subject",
-          onTap: () {
-            context.go('/clerk/add-subject');
-          },
-          color: const Color(0xFFBA68C8),
-          index: 2,
-        ),
-        DashboardActionCard(
-          icon: Icons.calendar_month_outlined,
-          title: "Set Timetable",
-          onTap: () {
-            context.go('/clerk/add-timetable');
-          },
-          color: const Color(0xFFFFB74D),
-          index: 3,
-        ),
       ],
     );
   }

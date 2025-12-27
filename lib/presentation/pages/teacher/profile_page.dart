@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:markmeapp/core/theme/app_theme.dart';
 import 'package:markmeapp/state/auth_state.dart';
+import 'package:markmeapp/presentation/pages/teacher/requests_page.dart';
 
 /// Professional Profile Page for attendance management system
 class ProfilePage extends ConsumerStatefulWidget {
@@ -270,12 +271,24 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     ),
                     _infoTile(
                       icon: Icons.event_note_rounded,
-                      label: 'Leave Requests',
-                      subtitle: 'Manage absence requests',
+                      label: 'Requests',
+                      subtitle: 'Manage all requests',
                       onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Open Leave Requests')),
-                        );
+                        context.push("/teacher/requests");
+                      },
+                    ),
+
+                    Container(
+                      height: 1,
+                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                      color: const Color(0xFFF1F5F9),
+                    ),
+                    _infoTile(
+                      icon: Icons.event_note_rounded,
+                      label: 'New Exception Request',
+                      subtitle: 'Request for exception',
+                      onTap: () {
+                        context.push("/teacher/new-exception-request");
                       },
                     ),
                   ],

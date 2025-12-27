@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -85,11 +87,22 @@ Future<void> _initLocalNotifications() async {
     await flutterLocalNotificationsPlugin.initialize(
       initSettings,
       onDidReceiveNotificationResponse: (details) {
-        AppLogger.info(
-          "📲 Notification clicked (foreground): ${details.payload}",
-        );
+        if (details.payload == null) return;
+
+        try {
+          final data = jsonDecode(details.payload!);
+          AppLogger.info("📲 Foreground notification tapped → $data");
+
+          final route = data["route"];
+          if (route is String) {
+            AppRouter.navigatorKey.currentContext?.push(route);
+          }
+        } catch (e) {
+          AppLogger.error("❌ Notification payload parse error: $e");
+        }
       },
     );
+
     AppLogger.info("✅ Local notifications initialized on $platformType");
   } else {
     AppLogger.info("🖥️ Skipping local notifications on $platformType");
@@ -248,7 +261,7 @@ class _MyAppState extends ConsumerState<MyApp> {
                   priority: Priority.high,
                 ),
               ),
-              payload: message.data.toString(),
+              payload: jsonEncode(message.data),
             );
 
             // Save to Hive
@@ -297,10 +310,10 @@ class _MyAppState extends ConsumerState<MyApp> {
   void _navigateFromNotification(Map<String, dynamic> data) {
     if (!mounted) return;
 
-    final route = data["screen"];
-    if (route != null && route is String) {
-      AppLogger.info("📍 Navigating to: $route from notification");
-      context.go(route);
+    final route = data["route"];
+    if (route is String) {
+      AppLogger.info("📍 Navigating to: $route");
+      context.push(route);
     }
   }
 

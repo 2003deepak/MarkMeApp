@@ -17,7 +17,7 @@ class TeacherRepository {
     try {
       AppLogger.info('🔵 [StudentRepository] Fetching student profile');
 
-      final response = await _dio.get('/teacher/me/');
+      final response = await _dio.get('/teacher/me');
       final responseBody = response.data;
 
       AppLogger.info("The response in repo is $responseBody");
@@ -409,6 +409,188 @@ class TeacherRepository {
     } catch (e) {
       AppLogger.error('🔴 [AuthRepository] Exception caught: $e');
       return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> raiseSessionException({
+    required String sessionId,
+    required String date,
+    required String action,
+    required String reason,
+    String? newStartTime,
+    String? newEndTime,
+    bool confirmSwap = false,
+  }) async {
+    try {
+      AppLogger.info('🔵 [TeacherRepository] Raising session exception...');
+      const url = '/teacher/create-exception';
+
+      final Map<String, dynamic> body = {
+        'session_id': sessionId,
+        'date': date,
+        'action': action,
+        'reason': reason,
+        'confirm_swap': confirmSwap,
+      };
+
+      if (newStartTime != null) body['new_start_time'] = newStartTime;
+      if (newEndTime != null) body['new_end_time'] = newEndTime;
+
+      AppLogger.info("📤 Exception Payload: $body");
+
+      final response = await _dio.post(url, data: body);
+      final responseBody = response.data;
+
+      AppLogger.info(
+        "📦 [TeacherRepository] Exception Response: $responseBody",
+      );
+
+      if (responseBody['success'] == true) {
+        return {
+          'success': true,
+          'message':
+              responseBody['message'] ?? 'Request processed successfully',
+          'data': responseBody['data'],
+        };
+      } else if (responseBody['code'] == 'OVERLAP_FOUND') {
+        return {
+          'success': false,
+          'code': 'OVERLAP_FOUND',
+          'message': responseBody['message'],
+          'data': responseBody['data'],
+        };
+      } else {
+        return {
+          'success': false,
+          'message': responseBody['message'] ?? 'Failed to process request',
+        };
+      }
+    } on DioException catch (e) {
+      AppLogger.error('🔴 [TeacherRepository] DioException: ${e.message}');
+      final responseBody = e.response?.data;
+
+      if (responseBody != null && responseBody['code'] == 'OVERLAP_FOUND') {
+        return {
+          'success': false,
+          'code': 'OVERLAP_FOUND',
+          'message': responseBody['message'],
+          'data': responseBody['data'],
+        };
+      }
+
+      final errorMessage =
+          responseBody?['message'] ?? e.message ?? 'Network error';
+      return {'success': false, 'message': errorMessage};
+    } catch (e) {
+      AppLogger.error('🔴 [TeacherRepository] Exception: $e');
+      return {'success': false, 'message': 'An unexpected error occurred'};
+    }
+  }
+
+  /// Fetches all requests for the teacher (Summary List)
+  Future<Map<String, dynamic>> fetchRequests({
+    int? year,
+    String? requestType,
+    String? status,
+    int page = 1,
+    int limit = 10,
+  }) async {
+    try {
+      AppLogger.info('🔵 [TeacherRepository] Fetching requests...');
+      const url = '/teacher/request';
+
+      final Map<String, dynamic> queryParams = {'page': page, 'limit': limit};
+
+      if (year != null) {
+        queryParams['year'] = year;
+      }
+
+      if (requestType != null) {
+        queryParams['request_type'] = requestType;
+      }
+
+      if (status != null) {
+        queryParams['status'] = status;
+      }
+
+      AppLogger.info('📤 Query Params: $queryParams');
+
+      final response = await _dio.get(url, queryParameters: queryParams);
+
+      if (response.statusCode == 200) {
+        return response.data;
+      } else {
+        throw DioException(
+          requestOptions: response.requestOptions,
+          response: response,
+          error: 'Failed to fetch requests',
+        );
+      }
+    } on DioException catch (e) {
+      AppLogger.error('❌ Error fetching requests: ${e.message}');
+      if (e.response != null && e.response?.data != null) {
+        return e.response?.data;
+      }
+      rethrow;
+    }
+  }
+
+  /// Fetches a single request detail by ID
+  Future<Map<String, dynamic>> fetchRequestDetail(String requestId) async {
+    try {
+      AppLogger.info(
+        '🔵 [TeacherRepository] Fetching request detail: $requestId',
+      );
+      final url = '/teacher/request/$requestId';
+      final response = await _dio.get(url);
+
+      if (response.statusCode == 200) {
+        return response.data;
+      } else {
+        throw DioException(
+          requestOptions: response.requestOptions,
+          response: response,
+          error: 'Failed to fetch request detail',
+        );
+      }
+    } on DioException catch (e) {
+      AppLogger.error('❌ Error fetching request detail: ${e.message}');
+      if (e.response != null && e.response?.data != null) {
+        return e.response?.data;
+      }
+      rethrow;
+    }
+  }
+
+  /// Responds to a swap request (Approve/Reject)
+  Future<Map<String, dynamic>> respondToSwap({
+    required String swapId,
+    required String action, // "APPROVE" or "REJECT"
+  }) async {
+    try {
+      AppLogger.info(
+        '🔵 [TeacherRepository] Responding to swap $swapId with $action...',
+      );
+      const url = '/teacher/swap-approval';
+      final body = {'swap_id': swapId, 'action': action};
+
+      final response = await _dio.post(url, data: body);
+
+      if (response.statusCode == 200) {
+        return response.data;
+      } else {
+        throw DioException(
+          requestOptions: response.requestOptions,
+          response: response,
+          error: 'Failed to respond to swap',
+        );
+      }
+    } on DioException catch (e) {
+      AppLogger.error('❌ Error responding to swap: ${e.message}');
+      if (e.response != null && e.response?.data != null) {
+        return e.response?.data;
+      }
+      rethrow;
     }
   }
 }

@@ -42,6 +42,9 @@ import 'package:markmeapp/presentation/pages/student/weekly_bunk_safety_page.dar
 import 'package:markmeapp/presentation/pages/teacher/attendance_camera_page.dart';
 import 'package:markmeapp/presentation/pages/teacher/attendance_marking_page.dart';
 import 'package:markmeapp/presentation/pages/teacher/push_notification_page.dart';
+import 'package:markmeapp/presentation/pages/teacher/raise_exception_page.dart';
+import 'package:markmeapp/presentation/pages/teacher/request_details_page.dart';
+import 'package:markmeapp/presentation/pages/teacher/requests_page.dart';
 import 'package:markmeapp/presentation/pages/teacher/session_page.dart';
 
 // Teacher & Admin Pages
@@ -58,8 +61,12 @@ import 'package:markmeapp/state/auth_state.dart';
 /// 🚀 APP ROUTER
 /// =============================================================
 class AppRouter {
+  static final GlobalKey<NavigatorState> navigatorKey =
+      GlobalKey<NavigatorState>();
+
   static final routerProvider = Provider<GoRouter>((ref) {
     return GoRouter(
+      navigatorKey: navigatorKey,
       debugLogDiagnostics: true,
       initialLocation: '/',
 
@@ -301,6 +308,18 @@ class AppRouter {
               builder: (context, state) => const PushNotificationPage(),
             ),
             GoRoute(
+              path: '/teacher/requests',
+              name: 'teacher_requests',
+              builder: (context, state) => const RequestsPage(),
+            ),
+            GoRoute(
+              path: '/teacher/request/:id',
+              name: 'teacher_request_details',
+              builder: (context, state) => RequestDetailsPage(
+                requestId: state.pathParameters['id'] ?? '',
+              ),
+            ),
+            GoRoute(
               path: '/teacher/session/capture',
               name: 'capture_attendance',
               builder: (context, state) {
@@ -318,6 +337,11 @@ class AppRouter {
                 final sessionData = state.extra as Map<String, dynamic>? ?? {};
                 return SessionPage(sessionData: sessionData);
               },
+            ),
+            GoRoute(
+              path: '/teacher/new-exception-request',
+              name: 'new_exception_request',
+              builder: (context, state) => const RaiseExceptionPage(),
             ),
 
             GoRoute(

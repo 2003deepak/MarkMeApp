@@ -104,11 +104,14 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
           final subjectList = cls['subjects'] as List<dynamic>? ?? [];
 
           for (final sub in subjectList) {
-            final subjectId = sub['subject_id'] as String?;
-            final subjectName = sub['subject_name'] as String?;
-            final component = sub['component'] as String?;
+            final subjectId = sub['subject_id']?.toString();
+            final subjectName = sub['subject_name']?.toString();
+            final component = sub['component']?.toString();
 
-            if (subjectId == null || subjectName == null || component == null) {
+            if (subjectId == null ||
+                subjectId.isEmpty ||
+                subjectName == null ||
+                component == null) {
               continue;
             }
 
@@ -126,9 +129,11 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
           }
         }
 
-        setState(() {
-          _availableTeacherSubjects = subjects;
-        });
+        if (mounted) {
+          setState(() {
+            _availableTeacherSubjects = subjects;
+          });
+        }
       }
     } catch (e) {
       debugPrint('Error fetching teacher subjects: $e');
@@ -500,6 +505,9 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
           ? _availableTeacherSubjects
           : _availableClerkSubjects;
 
+      print("DEBUG: Selected subject IDs: ${_selectedSubjectIds}");
+      print("DEBUG: Available subjects: ${source}");
+
       final names = _selectedSubjectIds.map((id) {
         final sub = source.firstWhere(
           (s) => s['id'] == id,
@@ -507,6 +515,8 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
         );
         return sub['name']!;
       }).toList();
+
+      print("DEBUG: Selected subject names: $names");
 
       chips.add(
         FilterChipWidget(

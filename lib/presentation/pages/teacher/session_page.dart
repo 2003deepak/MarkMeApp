@@ -7,6 +7,7 @@ import 'package:camera/camera.dart';
 
 import 'package:markmeapp/core/utils/app_logger.dart';
 import 'package:markmeapp/presentation/widgets/ui/app_bar.dart';
+import 'package:markmeapp/presentation/pages/teacher/raise_exception_page.dart';
 
 class SessionPage extends StatefulWidget {
   final Map<String, dynamic> sessionData;
@@ -223,6 +224,12 @@ class _SessionPageState extends State<SessionPage>
               if (lectureType != 'past') _buildAttendanceButton(),
 
               const SizedBox(height: 24),
+
+              // Raise Exception Button
+              if (lectureType != 'past') ...[
+                _buildRaiseExceptionButton(),
+                const SizedBox(height: 24),
+              ],
 
               // Additional Info
               _buildAdditionalInfo(),
@@ -612,6 +619,40 @@ class _SessionPageState extends State<SessionPage>
           ),
         );
       },
+    );
+  }
+
+  /// Builds raise exception button
+  Widget _buildRaiseExceptionButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: TextButton.icon(
+        onPressed: () async {
+          // Navigate to Raise Exception Page
+          await Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) =>
+                  RaiseExceptionPage(sessionData: widget.sessionData),
+            ),
+          );
+        },
+        icon: const Icon(Icons.assignment_late_outlined, color: Colors.orange),
+        label: const Text(
+          'Raise Exception',
+          style: TextStyle(
+            color: Colors.orange,
+            fontWeight: FontWeight.w600,
+            fontSize: 16,
+          ),
+        ),
+        style: TextButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          backgroundColor: Colors.orange.withAlpha(26), // 0.1
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
     );
   }
 

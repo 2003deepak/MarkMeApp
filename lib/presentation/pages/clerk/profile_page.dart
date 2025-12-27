@@ -334,33 +334,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       margin: const EdgeInsets.symmetric(horizontal: 16),
                       color: const Color(0xFFF1F5F9),
                     ),
-                    _infoTile(
-                      icon: Icons.calendar_today_rounded,
-                      label: 'Classes & Timetable',
-                      subtitle: 'View your schedule',
-                      onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Open Classes & Timetable'),
-                          ),
-                        );
-                      },
-                    ),
-                    Container(
-                      height: 1,
-                      margin: const EdgeInsets.symmetric(horizontal: 16),
-                      color: const Color(0xFFF1F5F9),
-                    ),
-                    _infoTile(
-                      icon: Icons.event_note_rounded,
-                      label: 'Leave Requests',
-                      subtitle: 'Manage absence requests',
-                      onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Open Leave Requests')),
-                        );
-                      },
-                    ),
                   ],
                 ),
               ),
@@ -383,21 +356,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       margin: const EdgeInsets.symmetric(horizontal: 16),
                       color: const Color(0xFFF1F5F9),
                     ),
-                    _infoTile(
-                      icon: Icons.description_outlined,
-                      label: 'Documents',
-                      subtitle: 'Access your documents',
-                      onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Open Documents')),
-                        );
-                      },
-                    ),
-                    Container(
-                      height: 1,
-                      margin: const EdgeInsets.symmetric(horizontal: 16),
-                      color: const Color(0xFFF1F5F9),
-                    ),
+
                     _infoTile(
                       icon: Icons.lock_outline_rounded,
                       label: 'Update Password',

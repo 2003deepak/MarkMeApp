@@ -210,10 +210,11 @@ class _InsightsPanelState extends ConsumerState<InsightsPanel> {
     Color? color;
     if (isDelta) {
       final val = double.tryParse(value.replaceAll('%', '')) ?? 0;
-      if (val > 0)
+      if (val > 0) {
         color = Colors.green;
-      else if (val < 0)
+      } else if (val < 0) {
         color = Colors.red;
+      }
     }
 
     return Padding(

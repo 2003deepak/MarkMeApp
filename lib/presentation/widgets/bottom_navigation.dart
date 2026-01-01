@@ -34,7 +34,7 @@ class _BottomNavigationState extends State<BottomNavigation> {
             label: 'Schedule',
           ),
           NavigationDestination(
-            route: '$baseRoute/attendance-history',
+            route: '/attendance-history',
             icon: Icons.calendar_month_outlined,
             activeIcon: Icons.calendar_month,
             label: 'Attendance',
@@ -91,7 +91,7 @@ class _BottomNavigationState extends State<BottomNavigation> {
             label: 'Schedule',
           ),
           NavigationDestination(
-            route: '$baseRoute/attendance-history',
+            route: '/attendance-history',
             icon: Icons.calendar_month_outlined,
             activeIcon: Icons.calendar_month,
             label: 'Attendance',

@@ -39,10 +39,13 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
   @override
   void initState() {
     super.initState();
-    _fetchAttendanceData();
-    _fetchUpcomingSessions();
-    _fetchTomorrowBunkSafety();
-    _fetchProfileData();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchAttendanceData();
+      _fetchUpcomingSessions();
+      _fetchTomorrowBunkSafety();
+      _fetchProfileData();
+    });
   }
 
   Future<void> _fetchProfileData() async {

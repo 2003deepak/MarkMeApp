@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:markmeapp/data/repositories/teacher_repository.dart';
+import 'package:markmeapp/state/teacher_state.dart';
+import 'package:markmeapp/core/utils/app_logger.dart';
 import 'package:markmeapp/presentation/widgets/dashboard_action_card.dart';
 import 'package:markmeapp/presentation/widgets/lectures_widget.dart';
 import 'package:markmeapp/presentation/widgets/recent_activity_widget.dart';
@@ -24,7 +26,28 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
   @override
   void initState() {
     super.initState();
-    _fetchSessions();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchSessions();
+      _fetchProfileData();
+    });
+  }
+
+  Future<void> _fetchProfileData() async {
+    final state = ref.read(teacherStoreProvider);
+
+    AppLogger.info("I am inside fetching profile of teacher");
+
+    // If profile already exists in state → do NOT fetch again
+    if (state.profile != null) {
+      // AppLogger.info("Profile already exists in state ${state.profile}");
+      return;
+    }
+
+    AppLogger.info("Profile does not exist in state ${state.profile}");
+
+    final teacherStore = ref.read(teacherStoreProvider.notifier);
+    await teacherStore.loadProfile();
   }
 
   Future<void> _fetchSessions() async {

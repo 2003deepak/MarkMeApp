@@ -57,6 +57,14 @@ import 'package:markmeapp/presentation/pages/teacher/timetable.dart'
 // State
 import 'package:markmeapp/state/auth_state.dart';
 
+class RouterRefreshNotifier extends ChangeNotifier {
+  RouterRefreshNotifier(Ref ref) {
+    ref.listen<AuthState>(authStoreProvider, (_, __) {
+      notifyListeners();
+    });
+  }
+}
+
 /// =============================================================
 /// 🚀 APP ROUTER
 /// =============================================================
@@ -65,8 +73,11 @@ class AppRouter {
       GlobalKey<NavigatorState>();
 
   static final routerProvider = Provider<GoRouter>((ref) {
+    final refreshNotifier = RouterRefreshNotifier(ref);
+
     return GoRouter(
       navigatorKey: navigatorKey,
+      refreshListenable: refreshNotifier,
       debugLogDiagnostics: true,
       initialLocation: '/',
 
@@ -175,11 +186,7 @@ class AppRouter {
               name: 'student_timetable',
               builder: (context, state) => const TimeTablePage(),
             ),
-            GoRoute(
-              path: '/student/attendance-history',
-              name: 'attendance-history',
-              builder: (context, state) => const AttendanceHistoryPage(),
-            ),
+
             GoRoute(
               path: '/student/profile',
               name: 'student_profile',
@@ -204,11 +211,6 @@ class AppRouter {
               name: 'teacher_timetable',
               builder: (context, state) =>
                   const teacher_time_table.TimeTablePage(),
-            ),
-            GoRoute(
-              path: '/teacher/attendance-history',
-              name: 'teacher-attendance-history',
-              builder: (context, state) => const AttendanceHistoryPage(),
             ),
 
             // =======================
@@ -260,14 +262,19 @@ class AppRouter {
               builder: (context, state) => const EditProfilePage(),
             ),
             GoRoute(
-              path: '/student/change-password',
+              path: '/change-password',
               name: 'change_password',
               builder: (context, state) => const ChangePasswordPage(),
             ),
             GoRoute(
-              path: '/student/notifications',
-              name: 'student_notifications',
+              path: '/notifications',
+              name: 'notifications',
               builder: (context, state) => const NotificationPage(),
+            ),
+            GoRoute(
+              path: '/attendance-history',
+              name: 'attendance-history',
+              builder: (context, state) => const AttendanceHistoryPage(),
             ),
             GoRoute(
               path: '/student/weekly-bunk-safety',
@@ -290,12 +297,7 @@ class AppRouter {
               builder: (context, state) => const AddTimeTablePage(),
             ),
             GoRoute(
-              path: '/clerk/attendance-history',
-              name: 'clerk-attendance-history',
-              builder: (context, state) => const AttendanceHistoryPage(),
-            ),
-            GoRoute(
-              path: '/clerk/attendance-detail/:id',
+              path: '/:role/attendance-detail/:id',
               name: 'attendance-detail',
               builder: (context, state) {
                 final attendanceId = state.pathParameters['id']!;
@@ -341,7 +343,13 @@ class AppRouter {
             GoRoute(
               path: '/teacher/new-exception-request',
               name: 'new_exception_request',
-              builder: (context, state) => const RaiseExceptionPage(),
+              builder: (context, state) {
+                final extra = state.extra as Map<String, dynamic>? ?? {};
+                final sessionData =
+                    extra['session_data'] as Map<String, dynamic>? ?? {};
+
+                return RaiseExceptionPage(sessionData: sessionData);
+              },
             ),
 
             GoRoute(

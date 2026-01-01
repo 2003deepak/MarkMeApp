@@ -274,11 +274,16 @@ class AuthRepository {
   Future<Map<String, dynamic>> changePassword(
     String currPassword,
     String newPassword,
+    String role,
   ) async {
     try {
       final response = await _dio.patch(
         '/auth/change-password',
-        data: {'current_password': currPassword, 'new_password': newPassword},
+        data: {
+          'current_password': currPassword,
+          'new_password': newPassword,
+          'role': role,
+        },
       );
 
       final responseBody = response.data;

@@ -7,7 +7,6 @@ import 'package:camera/camera.dart';
 
 import 'package:markmeapp/core/utils/app_logger.dart';
 import 'package:markmeapp/presentation/widgets/ui/app_bar.dart';
-import 'package:markmeapp/presentation/pages/teacher/raise_exception_page.dart';
 
 class SessionPage extends StatefulWidget {
   final Map<String, dynamic> sessionData;
@@ -40,10 +39,23 @@ class _SessionPageState extends State<SessionPage>
   String get component => widget.sessionData['component'] ?? 'Lecture';
   String get startTime => widget.sessionData['start_time'] ?? '';
   String get endTime => widget.sessionData['end_time'] ?? '';
-  String get attendanceId => widget.sessionData['attendance_id'] ?? '';
+
+  String get attendanceId {
+    final id = widget.sessionData['attendance_id'];
+    if (id == null) return '';
+    return id.toString();
+  }
 
   // ✅ Get lecture type from session data
   String get lectureType => widget.sessionData['lecture_type'] ?? 'current';
+
+  // ✅ Check if attendance is already marked
+  bool get isAttendanceMarked {
+    final marked = widget.sessionData['attendance_marked'];
+    return marked == true ||
+        marked.toString().toLowerCase() == 'true' ||
+        marked == 1;
+  }
 
   @override
   void initState() {
@@ -221,21 +233,19 @@ class _SessionPageState extends State<SessionPage>
               const SizedBox(height: 32),
 
               // Attendance Button (conditionally shown)
-              if (lectureType != 'past') _buildAttendanceButton(),
+              _buildAttendanceButton(),
 
               const SizedBox(height: 24),
 
               // Raise Exception Button
-              if (lectureType != 'past') ...[
+              if (lectureType == 'upcoming' &&
+                  _timeRemaining.inMinutes >= 15) ...[
                 _buildRaiseExceptionButton(),
                 const SizedBox(height: 24),
               ],
 
               // Additional Info
               _buildAdditionalInfo(),
-
-              // ✅ Past session message
-              if (lectureType == 'past') _buildPastSessionMessage(),
             ],
           ),
         ),
@@ -472,14 +482,32 @@ class _SessionPageState extends State<SessionPage>
     );
   }
 
-  /// Builds attendance button based on lecture type
   Widget _buildAttendanceButton() {
-    if (lectureType == 'current') {
-      return _buildStartAttendanceButton();
-    } else if (lectureType == 'upcoming') {
-      return _buildUpcomingButton();
-    } else {
-      return const SizedBox.shrink();
+    final bool marked = isAttendanceMarked;
+    final bool hasAttendanceId = attendanceId.isNotEmpty;
+
+    AppLogger.info(
+      'lectureType=$lectureType, marked=$marked, attendanceId=$attendanceId',
+    );
+
+    switch (lectureType) {
+      case 'current':
+        if (marked && hasAttendanceId) {
+          return _buildEditAttendanceButton();
+        }
+        return _buildStartAttendanceButton();
+
+      case 'upcoming':
+        return _buildUpcomingButton();
+
+      case 'past':
+        if (marked && hasAttendanceId) {
+          return _buildEditAttendanceButton();
+        }
+        return const SizedBox.shrink(); // ❌ no button
+
+      default:
+        return const SizedBox.shrink();
     }
   }
 
@@ -567,6 +595,64 @@ class _SessionPageState extends State<SessionPage>
     );
   }
 
+  /// Builds edit attendance button
+  Widget _buildEditAttendanceButton() {
+    return AnimatedBuilder(
+      animation: _buttonScaleAnimation,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _buttonScaleAnimation.value,
+          child: GestureDetector(
+            onTapDown: (_) => _buttonController.forward(),
+            onTapUp: (_) => _buttonController.reverse(),
+            onTapCancel: () => _buttonController.reverse(),
+            onTap: _handleEditAttendance,
+            child: Container(
+              width: 200,
+              height: 200,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.blue.withAlpha(102), // 0.4
+                    blurRadius: 30,
+                    offset: const Offset(0, 15),
+                  ),
+                  BoxShadow(
+                    color: Colors.blue.withAlpha(51), // 0.2
+                    blurRadius: 60,
+                    offset: const Offset(0, 30),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Icon(Icons.edit, color: Colors.white, size: 40),
+                  SizedBox(height: 12),
+                  Text(
+                    'Edit\nAttendance',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   /// Builds upcoming session button
   Widget _buildUpcomingButton() {
     return AnimatedBuilder(
@@ -627,15 +713,10 @@ class _SessionPageState extends State<SessionPage>
     return SizedBox(
       width: double.infinity,
       child: TextButton.icon(
-        onPressed: () async {
-          // Navigate to Raise Exception Page
-          await Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) =>
-                  RaiseExceptionPage(sessionData: widget.sessionData),
-            ),
-          );
-        },
+        onPressed: () => context.push(
+          "/teacher/new-exception-request",
+          extra: {"session_data": widget.sessionData},
+        ),
         icon: const Icon(Icons.assignment_late_outlined, color: Colors.orange),
         label: const Text(
           'Raise Exception',
@@ -652,39 +733,6 @@ class _SessionPageState extends State<SessionPage>
             borderRadius: BorderRadius.circular(12),
           ),
         ),
-      ),
-    );
-  }
-
-  /// Builds past session message
-  Widget _buildPastSessionMessage() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: Column(
-        children: [
-          Icon(Icons.history, color: Colors.grey.shade500, size: 48),
-          const SizedBox(height: 16),
-          Text(
-            'Session Completed',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey.shade700,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'This session has already ended. You can view attendance records in the history section.',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
-          ),
-        ],
       ),
     );
   }
@@ -784,6 +832,21 @@ class _SessionPageState extends State<SessionPage>
     }
   }
 
+  /// Handles edit attendance navigation
+  Future<void> _handleEditAttendance() async {
+    HapticFeedback.lightImpact();
+
+    // Navigate to marking page in "Edit Mode" (pass empty images list)
+    context.push(
+      '/teacher/mark-attendance',
+      extra: {
+        'session_data': widget.sessionData, // Fix key name to match router
+        'images': <XFile>[], // Empty list signals Edit Mode
+        'attendance_id': attendanceId,
+      },
+    );
+  }
+
   // ✅ Status color helpers (only for status badges)
   Color _getStatusColor() {
     switch (lectureType) {
@@ -829,9 +892,9 @@ class _SessionPageState extends State<SessionPage>
       case 'past':
         return [
           '1. This session has already been completed',
-          '2. Attendance records are available in history',
+          '2. Attendance records are available',
           '3. You can review student participation data',
-          '4. Contact admin for any attendance modifications',
+          '4. You can edit attendance records today only',
         ];
       default:
         return [

@@ -88,7 +88,7 @@ class _StudentLayoutState extends ConsumerState<StudentLayout> {
               }).length;
 
               return IconButton(
-                onPressed: () => context.push('/student/notifications'),
+                onPressed: () => context.push('/notifications'),
                 icon: Badge(
                   isLabelVisible: unreadCount > 0,
                   label: Text(unreadCount > 9 ? '9+' : unreadCount.toString()),

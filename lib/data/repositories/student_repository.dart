@@ -15,7 +15,7 @@ class StudentRepository {
       final response = await _dio.get('/student/me');
       final responseBody = response.data;
 
-      AppLogger.info("The response in repo is $responseBody");
+      // AppLogger.info("The response in repo is $responseBody");
 
       if (response.statusCode == 200) {
         AppLogger.info('🟢 [StudentRepository] Profile fetched successfully');

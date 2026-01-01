@@ -44,7 +44,7 @@ class TeacherLayout extends StatelessWidget {
 
               return IconButton(
                 onPressed: () {
-                  context.push('/student/notifications');
+                  context.push('/notifications');
                 },
                 icon: Badge(
                   isLabelVisible: unreadCount > 0,

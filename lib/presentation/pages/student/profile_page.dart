@@ -51,7 +51,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   }
 
   void _onUpdatePassword() {
-    context.push('/student/change-password');
+    context.push('/change-password');
   }
 
   void _openEditProfile() {

@@ -1,9 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:markmeapp/state/clerk_state.dart';
-import 'package:markmeapp/state/student_state.dart';
-import 'package:markmeapp/state/teacher_state.dart';
+import 'package:markmeapp/core/utils/get_device_info.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:markmeapp/data/repositories/auth_repository.dart';
@@ -56,85 +52,14 @@ class AuthState {
 class AuthStore extends StateNotifier<AuthState> {
   final AuthRepository _authRepo;
 
-  AuthStore(this._authRepo) : super(const AuthState());
+  AuthStore(this._authRepo) : super(const AuthState()) {
+    _restoreSession();
+  }
 
   String? get accessToken => state.accessToken;
   bool get isLoggedIn => state.isLoggedIn;
   String? get role => state.role;
   bool get isLoading => state.isLoading;
-
-  Future<Map<String, dynamic>> loadProfileForRole(
-    WidgetRef ref,
-    String role,
-  ) async {
-    if (role == 'student') {
-      return await ref.read(studentStoreProvider.notifier).loadProfile();
-    } else if (role == 'teacher') {
-      return await ref.read(teacherStoreProvider.notifier).loadProfile();
-    } else if (role == 'admin') {
-      return {'success': true};
-    } else if (role == 'clerk') {
-      return await ref.read(clerkStoreProvider.notifier).loadProfile();
-    }
-
-    // Fallback
-    return {'success': false, 'message': 'Unknown role'};
-  }
-
-  /// Auto Login Logic
-  Future<void> loadUserData(WidgetRef ref, BuildContext context) async {
-    try {
-      AppLogger.info('🟡 Loading user data from SharedPreferences');
-      final prefs = await SharedPreferences.getInstance();
-      final storedRefreshToken = prefs.getString('refreshToken');
-      final storedRole = prefs.getString('role');
-
-      if (storedRefreshToken == null || storedRole == null) {
-        AppLogger.info('🟡 No stored session found');
-        state = state.copyWith(hasLoaded: true, isLoggedIn: false);
-        return;
-      }
-
-      // Refresh Access Token
-      final refreshResult = await refreshAccessToken();
-
-      if (refreshResult['success'] == true) {
-        AppLogger.info('🟢 Access token refreshed successfully');
-
-        // Load profile (only for student)
-        final profileResult = await loadProfileForRole(ref, storedRole);
-
-        if (profileResult['success'] == true) {
-          state = state.copyWith(
-            isLoggedIn: true,
-            hasLoaded: true,
-            isLoading: false,
-            role: storedRole,
-          );
-
-          AppLogger.info('🟢 Auto-login done for role: $storedRole');
-        } else {
-          AppLogger.error('🔴 Profile fetch failed');
-          await prefs.remove('refreshToken');
-          await prefs.remove('role');
-
-          state = const AuthState(hasLoaded: true, isLoggedIn: false);
-        }
-      } else {
-        AppLogger.error('🔴 Token refresh failed');
-        await prefs.remove('refreshToken');
-        await prefs.remove('role');
-
-        state = const AuthState(hasLoaded: true, isLoggedIn: false);
-
-        if (context.mounted) context.go('/login');
-      }
-    } catch (e) {
-      AppLogger.error('🔴 Error during auto-login: $e');
-      state = state.copyWith(hasLoaded: true, isLoggedIn: false);
-      if (context.mounted) context.go('/login');
-    }
-  }
 
   /// Set login state + save refresh token + save role
   Future<void> setLogIn(Map<String, dynamic> userData) async {
@@ -182,11 +107,7 @@ class AuthStore extends StateNotifier<AuthState> {
   }
 
   /// Login User
-  Future<Map<String, dynamic>> loginUser(
-    User userModel,
-    String role,
-    BuildContext context,
-  ) async {
+  Future<Map<String, dynamic>> loginUser(User userModel, String role) async {
     if (state.isLoading) {
       return {'success': false, 'message': 'Operation already in progress'};
     }
@@ -248,8 +169,6 @@ class AuthStore extends StateNotifier<AuthState> {
     return prefs.getString('refreshToken');
   }
 
-  // PRESERVED FUNCTIONS FROM OLD CODE
-
   /// Get route based on user role
   String getRouteForRole(String role) {
     switch (role) {
@@ -304,11 +223,7 @@ class AuthStore extends StateNotifier<AuthState> {
   }
 
   /// Forgot Password
-  Future<Map<String, dynamic>> forgotPassword(
-    String email,
-    String role,
-    BuildContext context,
-  ) async {
+  Future<Map<String, dynamic>> forgotPassword(String email, String role) async {
     if (state.isLoading) {
       return {'status': 'fail', 'message': 'Operation already in progress'};
     }
@@ -343,7 +258,6 @@ class AuthStore extends StateNotifier<AuthState> {
     String email,
     String role,
     String otp,
-    BuildContext context,
   ) async {
     if (state.isLoading) {
       return {'status': 'fail', 'message': 'Operation already in progress'};
@@ -379,7 +293,6 @@ class AuthStore extends StateNotifier<AuthState> {
     String email,
     String role,
     String newPassword,
-    BuildContext context,
   ) async {
     if (state.isLoading) {
       return {'status': 'fail', 'message': 'Operation already in progress'};
@@ -407,6 +320,36 @@ class AuthStore extends StateNotifier<AuthState> {
       final errorMessage = 'Password reset failed. Please try again.';
       state = state.copyWith(isLoading: false);
       return {'status': 'fail', 'message': errorMessage};
+    }
+  }
+
+  Future<void> _restoreSession() async {
+    try {
+      AppLogger.info('🟡 Restoring session');
+
+      final prefs = await SharedPreferences.getInstance();
+      final refreshToken = prefs.getString('refreshToken');
+      final role = prefs.getString('role');
+
+      if (refreshToken == null || role == null) {
+        state = const AuthState(hasLoaded: true, isLoggedIn: false);
+        return;
+      }
+
+      final refreshResult = await refreshAccessToken();
+
+      if (refreshResult['success'] != true) {
+        await clearSession(prefs);
+        state = const AuthState(hasLoaded: true, isLoggedIn: false);
+        return;
+      }
+
+      state = state.copyWith(hasLoaded: true, isLoggedIn: true, role: role);
+
+      AppLogger.info('🟢 Auto-login success → $role');
+    } catch (e) {
+      AppLogger.error('🔴 Restore session failed: $e');
+      state = const AuthState(hasLoaded: true, isLoggedIn: false);
     }
   }
 }

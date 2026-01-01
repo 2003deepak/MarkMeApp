@@ -36,9 +36,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   }
 
   void _onUpdatePassword() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Navigate to Update Password')),
-    );
+    context.push('/change-password');
   }
 
   void _openEditProfile() {
@@ -327,7 +325,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       icon: Icons.bar_chart_rounded,
                       label: 'Attendance Summary',
                       subtitle: 'View your attendance statistics',
-                      onTap: () => context.push('/clerk/attendance-history'),
+                      onTap: () => context.push('/attendance-history'),
                     ),
                     Container(
                       height: 1,

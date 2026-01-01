@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:markmeapp/core/utils/app_logger.dart';
 import 'package:markmeapp/data/repositories/teacher_repository.dart';
 
 @immutable
@@ -47,6 +48,7 @@ class TeacherStore extends StateNotifier<TeacherState> {
 
   Future<Map<String, dynamic>> loadProfile() async {
     try {
+      AppLogger.info("Loading Teacher Profile");
       state = state.copyWith(isLoading: true);
 
       final result = await _teacherRepo.fetchProfile();
@@ -73,6 +75,10 @@ class TeacherStore extends StateNotifier<TeacherState> {
 
       return {"success": false, "message": "Error: $e"};
     }
+  }
+
+  void clearState() {
+    state = const TeacherState();
   }
 }
 

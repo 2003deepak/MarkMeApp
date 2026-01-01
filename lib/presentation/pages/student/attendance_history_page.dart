@@ -506,9 +506,6 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
           ? _availableTeacherSubjects
           : _availableClerkSubjects;
 
-      print("DEBUG: Selected subject IDs: ${_selectedSubjectIds}");
-      print("DEBUG: Available subjects: ${source}");
-
       final names = _selectedSubjectIds.map((id) {
         final sub = source.firstWhere(
           (s) => s['id'] == id,
@@ -516,8 +513,6 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
         );
         return sub['name']!;
       }).toList();
-
-      print("DEBUG: Selected subject names: $names");
 
       chips.add(
         FilterChipWidget(
@@ -922,7 +917,8 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
     return GestureDetector(
       onTap: () {
         // 🚀 NAVIGATION HERE
-        context.push('/clerk/attendance-detail/${record.attendanceId}');
+        final role = ref.read(authStoreProvider).role;
+        context.push('/$role/attendance-detail/${record.attendanceId}');
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
@@ -1078,9 +1074,9 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
   Color _getStatusColor(AttendanceStatus status) {
     switch (status) {
       case AttendanceStatus.present:
-        return const Color(0xFFEF4444);
-      case AttendanceStatus.late:
-        return const Color(0xFFF59E0B);
+        return const Color.fromARGB(255, 80, 177, 16);
+      case AttendanceStatus.absent:
+        return const Color.fromARGB(255, 202, 11, 11);
       default:
         return Colors.transparent;
     }

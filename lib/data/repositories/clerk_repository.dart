@@ -479,6 +479,48 @@ class ClerkRepository {
       return {'success': false, 'error': e.toString()};
     }
   }
+
+  Future<Map<String, dynamic>> updateAttendance(
+    String attendanceId,
+    String attendanceStudent,
+  ) async {
+    try {
+      AppLogger.info('🔵 [ClerkRepository] Updating attendance...');
+
+      // Reuse the teacher endpoint for now as per plan, or a generic one if available.
+      // Assuming backend supports this endpoint for Clerks/Admins too or valid RBAC.
+      const url = '/teacher/attendance';
+      final body = {
+        'attendance_id': attendanceId,
+        'attendance_student': attendanceStudent,
+      };
+
+      final response = await _dio.patch(url, data: body);
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'message':
+              response.data['message'] ?? 'Attendance updated successfully',
+          'data': response.data,
+        };
+      } else {
+        return {
+          'success': false,
+          'message': response.data['message'] ?? 'Failed to update attendance',
+        };
+      }
+    } on DioException catch (e) {
+      AppLogger.error('❌ Error updating attendance: ${e.message}');
+      if (e.response != null && e.response?.data != null) {
+        return e.response?.data;
+      }
+      return {
+        'success': false,
+        'message': e.message ?? 'An unexpected error occurred',
+      };
+    }
+  }
 }
 
 // Provider for ClerkRepository

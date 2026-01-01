@@ -15,15 +15,15 @@ class TeacherRepository {
 
   Future<Map<String, dynamic>> fetchProfile() async {
     try {
-      AppLogger.info('🔵 [StudentRepository] Fetching student profile');
+      AppLogger.info('🔵 [TeacherRepository] Fetching teacher profile');
 
       final response = await _dio.get('/teacher/me');
       final responseBody = response.data;
 
-      AppLogger.info("The response in repo is $responseBody");
+      // AppLogger.info("The response in repo is $responseBody");
 
       if (response.statusCode == 200) {
-        AppLogger.info('🟢 [StudentRepository] Profile fetched successfully');
+        AppLogger.info('🟢 [TeacherRepository] Profile fetched successfully');
         return {'success': true, 'data': responseBody['data']};
       } else {
         return {
@@ -32,7 +32,7 @@ class TeacherRepository {
         };
       }
     } on DioException catch (e) {
-      AppLogger.error('🔴 [StudentRepository] DioException: ${e.message}');
+      AppLogger.error('🔴 [TeacherRepository] DioException: ${e.message}');
 
       // Handle specific error cases
       if (e.response?.statusCode == 401) {
@@ -47,19 +47,19 @@ class TeacherRepository {
           'Failed to fetch profile';
       return {'success': false, 'error': errorMessage};
     } catch (e) {
-      AppLogger.error('🔴 [StudentRepository] Exception: $e');
+      AppLogger.error('🔴 [TeacherRepository] Exception: $e');
       return {'success': false, 'error': e.toString()};
     }
   }
 
   Future<Map<String, dynamic>> fetchTimeTable() async {
     try {
-      AppLogger.info('🔵 [TeacherRepository] Fetching student timetable');
+      AppLogger.info('🔵 [TeacherRepository] Fetching teacher timetable');
 
       final response = await _dio.get('/timetable/teacher-based');
       final responseBody = response.data;
 
-      AppLogger.info("📦 [TeacherRepository] Response: $responseBody");
+      // AppLogger.info("📦 [TeacherRepository] Response: $responseBody");
 
       if (response.statusCode == 200) {
         AppLogger.info('🟢 [TeacherRepository] Timetable fetched successfully');
@@ -591,6 +591,47 @@ class TeacherRepository {
         return e.response?.data;
       }
       rethrow;
+    }
+  }
+
+  /// Updates attendance for a session
+  Future<Map<String, dynamic>> updateAttendance(
+    String attendanceId,
+    String attendanceStudent,
+  ) async {
+    try {
+      AppLogger.info('🔵 [TeacherRepository] Updating attendance...');
+
+      const url = '/teacher/attendance';
+      final body = {
+        'attendance_id': attendanceId,
+        'attendance_student': attendanceStudent,
+      };
+
+      final response = await _dio.patch(url, data: body);
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'message':
+              response.data['message'] ?? 'Attendance updated successfully',
+          'data': response.data,
+        };
+      } else {
+        return {
+          'success': false,
+          'message': response.data['message'] ?? 'Failed to update attendance',
+        };
+      }
+    } on DioException catch (e) {
+      AppLogger.error('❌ Error updating attendance: ${e.message}');
+      if (e.response != null && e.response?.data != null) {
+        return e.response?.data;
+      }
+      return {
+        'success': false,
+        'message': e.message ?? 'An unexpected error occurred',
+      };
     }
   }
 }

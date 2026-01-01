@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:markmeapp/state/auth_state.dart';
 import 'package:markmeapp/data/repositories/auth_repository.dart';
 import 'package:markmeapp/presentation/widgets/ui/input_field.dart';
 import 'package:markmeapp/presentation/widgets/ui/snackbar.dart';
@@ -63,11 +64,17 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
     setState(() => _isLoading = true);
 
     try {
+      final authStoreNotifier = ref.read(authStoreProvider.notifier);
+      final authState = ref.read(authStoreProvider);
       final authRepo = ref.read(authRepositoryProvider);
+
+      // Get role safely
+      final role = authState.role?.toLowerCase() ?? 'student';
 
       final result = await authRepo.changePassword(
         _currentPasswordController.text,
         _newPasswordController.text,
+        role,
       );
 
       AppLogger.info(result.toString());
@@ -80,7 +87,11 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
           result['message'] ?? 'Password changed successfully!',
         );
         await Future.delayed(const Duration(milliseconds: 600));
-        if (mounted) context.go('/student/profile');
+
+        if (mounted) {
+          final baseRoute = authStoreNotifier.getRouteForRole(role);
+          context.go('$baseRoute/profile');
+        }
       } else {
         showErrorSnackBar(
           context,
@@ -100,7 +111,10 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
   }
 
   void _handleBackPress() {
-    context.go("/student/profile");
+    final authStore = ref.read(authStoreProvider.notifier);
+    final role = ref.read(authStoreProvider).role?.toLowerCase() ?? 'student';
+    final baseRoute = authStore.getRouteForRole(role);
+    context.go("$baseRoute/profile");
   }
 
   @override

@@ -124,7 +124,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       if (!mounted) return;
 
       // ✅ Await here
-      final result = await authStore.loginUser(user, _selectedRole, context);
+      final result = await authStore.loginUser(user, _selectedRole);
 
       AppLogger.info('🟢 [LoginPage] The response from state is = $result');
 

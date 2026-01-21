@@ -113,7 +113,6 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
           widget.email,
           widget.role.toLowerCase(),
           _enteredOtp,
-          context,
         );
 
         if (response['success'] == true) {
@@ -165,7 +164,6 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
           widget.email,
           widget.role.toLowerCase(),
           _newPassword,
-          context,
         );
         if (response['success'] == true) {
           _showSnackBar(response['message'] ?? 'Password reset successfully');
@@ -262,15 +260,15 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
 
     // Call the forgot password API again to resend OTP
     final authNotifier = ref.read(authStoreProvider.notifier);
-    authNotifier
-        .forgotPassword(widget.email, widget.role.toLowerCase(), context)
-        .then((response) {
-          if (response['success'] == true) {
-            _showSnackBar('OTP resent successfully');
-          } else {
-            _showSnackBar('Failed to resend OTP', isError: true);
-          }
-        });
+    authNotifier.forgotPassword(widget.email, widget.role.toLowerCase()).then((
+      response,
+    ) {
+      if (response['success'] == true) {
+        _showSnackBar('OTP resent successfully');
+      } else {
+        _showSnackBar('Failed to resend OTP', isError: true);
+      }
+    });
   }
 
   @override

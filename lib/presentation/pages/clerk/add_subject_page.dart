@@ -104,7 +104,9 @@ class _AddSubjectPageState extends ConsumerState<AddSubjectPage> {
         _resetForm();
 
         // Clear focus
-        FocusScope.of(context).requestFocus(FocusNode());
+        if (mounted) {
+          FocusScope.of(context).requestFocus(FocusNode());
+        }
       } else {
         showErrorSnackBar(
           context,

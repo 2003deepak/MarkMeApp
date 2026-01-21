@@ -66,7 +66,7 @@ class AttendanceHistoryRecord {
       presentCount: json['present_count'],
       absentCount: json['absent_count'],
       attendancePercentage: (json['attendance_percentage'] as num?)?.toDouble(),
-      componentType: json['component_type'],
+      componentType: json['component_type'] ?? json['component'],
     );
   }
 

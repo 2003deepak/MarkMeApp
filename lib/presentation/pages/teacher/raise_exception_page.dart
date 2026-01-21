@@ -50,7 +50,7 @@ class _RaiseExceptionPageState extends ConsumerState<RaiseExceptionPage> {
     super.initState();
 
     // Only pre-fill date if coming from a specific session
-    if (widget.sessionData != null) {
+    if (widget.sessionData != null && widget.sessionData!.isNotEmpty) {
       _selectedSessionId = widget.sessionData!['session_id'];
       final sessionDate = widget.sessionData!['date'];
       if (sessionDate != null && sessionDate.isNotEmpty) {
@@ -61,6 +61,8 @@ class _RaiseExceptionPageState extends ConsumerState<RaiseExceptionPage> {
           ).format(_selectedDate!);
         }
       }
+      // Populate available sessions with the single session for display
+      _availableSessions = [widget.sessionData!];
     }
 
     _initializeData();
@@ -72,7 +74,7 @@ class _RaiseExceptionPageState extends ConsumerState<RaiseExceptionPage> {
     }
 
     try {
-      if (widget.sessionData == null) {
+      if (widget.sessionData == null || widget.sessionData!.isEmpty) {
         await Future.wait([_fetchTimetable(), _fetchClasses()]);
       }
     } catch (e) {
@@ -185,7 +187,7 @@ class _RaiseExceptionPageState extends ConsumerState<RaiseExceptionPage> {
         _selectedSessionId = null;
       });
 
-      if (widget.sessionData == null) {
+      if (widget.sessionData == null || widget.sessionData!.isEmpty) {
         _updateAvailableSessions();
       }
     }
@@ -282,7 +284,7 @@ class _RaiseExceptionPageState extends ConsumerState<RaiseExceptionPage> {
       if (mounted) {
         if (result['success'] == true) {
           _showSuccess(result['message']);
-          context.pop(true);
+          context.push('/teacher');
         } else if (result['code'] == 'OVERLAP_FOUND') {
           setState(() {
             _overlapData = result['data'];
@@ -404,52 +406,57 @@ class _RaiseExceptionPageState extends ConsumerState<RaiseExceptionPage> {
         border: Border.all(color: Colors.grey.shade200),
       ),
       child: Row(
-        children: ['Cancel', 'Add Extra', 'Reschedule'].map((action) {
-          final mapValues = {
-            'Cancel': 'Cancel',
-            'Add Extra': 'Add',
-            'Reschedule': 'Reschedule',
-          };
-          final apiValue = mapValues[action]!;
+        children:
+            (widget.sessionData != null && widget.sessionData!.isNotEmpty
+                    ? ['Cancel', 'Reschedule']
+                    : ['Cancel', 'Add Extra', 'Reschedule'])
+                .map((action) {
+                  final mapValues = {
+                    'Cancel': 'Cancel',
+                    'Add Extra': 'Add',
+                    'Reschedule': 'Reschedule',
+                  };
+                  final apiValue = mapValues[action]!;
 
-          return Expanded(
-            child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  _selectedAction = apiValue;
-                  _overlapData = null;
-                  _errorMessage = null;
-                  if (_selectedAction == 'Cancel') {
-                    _selectedStartTime = null;
-                    _selectedEndTime = null;
-                    _startTimeController.clear();
-                    _endTimeController.clear();
-                  }
-                });
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color: _selectedAction == apiValue
-                      ? const Color(0xFF2563EB)
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  action,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: _selectedAction == apiValue
-                        ? Colors.white
-                        : Colors.grey.shade600,
-                  ),
-                ),
-              ),
-            ),
-          );
-        }).toList(),
+                  return Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _selectedAction = apiValue;
+                          _overlapData = null;
+                          _errorMessage = null;
+                          if (_selectedAction == 'Cancel') {
+                            _selectedStartTime = null;
+                            _selectedEndTime = null;
+                            _startTimeController.clear();
+                            _endTimeController.clear();
+                          }
+                        });
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(
+                          color: _selectedAction == apiValue
+                              ? const Color(0xFF2563EB)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          action,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: _selectedAction == apiValue
+                                ? Colors.white
+                                : Colors.grey.shade600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                })
+                .toList(),
       ),
     );
   }
@@ -457,8 +464,6 @@ class _RaiseExceptionPageState extends ConsumerState<RaiseExceptionPage> {
   Widget _buildForm() {
     final requiresTime = _selectedAction != 'Cancel';
     final isAddMode = _selectedAction == 'Add';
-    final isStandalone = widget.sessionData == null;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -466,11 +471,9 @@ class _RaiseExceptionPageState extends ConsumerState<RaiseExceptionPage> {
         _buildDatePicker(),
         const SizedBox(height: 20),
 
-        // 2. Session/Class Selector (Standalone only)
-        if (isStandalone) ...[
-          if (isAddMode) _buildClassSelector() else _buildSessionSelector(),
-          const SizedBox(height: 20),
-        ],
+        // 2. Session/Class Selector
+        isAddMode ? _buildClassSelector() : _buildSessionSelector(),
+        const SizedBox(height: 20),
 
         // 3. Time Fields
         if (requiresTime) ...[_buildTimePickers(), const SizedBox(height: 20)],
@@ -573,8 +576,8 @@ class _RaiseExceptionPageState extends ConsumerState<RaiseExceptionPage> {
       );
       if (session.isEmpty) return id;
       final subject = session['subject_name'] ?? 'Unknown Subject';
-      final time = '${session['start_time']} - ${session['end_time']}';
-      return '$subject ($time)';
+      final component = session["component"] ?? "";
+      return '$subject ($component)';
     }
 
     return Column(
@@ -587,6 +590,7 @@ class _RaiseExceptionPageState extends ConsumerState<RaiseExceptionPage> {
               .map<String>((s) => s['session_id'].toString())
               .toList(),
           value: _selectedSessionId,
+          enabled: widget.sessionData == null || widget.sessionData!.isEmpty,
           onChanged: (val) {
             setState(() {
               _selectedSessionId = val;
@@ -611,12 +615,11 @@ class _RaiseExceptionPageState extends ConsumerState<RaiseExceptionPage> {
     final List<Map<String, dynamic>> flatSubjects = [];
     for (var cls in _availableClasses) {
       final subjects = cls['subjects'] as List<dynamic>? ?? [];
-      final className = cls['class_name'] ?? '';
+
       for (var sub in subjects) {
         flatSubjects.add({
           'id': sub['subject_id'].toString(),
-          'display':
-              '${sub['subject_name']} (${sub['component']}) - $className',
+          'display': '${sub['subject_name']} (${sub['component']}) ',
         });
       }
     }

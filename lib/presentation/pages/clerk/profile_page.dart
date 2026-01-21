@@ -29,16 +29,43 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   int? _semester;
 
   Future<void> _handleLogout() async {
-    await ref.read(authStoreProvider.notifier).setLogOut();
-    if (mounted) {
-      context.go('/login');
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to log out?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red,
+            ),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldLogout == true && mounted) {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      await ref.read(authStoreProvider.notifier).setLogOut();
     }
   }
 
   void _onUpdatePassword() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Navigate to Update Password')),
-    );
+    context.push('/change-password');
   }
 
   void _openEditProfile() {
@@ -327,12 +354,18 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       icon: Icons.bar_chart_rounded,
                       label: 'Attendance Summary',
                       subtitle: 'View your attendance statistics',
-                      onTap: () => context.push('/clerk/attendance-history'),
+                      onTap: () => context.push('/attendance-history'),
                     ),
                     Container(
                       height: 1,
                       margin: const EdgeInsets.symmetric(horizontal: 16),
                       color: const Color(0xFFF1F5F9),
+                    ),
+                    _infoTile(
+                      icon: Icons.warning_amber_rounded,
+                      label: 'Defaulters List',
+                      subtitle: 'View students with low attendance',
+                      onTap: () => context.push('/clerk/defaulters'),
                     ),
                   ],
                 ),

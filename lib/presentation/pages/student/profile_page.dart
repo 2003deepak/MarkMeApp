@@ -27,9 +27,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   final _roll3Ctrl = TextEditingController();
   final _batchYearCtrl = TextEditingController();
 
-  String? _program;
-  int? _semester;
-
   @override
   void initState() {
     super.initState();
@@ -47,14 +44,45 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   }
 
   Future<void> _handleLogout() async {
-    await ref.read(authStoreProvider.notifier).setLogOut();
-    if (mounted) {
-      context.go('/login');
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to log out?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red,
+            ),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldLogout == true && mounted) {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+      
+      // Perform logout
+      await ref.read(authStoreProvider.notifier).setLogOut();
+      // AppRouter will handle the redirection automatically
     }
   }
 
   void _onUpdatePassword() {
-    context.push('/student/change-password');
+    context.push('/change-password');
   }
 
   void _openEditProfile() {

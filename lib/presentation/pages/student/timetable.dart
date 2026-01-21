@@ -24,7 +24,7 @@ class _TimeTableState extends ConsumerState<TimeTablePage>
   // Timeline configuration
   static const double pixelsPerHour = 100.0;
   static const int startHour = 8; // 8 AM
-  static const int totalHours = 10; // 8 AM to 6 PM (inclusive)
+  static const int totalHours = 15; // 8 AM to 6 PM (inclusive)
   static const double eventSpacing = 8.0; // Gap between events
 
   // Color scheme for different components
@@ -585,74 +585,157 @@ class _TimeTableState extends ConsumerState<TimeTablePage>
     final borderColor =
         componentBorderColors[event.component] ?? const Color(0xFF1E3A8A);
 
+    // Prepare tooltip message
+    final tooltipMessage =
+        '${event.title}\n${event.instructor}\n${event.startTime} - ${event.endTime}';
+
     return Positioned(
       top: top,
       left: 0,
       right: 0,
-      child: Container(
-        height: height,
-        margin: const EdgeInsets.only(bottom: 8.0), // Additional bottom margin
-        decoration: BoxDecoration(
-          color: componentColor,
-          borderRadius: BorderRadius.circular(8),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
+      child: Tooltip(
+        message: tooltipMessage,
         padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            Container(
-              width: 4,
-              height: height - 24, // account for padding
-              decoration: BoxDecoration(
-                color: borderColor,
-                borderRadius: BorderRadius.circular(2),
+        margin: const EdgeInsets.all(16),
+        showDuration: const Duration(seconds: 3),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.9),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        textStyle: const TextStyle(color: Colors.white, fontSize: 13),
+        triggerMode: TooltipTriggerMode.tap,
+        child: Container(
+          height: height,
+          margin: const EdgeInsets.only(bottom: 8.0),
+          decoration: BoxDecoration(
+            color: componentColor,
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
               ),
-              margin: const EdgeInsets.only(right: 12),
-            ),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    event.title,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Text(
-                        event.instructor,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF999999),
+            ],
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          child: Row(
+            children: [
+              Container(
+                width: 4,
+                // Adjust decoration height based on container height
+                height: height > 16 ? height - 12 : height - 4,
+                decoration: BoxDecoration(
+                  color: borderColor,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+                margin: const EdgeInsets.only(right: 12),
+              ),
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    // Adaptive rendering based on available height
+                    // Heuristic:
+                    // < 50px: Title only
+                    // 50px - 80px: Title + Time
+                    // > 80px: Full details
+
+                    if (height >= 80) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            event.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  event.instructor,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFF999999),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${event.startTime} - ${event.endTime}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF999999),
+                            ),
+                          ),
+                        ],
+                      );
+                    } else if (height >= 50) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            event.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${event.startTime} - ${event.endTime}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF999999),
+                            ),
+                          ),
+                        ],
+                      );
+                    } else {
+                      // Minimal view for small slots
+                      return Center(
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                event.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${event.startTime} - ${event.endTime}',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: Color(0xFF999999),
-                    ),
-                  ),
-                ],
+                      );
+                    }
+                  },
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

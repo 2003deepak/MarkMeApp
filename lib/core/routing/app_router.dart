@@ -8,8 +8,12 @@ import 'package:markmeapp/presentation/layout/guest_layout.dart';
 import 'package:markmeapp/presentation/layout/role_based_layout.dart';
 import 'package:markmeapp/presentation/layout/protected_layout.dart';
 import 'package:markmeapp/presentation/pages/clerk/add_time_table_page.dart';
+import 'package:markmeapp/presentation/pages/clerk/attendance_detail_page.dart';
 import 'package:markmeapp/presentation/pages/clerk/student_list_page.dart';
 import 'package:markmeapp/presentation/pages/clerk/teacher_list_page.dart';
+import 'package:markmeapp/presentation/pages/clerk/teacher_overview_page.dart';
+import 'package:markmeapp/presentation/pages/clerk/subject_analytics_detail_page.dart';
+import 'package:markmeapp/presentation/pages/clerk/teacher_menu_page.dart';
 
 // Auth Pages
 import 'package:markmeapp/presentation/pages/splash/splash_page.dart';
@@ -34,6 +38,9 @@ import 'package:markmeapp/presentation/pages/clerk/profile_page.dart'
     as clerk_profile;
 import 'package:markmeapp/presentation/pages/clerk/add_subject_page.dart';
 import 'package:markmeapp/presentation/pages/clerk/add_teacher_page.dart';
+import 'package:markmeapp/presentation/pages/clerk/add_student_page.dart';
+import 'package:markmeapp/presentation/pages/clerk/defaulters_page.dart';
+import 'package:markmeapp/presentation/pages/clerk/defaulters_page.dart';
 import 'package:markmeapp/presentation/pages/student/weekly_bunk_safety_page.dart';
 import 'package:markmeapp/presentation/pages/teacher/attendance_camera_page.dart';
 import 'package:markmeapp/presentation/pages/teacher/attendance_marking_page.dart';
@@ -53,6 +60,14 @@ import 'package:markmeapp/presentation/pages/teacher/timetable.dart'
 // State
 import 'package:markmeapp/state/auth_state.dart';
 
+class RouterRefreshNotifier extends ChangeNotifier {
+  RouterRefreshNotifier(Ref ref) {
+    ref.listen<AuthState>(authStoreProvider, (_, __) {
+      notifyListeners();
+    });
+  }
+}
+
 /// =============================================================
 /// 🚀 APP ROUTER
 /// =============================================================
@@ -61,8 +76,11 @@ class AppRouter {
       GlobalKey<NavigatorState>();
 
   static final routerProvider = Provider<GoRouter>((ref) {
+    final refreshNotifier = RouterRefreshNotifier(ref);
+
     return GoRouter(
       navigatorKey: navigatorKey,
+      refreshListenable: refreshNotifier,
       debugLogDiagnostics: true,
       initialLocation: '/',
 
@@ -173,9 +191,10 @@ class AppRouter {
             ),
             GoRoute(
               path: '/student/attendance-history',
-              name: 'attendance-history',
+              name: 'student_attendance_history',
               builder: (context, state) => const AttendanceHistoryPage(),
             ),
+
             GoRoute(
               path: '/student/profile',
               name: 'student_profile',
@@ -203,7 +222,7 @@ class AppRouter {
             ),
             GoRoute(
               path: '/teacher/attendance-history',
-              name: 'teacher-attendance-history',
+              name: 'teacher_attendance_history',
               builder: (context, state) => const AttendanceHistoryPage(),
             ),
 
@@ -256,13 +275,13 @@ class AppRouter {
               builder: (context, state) => const EditProfilePage(),
             ),
             GoRoute(
-              path: '/student/change-password',
+              path: '/change-password',
               name: 'change_password',
               builder: (context, state) => const ChangePasswordPage(),
             ),
             GoRoute(
-              path: '/student/notifications',
-              name: 'student_notifications',
+              path: '/notifications',
+              name: 'notifications',
               builder: (context, state) => const NotificationPage(),
             ),
             GoRoute(
@@ -276,6 +295,11 @@ class AppRouter {
               builder: (context, state) => const AddTeacherPage(),
             ),
             GoRoute(
+              path: '/clerk/new-student',
+              name: 'add_student',
+              builder: (context, state) => const AddStudentPage(),
+            ),
+            GoRoute(
               path: '/clerk/add-subject',
               name: 'add_subject',
               builder: (context, state) => const AddSubjectPage(),
@@ -286,9 +310,17 @@ class AppRouter {
               builder: (context, state) => const AddTimeTablePage(),
             ),
             GoRoute(
-              path: '/clerk/attendance-history',
-              name: 'clerk-attendance-history',
-              builder: (context, state) => const AttendanceHistoryPage(),
+              path: '/clerk/defaulters',
+              name: 'clerk_defaulters',
+              builder: (context, state) => const DefaultersPage(),
+            ),
+            GoRoute(
+              path: '/:role/attendance-detail/:id',
+              name: 'attendance-detail',
+              builder: (context, state) {
+                final attendanceId = state.pathParameters['id']!;
+                return AttendanceDetailPage(attendanceId: attendanceId);
+              },
             ),
             GoRoute(
               path: '/teacher/push-notification',
@@ -329,7 +361,13 @@ class AppRouter {
             GoRoute(
               path: '/teacher/new-exception-request',
               name: 'new_exception_request',
-              builder: (context, state) => const RaiseExceptionPage(),
+              builder: (context, state) {
+                final extra = state.extra as Map<String, dynamic>? ?? {};
+                final sessionData =
+                    extra['session_data'] as Map<String, dynamic>? ?? {};
+
+                return RaiseExceptionPage(sessionData: sessionData);
+              },
             ),
 
             GoRoute(
@@ -346,6 +384,51 @@ class AppRouter {
                   attendanceId: attendanceId,
                   sessionData: sessionData,
                   images: images,
+                );
+              },
+            ),
+
+            // Clerk Analytics Routes
+
+            // 1. Menu Page (Landing)
+            GoRoute(
+              path: '/clerk/teacher/:teacherId',
+              name: 'clerk_teacher_menu',
+              builder: (context, state) {
+                final teacherId = state.pathParameters['teacherId']!;
+                final teacherName = state.extra as String? ?? 'Teacher Actions';
+                return TeacherMenuPage(
+                  teacherId: teacherId,
+                  teacherName: teacherName,
+                );
+              },
+            ),
+
+            // 2. Performance Overview (Analysis)
+            GoRoute(
+              path: '/clerk/teacher/:teacherId/performance',
+              name: 'clerk_teacher_performance',
+              builder: (context, state) {
+                final teacherId = state.pathParameters['teacherId']!;
+                final teacherName =
+                    state.extra as String? ?? 'Performance Analysis';
+                return TeacherOverviewPage(
+                  teacherId: teacherId,
+                  teacherName: teacherName,
+                );
+              },
+            ),
+
+            // 3. Subject Detail
+            GoRoute(
+              path: '/clerk/teacher/:teacherId/subject/:subjectId',
+              name: 'clerk_subject_analytics',
+              builder: (context, state) {
+                final teacherId = state.pathParameters['teacherId']!;
+                final subjectId = state.pathParameters['subjectId']!;
+                return SubjectAnalyticsDetailPage(
+                  teacherId: teacherId,
+                  subjectId: subjectId,
                 );
               },
             ),

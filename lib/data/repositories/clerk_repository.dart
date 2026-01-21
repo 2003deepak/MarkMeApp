@@ -326,6 +326,34 @@ class ClerkRepository {
     }
   }
 
+  Future<Map<String, dynamic>> fetchAttendanceDetail(
+    String attendanceId,
+  ) async {
+    try {
+      final response = await _dio.get('/attendance/$attendanceId');
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'data': response.data,
+          'message': response.data['message'],
+        };
+      } else {
+        return {
+          'success': false,
+          'error': response.data['message'] ?? 'Failed to fetch details',
+        };
+      }
+    } on DioException catch (e) {
+      return {
+        'success': false, // Ensure success is boolean false
+        'error': e.response?.data?['message'] ?? e.message ?? 'Network error',
+      };
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
   Future<Map<String, dynamic>> createTimeTable(
     Map<String, dynamic> data,
   ) async {
@@ -364,6 +392,178 @@ class ClerkRepository {
       };
     } catch (e) {
       AppLogger.error("Other error: $e");
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  // --- Analytics Methods ---
+
+  Future<Map<String, dynamic>> fetchTeacherSubjectPerformance(
+    String teacherId,
+  ) async {
+    try {
+      final response = await _dio.get(
+        '/clerk/teacher/$teacherId/subject-performance',
+      );
+
+      if (response.statusCode == 200) {
+        return response.data;
+      } else {
+        return {
+          'success': false,
+          'error':
+              response.data['message'] ?? 'Failed to fetch performance data',
+        };
+      }
+    } on DioException catch (e) {
+      return {
+        'success': false,
+        'error': e.response?.data?['message'] ?? e.message ?? 'Network error',
+      };
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> fetchSubjectPerformanceDetail(
+    String teacherId,
+    String subjectId,
+  ) async {
+    try {
+      final response = await _dio.get(
+        '/clerk/teacher/$teacherId/subjects/$subjectId/performance',
+      );
+
+      if (response.statusCode == 200) {
+        return response.data;
+      } else {
+        return {
+          'success': false,
+          'error':
+              response.data['message'] ?? 'Failed to fetch subject details',
+        };
+      }
+    } on DioException catch (e) {
+      return {
+        'success': false,
+        'error': e.response?.data?['message'] ?? e.message ?? 'Network error',
+      };
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> fetchSubjectInsights(
+    String teacherId,
+    String subjectId,
+  ) async {
+    try {
+      final response = await _dio.get(
+        '/clerk/teacher/$teacherId/subjects/$subjectId/insights',
+      );
+
+      if (response.statusCode == 200) {
+        return response.data;
+      } else {
+        return {
+          'success': false,
+          'error': response.data['message'] ?? 'Failed to fetch insights',
+        };
+      }
+    } on DioException catch (e) {
+      return {
+        'success': false,
+        'error': e.response?.data?['message'] ?? e.message ?? 'Network error',
+      };
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> updateAttendance(
+    String attendanceId,
+    String attendanceStudent,
+  ) async {
+    try {
+      AppLogger.info('🔵 [ClerkRepository] Updating attendance...');
+
+      // Reuse the teacher endpoint for now as per plan, or a generic one if available.
+      // Assuming backend supports this endpoint for Clerks/Admins too or valid RBAC.
+      const url = '/teacher/attendance';
+      final body = {
+        'attendance_id': attendanceId,
+        'attendance_student': attendanceStudent,
+      };
+
+      final response = await _dio.patch(url, data: body);
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'message':
+              response.data['message'] ?? 'Attendance updated successfully',
+          'data': response.data,
+        };
+      } else {
+        return {
+          'success': false,
+          'message': response.data['message'] ?? 'Failed to update attendance',
+        };
+      }
+    } on DioException catch (e) {
+      AppLogger.error('❌ Error updating attendance: ${e.message}');
+      if (e.response != null && e.response?.data != null) {
+        return e.response?.data;
+      }
+      return {
+        'success': false,
+        'message': e.message ?? 'An unexpected error occurred',
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> getDefaulters({
+    String? search,
+    String? subjectId,
+    int page = 1,
+    int limit = 10,
+    String? program,
+    int? semester,
+    int? threshold,
+  }) async {
+    try {
+      final Map<String, dynamic> params = {};
+
+      if (search != null && search.trim().isNotEmpty) params['search'] = search;
+      if (subjectId != null) params['subject_id'] = subjectId;
+      if (program != null) params['program'] = program;
+      if (semester != null) params['semester'] = semester;
+      if (threshold != null) params['threshold'] = threshold;
+
+      params['page'] = page;
+      params['limit'] = limit;
+
+      AppLogger.info('🔍 [ClerkRepository] Fetching defaulters: $params');
+
+      final response = await _dio.get(
+        '/clerk/defaulters',
+        queryParameters: params,
+      );
+
+      if (response.statusCode == 200) {
+        return response.data; // Raw JSON matching DefaultResponse structure
+      } else {
+        return {
+          'success': false,
+          'error': response.data['message'] ?? 'Failed to fetch defaulters',
+        };
+      }
+    } on DioException catch (e) {
+      return {
+        'success': false,
+        'error': e.response?.data?['message'] ?? e.message ?? 'Network error',
+      };
+    } catch (e) {
       return {'success': false, 'error': e.toString()};
     }
   }

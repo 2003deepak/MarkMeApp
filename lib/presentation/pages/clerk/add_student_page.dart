@@ -1,44 +1,41 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:markmeapp/state/auth_state.dart';
+import 'package:markmeapp/data/models/user_model.dart';
 import 'package:markmeapp/data/repositories/auth_repository.dart';
 import 'package:markmeapp/presentation/widgets/ui/input_field.dart';
+import 'package:markmeapp/presentation/widgets/ui/otp_field.dart';
 import 'package:markmeapp/presentation/widgets/ui/snackbar.dart';
-import 'package:markmeapp/core/utils/app_logger.dart';
 import 'package:markmeapp/presentation/widgets/ui/app_bar.dart';
 
-class ChangePasswordPage extends ConsumerStatefulWidget {
-  const ChangePasswordPage({super.key});
+class AddStudentPage extends ConsumerStatefulWidget {
+  const AddStudentPage({super.key});
 
   @override
-  ConsumerState<ChangePasswordPage> createState() => _ChangePasswordPageState();
+  ConsumerState<AddStudentPage> createState() => _AddStudentPageState();
 }
 
-class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
+class _AddStudentPageState extends ConsumerState<AddStudentPage> {
   final _formKey = GlobalKey<FormState>();
-
-  final _currentPasswordController = TextEditingController();
-  final _newPasswordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
-
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
+  final _emailController = TextEditingController();
   bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
     // Add listeners to update button state
-    _currentPasswordController.addListener(_updateFormState);
-    _newPasswordController.addListener(_updateFormState);
-    _confirmPasswordController.addListener(_updateFormState);
+    _firstNameController.addListener(_updateFormState);
+    _lastNameController.addListener(_updateFormState);
+    _emailController.addListener(_updateFormState);
   }
 
   @override
   void dispose() {
-    _currentPasswordController.dispose();
-    _newPasswordController.dispose();
-    _confirmPasswordController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _emailController.dispose();
     super.dispose();
   }
 
@@ -49,72 +46,65 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
   }
 
   bool get _isFormValid {
-    return _currentPasswordController.text.length == 6 &&
-        _newPasswordController.text.length == 6 &&
-        _confirmPasswordController.text.length == 6 &&
-        _newPasswordController.text == _confirmPasswordController.text;
+    final isEmailValid = RegExp(
+      r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+    ).hasMatch(_emailController.text.trim());
+
+    return _firstNameController.text.trim().isNotEmpty &&
+        _lastNameController.text.trim().isNotEmpty &&
+        _emailController.text.trim().isNotEmpty &&
+        isEmailValid ;
   }
 
-  Future<void> _changePassword() async {
-    if (!_formKey.currentState!.validate() || !_isFormValid) return;
+  void _resetForm() {
+    _formKey.currentState?.reset();
+    _firstNameController.clear();
+    _lastNameController.clear();
+    _emailController.clear();
+  }
 
-    // Unfocus keyboard
-    FocusScope.of(context).unfocus();
+  Future<void> _registerStudent() async {
+    if (_formKey.currentState!.validate() && _isFormValid) {
+      setState(() {
+        _isLoading = true;
+      });
 
-    setState(() => _isLoading = true);
+      try {
+        final authRepo = ref.read(authRepositoryProvider);
 
-    try {
-      final authStoreNotifier = ref.read(authStoreProvider.notifier);
-      final authState = ref.read(authStoreProvider);
-      final authRepo = ref.read(authRepositoryProvider);
-
-      // Get role safely
-      final role = authState.role?.toLowerCase() ?? 'student';
-
-      final result = await authRepo.changePassword(
-        _currentPasswordController.text,
-        _newPasswordController.text,
-        role,
-      );
-
-      AppLogger.info(result.toString());
-
-      if (!mounted) return;
-
-      if (result['success'] == true) {
-        showSuccessSnackBar(
-          context,
-          result['message'] ?? 'Password changed successfully!',
+        final user = User(
+          firstName: _firstNameController.text.trim(),
+          lastName: _lastNameController.text.trim(),
+          email: _emailController.text.trim()
         );
-        await Future.delayed(const Duration(milliseconds: 600));
 
-        if (mounted) {
-          final baseRoute = authStoreNotifier.getRouteForRole(role);
-          context.go('$baseRoute/profile');
+        final result = await authRepo.registerUser(user);
+
+        if (!mounted) return;
+
+        if (result['success'] == true) {
+          showSuccessSnackBar(context, 'Student registered successfully!');
+          await Future.delayed(const Duration(milliseconds: 500));
+          _resetForm();
+          FocusScope.of(context).requestFocus(FocusNode());
+        } else {
+          showErrorSnackBar(
+            context,
+            result['message'] ?? 'Failed to register student',
+          );
         }
-      } else {
-        showErrorSnackBar(
-          context,
-          result['error'] ?? 'Failed to change password',
-        );
+      } catch (e) {
+        if (mounted) {
+          showErrorSnackBar(context, 'An error occurred: $e');
+        }
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
       }
-    } catch (error) {
-      if (mounted) {
-        showErrorSnackBar(
-          context,
-          'Failed to change password: ${error.toString()}',
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
     }
-  }
-
-  void _handleBackPress() {
-    final authStore = ref.read(authStoreProvider.notifier);
-    final role = ref.read(authStoreProvider).role?.toLowerCase() ?? 'student';
-    final baseRoute = authStore.getRouteForRole(role);
-    context.go("$baseRoute/profile");
   }
 
   @override
@@ -122,8 +112,8 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: MarkMeAppBar(
-        title: 'Change Password',
-        onBackPressed: _isLoading ? null : _handleBackPress,
+        title: 'Add Student',
+        onBackPressed: _isLoading ? null : () => context.go("/clerk"),
         isLoading: _isLoading,
       ),
       body: SafeArea(
@@ -173,7 +163,7 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
                                   ],
                                 ),
                                 child: const Icon(
-                                  Icons.lock_reset_rounded,
+                                  Icons.person_add_alt_1_rounded,
                                   color: Color(0xFF2563EB),
                                   size: 24,
                                 ),
@@ -183,20 +173,20 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text(
-                                      'Update Password',
+                                    Text(
+                                      'Add New Student',
                                       style: TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.w700,
-                                        color: Color(0xFF0F172A),
+                                        color: const Color(0xFF0F172A),
                                       ),
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      'Secure your account with a new password',
+                                      'Enter student details to register',
                                       style: TextStyle(
                                         fontSize: 14,
-                                        color: Colors.grey.shade600,
+                                        color: const Color(0xFF64748B),
                                       ),
                                     ),
                                   ],
@@ -210,7 +200,7 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
 
                     const SizedBox(height: 32),
 
-                    // Form Container
+                    // Form
                     Container(
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
@@ -229,44 +219,37 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'Password Details',
+                            Text(
+                              'Student Information',
                               style: TextStyle(
                                 fontSize: 17,
                                 fontWeight: FontWeight.w700,
-                                color: Color(0xFF0F172A),
+                                color: const Color(0xFF0F172A),
                                 letterSpacing: -0.3,
                               ),
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Enter your current and new password',
+                              'Personal details and credentials',
                               style: TextStyle(
                                 fontSize: 14,
-                                color: Colors.grey.shade600,
+                                color: const Color(0xFF64748B),
                               ),
                             ),
                             const SizedBox(height: 24),
 
-                            // Current Password
+                            // First Name
                             InputField(
-                              label: "Current Password",
-                              hintText: "Enter 6-digit current password",
-                              controller: _currentPasswordController,
-                              keyboardType: TextInputType.number,
-                              obscureText: true,
-                              maxLength: 6,
-                              showCounter: false,
-                              inputFormatters: [
-                                FilteringTextInputFormatter.digitsOnly,
-                                LengthLimitingTextInputFormatter(6),
-                              ],
+                              label: "First Name",
+                              hintText: "Enter student's first name",
+                              controller: _firstNameController,
+                              keyboardType: TextInputType.text,
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
-                                  return 'Please enter current password';
+                                  return 'Please enter first name';
                                 }
-                                if (value.length != 6) {
-                                  return 'Must be exactly 6 digits';
+                                if (value.length < 2) {
+                                  return 'Must be at least 2 characters';
                                 }
                                 return null;
                               },
@@ -276,25 +259,15 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
 
                             const SizedBox(height: 20),
 
-                            // New Password
+                            // Last Name
                             InputField(
-                              label: "New Password",
-                              hintText: "Enter 6-digit new password",
-                              controller: _newPasswordController,
-                              keyboardType: TextInputType.number,
-                              obscureText: true,
-                              maxLength: 6,
-                              showCounter: false,
-                              inputFormatters: [
-                                FilteringTextInputFormatter.digitsOnly,
-                                LengthLimitingTextInputFormatter(6),
-                              ],
+                              label: "Last Name",
+                              hintText: "Enter student's last name",
+                              controller: _lastNameController,
+                              keyboardType: TextInputType.text,
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
-                                  return 'Please enter new password';
-                                }
-                                if (value.length != 6) {
-                                  return 'Must be exactly 6 digits';
+                                  return 'Please enter last name';
                                 }
                                 return null;
                               },
@@ -304,42 +277,47 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
 
                             const SizedBox(height: 20),
 
-                            // Confirm Password
+                            // Email ID
                             InputField(
-                              label: "Confirm Password",
-                              hintText: "Re-enter new password",
-                              controller: _confirmPasswordController,
-                              keyboardType: TextInputType.number,
-                              obscureText: true,
-                              maxLength: 6,
-                              showCounter: false,
-                              inputFormatters: [
-                                FilteringTextInputFormatter.digitsOnly,
-                                LengthLimitingTextInputFormatter(6),
-                              ],
+                              label: "Email ID",
+                              hintText: "Enter student email",
+                              controller: _emailController,
+                              keyboardType: TextInputType.emailAddress,
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
-                                  return 'Please confirm new password';
+                                  return 'Please enter email ID';
                                 }
-                                if (value != _newPasswordController.text) {
-                                  return 'Passwords do not match';
+                                if (!RegExp(
+                                  r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                                ).hasMatch(value)) {
+                                  return 'Enter a valid email address';
                                 }
                                 return null;
                               },
                               isRequired: true,
-                              textInputAction: TextInputAction.done,
+                              textInputAction: TextInputAction.next,
                             ),
 
-                            const SizedBox(height: 32),
+                            const SizedBox(height: 20),
 
-                            // Submit Button
+                            
+                            // Save Button
                             SizedBox(
                               width: double.infinity,
                               child: ElevatedButton(
-                                onPressed: _isLoading ? null : _changePassword,
+                                onPressed:
+                                    _isFormValid && !_isLoading
+                                        ? _registerStudent
+                                        : null,
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF2563EB),
-                                  foregroundColor: Colors.white,
+                                  backgroundColor:
+                                      _isFormValid && !_isLoading
+                                          ? const Color(0xFF2563EB)
+                                          : const Color(0xFFE2E8F0),
+                                  foregroundColor:
+                                      _isFormValid && !_isLoading
+                                          ? Colors.white
+                                          : const Color(0xFF94A3B8),
                                   padding: const EdgeInsets.symmetric(
                                     vertical: 18,
                                   ),
@@ -352,38 +330,42 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
                                     0xFFF1F5F9,
                                   ),
                                 ),
-                                child: _isLoading
-                                    ? SizedBox(
-                                        height: 24,
-                                        width: 24,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2.5,
-                                          valueColor:
-                                              AlwaysStoppedAnimation<Color>(
-                                                Colors.white.withOpacity(0.9),
-                                              ),
-                                        ),
-                                      )
-                                    : const Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          SizedBox(width: 10),
-                                          Text(
-                                            'Change Password',
-                                            style: TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w600,
-                                            ),
+                                child:
+                                    _isLoading
+                                        ? SizedBox(
+                                          height: 24,
+                                          width: 24,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2.5,
+                                            valueColor:
+                                                AlwaysStoppedAnimation<
+                                                  Color
+                                                >(
+                                                  Colors.white.withOpacity(0.9),
+                                                ),
                                           ),
-                                        ],
-                                      ),
+                                        )
+                                        : const Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            SizedBox(width: 10),
+                                            Text(
+                                              'Register Student',
+                                              style: TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                               ),
                             ),
                           ],
                         ),
                       ),
                     ),
+                    const SizedBox(height: 40),
                   ],
                 ),
               ),

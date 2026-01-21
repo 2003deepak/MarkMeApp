@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:markmeapp/core/utils/app_logger.dart';
+import 'package:markmeapp/data/repositories/clerk_repository.dart';
 import 'package:markmeapp/data/repositories/teacher_repository.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
@@ -56,13 +57,23 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
   TeacherRepository get teacherRepository =>
       ref.read(teacherRepositoryProvider);
 
+  ClerkRepository get clerkRepository => ref.read(clerkRepositoryProvider);
+
   @override
   void initState() {
     super.initState();
     _initializeAnimations();
-    _loadAllStudents();
-    _startFaceRecognition();
+
+    if (_isEditMode) {
+      _loadExistingAttendance();
+    } else {
+      _loadAllStudents();
+      _startFaceRecognition();
+    }
   }
+
+  bool get _isEditMode =>
+      widget.images.isEmpty && widget.attendanceId.isNotEmpty;
 
   @override
   void dispose() {
@@ -125,8 +136,8 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
       }
     });
 
-    AppLogger.info("🎯 Present IDs: $present");
-    AppLogger.info("🎯 Absent IDs:  $absent");
+    // AppLogger.info("🎯 Present IDs: $present");
+    // AppLogger.info("🎯 Absent IDs:  $absent");
   }
 
   // ========== LOAD ALL STUDENTS ==========
@@ -198,6 +209,84 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
     } catch (e) {
       setState(() => _isLoadingStudents = false);
       AppLogger.info('Exception loading students: $e');
+    }
+  }
+
+  // Load existing attendance for edit mode
+  Future<void> _loadExistingAttendance() async {
+    try {
+      AppLogger.info("📌 Fetching existing attendance for edit mode...");
+
+      final result = await clerkRepository.fetchAttendanceDetail(
+        widget.attendanceId,
+      );
+
+      // Handle nested data structure from ClerkRepository if present
+      final data = (result.containsKey('data') && result['data'] is Map)
+          ? result['data']
+          : result;
+
+      if (data['success'] == true || data['attendance'] != null) {
+        final studentsData = data['students'];
+
+        if (studentsData is Map) {
+          final presentList = List<Map<String, dynamic>>.from(
+            studentsData['present'] ?? [],
+          );
+          final absentList = List<Map<String, dynamic>>.from(
+            studentsData['absent'] ?? [],
+          );
+
+          setState(() {
+            _allStudents.clear();
+            _attendanceMap.clear();
+
+            // Process Present Students
+            for (final student in presentList) {
+              final studentId = student['id']?.toString() ?? '';
+              final studentEntry = {
+                'id': studentId,
+                'name': student['name'] ?? '',
+                'roll_number': student['roll_no']?.toString() ?? '',
+                'profile_image': student['profile_picture']?.toString() ?? '',
+                'student_id': studentId,
+                'is_recognized': true,
+              };
+              _allStudents.add(studentEntry);
+              _attendanceMap[studentId] = true;
+            }
+
+            // Process Absent Students
+            for (final student in absentList) {
+              final studentId = student['id']?.toString() ?? '';
+              final studentEntry = {
+                'id': studentId,
+                'name': student['name'] ?? '',
+                'roll_number': student['roll_no']?.toString() ?? '',
+                'profile_image': student['profile_picture']?.toString() ?? '',
+                'student_id': studentId,
+                'is_recognized': false,
+              };
+              _allStudents.add(studentEntry);
+              _attendanceMap[studentId] = false;
+            }
+
+            _isLoadingStudents = false;
+            _isProcessing = false; // No image processing in edit mode
+            _filterStudents();
+            _generateAttendanceBitString();
+          });
+        } else {
+          AppLogger.error("❌ Students data is not a Map: $studentsData");
+          setState(() => _isLoadingStudents = false);
+        }
+      } else {
+        setState(() => _isLoadingStudents = false);
+        AppLogger.error('Error loading existing attendance');
+      }
+    } catch (e) {
+      setState(() => _isLoadingStudents = false);
+      AppLogger.error('Exception loading existing attendance: $e');
     }
   }
 
@@ -344,14 +433,14 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
       '📊 Present Count: ${_attendanceMap.values.where((present) => present).length}',
     );
 
-    // AppLogger.info roll numbers with attendance status for verification
-    for (int i = 0; i < sortedStudents.length; i++) {
-      final student = sortedStudents[i];
-      final status = _attendanceBitString[i];
-      AppLogger.info(
-        '🎯 Roll: ${student['roll_number']} - ${status == '1' ? 'Present' : 'Absent'}',
-      );
-    }
+    // // AppLogger.info roll numbers with attendance status for verification
+    // for (int i = 0; i < sortedStudents.length; i++) {
+    //   final student = sortedStudents[i];
+    //   final status = _attendanceBitString[i];
+    //   // AppLogger.info(
+    //   //   '🎯 Roll: ${student['roll_number']} - ${status == '1' ? 'Present' : 'Absent'}',
+    //   // );
+    // }
   }
 
   void _handleBackPressed() {
@@ -417,16 +506,55 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
         ),
         onPressed: _handleBackPressed,
       ),
-      title: const Text(
-        'Mark Attendance',
-        style: TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-          color: Colors.white,
-        ),
+      title: Column(
+        children: [
+          Text(
+            _isEditMode ? 'Edit Attendance' : 'Mark Attendance',
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+          if (_isEditMode)
+            Text(
+              "Session Date: ${_formatDate(widget.sessionData['date'] ?? '')}",
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w400,
+                color: Colors.white70,
+              ),
+            ),
+        ],
       ),
       centerTitle: true,
     );
+  }
+
+  String _formatDate(String date) {
+    if (date.isEmpty) return '';
+    try {
+      // Assuming date is in YYYY-MM-DD format
+      final parsed = DateTime.parse(date);
+      // Format to DD Mon YYYY safely logic or basic string manipulation
+      const months = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+      ];
+      return '${parsed.day} ${months[parsed.month - 1]} ${parsed.year}';
+    } catch (_) {
+      return date;
+    }
   }
 
   Widget _buildHeaderSection(int presentCount, int totalCount) {
@@ -738,21 +866,12 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
               ),
             ),
             const SizedBox(height: 2),
-            if (isRecognized)
+            if (isRecognized && !_isEditMode)
               Text(
                 'Confidence :- $confidence%',
                 style: TextStyle(
                   fontSize: 12,
                   color: _getConfidenceColor(double.tryParse(confidence) ?? 0),
-                  fontWeight: FontWeight.w500,
-                ),
-              )
-            else
-              const Text(
-                'Absent',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Color.fromARGB(255, 192, 32, 32),
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -865,7 +984,7 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
               height: 50,
               child: ElevatedButton(
                 onPressed: hasMarkedAttendance && !_isSubmitting
-                    ? _submitAttendance
+                    ? _handleAttendanceSubmission
                     : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF2563EB),
@@ -884,9 +1003,9 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
                           strokeWidth: 2,
                         ),
                       )
-                    : const Text(
-                        'Save Attendance',
-                        style: TextStyle(
+                    : Text(
+                        _isEditMode ? 'Update Attendance' : 'Save Attendance',
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                           color: Colors.white,
@@ -1015,5 +1134,115 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
         });
       }
     }
+  }
+
+  void _handleAttendanceSubmission() {
+    if (_isEditMode) {
+      _showUpdateConfirmationDialog();
+    } else {
+      _submitAttendance();
+    }
+  }
+
+  Future<void> _showUpdateConfirmationDialog() async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text('Update Attendance?'),
+          content: const Text(
+            'Are you sure you want to update attendance for this session?',
+            style: TextStyle(color: Color(0xFF64748B)),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Color(0xFF64748B)),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text(
+                'Update',
+                style: TextStyle(
+                  color: Color(0xFF2563EB),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+                _updateAttendance();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _updateAttendance() async {
+    if (_isSubmitting) return;
+
+    setState(() => _isSubmitting = true);
+    HapticFeedback.mediumImpact();
+
+    AppLogger.info(
+      '🎯 Updating attendance with bitstring: $_attendanceBitString',
+    );
+
+    final resp = await teacherRepository.updateAttendance(
+      widget.attendanceId,
+      _attendanceBitString,
+    );
+
+    if (resp['success'] != true) {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+        _showSnackBar(
+          resp['message']?.toString() ?? 'Failed to update attendance',
+          isError: true,
+        );
+      }
+    } else {
+      if (mounted) {
+        _showSnackBar('Attendance updated successfully');
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) {
+            context.go("/teacher");
+          }
+        });
+      }
+    }
+  }
+
+  void _showSnackBar(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(
+              isError ? Icons.error : Icons.check_circle,
+              color: Colors.white,
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Text(message),
+          ],
+        ),
+        backgroundColor: isError
+            ? const Color(0xFFEF4444)
+            : const Color(0xFF10B981),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        duration: const Duration(seconds: 3),
+      ),
+    );
   }
 }

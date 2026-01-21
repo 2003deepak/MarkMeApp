@@ -53,7 +53,6 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
         final response = await authStore.forgotPassword(
           _emailController.text.trim(),
           _selectedRole.toLowerCase(),
-          context,
         );
 
         // Fixed: Check specifically for success boolean

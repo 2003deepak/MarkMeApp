@@ -70,9 +70,6 @@ class LecturesWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    debugPrint("📚 $title Sessions: $sessions");
-    debugPrint("🧾 Is Empty: ${sessions.isEmpty}");
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -255,8 +252,6 @@ class LecturesWidget extends StatelessWidget {
 
           // ✅ FIXED: Use 'session_id' instead of 'id'
           final sessionId = session['session_id']?.toString();
-
-          debugPrint("🆔 Session ID for card: $sessionId");
 
           final color = _getComponentColor(component, subjectName);
 

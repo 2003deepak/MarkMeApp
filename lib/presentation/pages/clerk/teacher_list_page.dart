@@ -426,7 +426,6 @@ class TeacherCard extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF252542) : Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -441,17 +440,33 @@ class TeacherCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              _buildAvatar(fullName, avatarColor),
-              const SizedBox(width: 16),
-              _buildTeacherInfo(fullName),
-            ],
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () {
+            // Navigate to Teacher Overview
+            context.push(
+              '/clerk/teacher/${teacher.id}',
+              extra: '${teacher.firstName} ${teacher.lastName}',
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    _buildAvatar(fullName, avatarColor),
+                    const SizedBox(width: 16),
+                    _buildTeacherInfo(fullName),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ],
+        ),
       ),
     );
   }

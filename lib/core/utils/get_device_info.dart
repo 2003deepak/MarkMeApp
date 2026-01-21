@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 Future<String> getDeviceInfo() async {
   // For desktop platforms, return generic info
@@ -35,3 +36,9 @@ String getPlatformType() {
 bool get isMobilePlatform => Platform.isAndroid || Platform.isIOS;
 bool get isDesktopPlatform =>
     Platform.isWindows || Platform.isMacOS || Platform.isLinux;
+
+Future<void> clearSession(SharedPreferences prefs) async {
+  await prefs.remove('refreshToken');
+  await prefs.remove('role');
+  await prefs.remove('fcmToken');
+}

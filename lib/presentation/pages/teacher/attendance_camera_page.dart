@@ -16,6 +16,7 @@ class CameraCaptureScreen extends StatefulWidget {
 class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
   late CameraController _controller;
   Future<void>? _initializeControllerFuture;
+  Widget? _cachedPreview; // Cache the preview widget
 
   final List<XFile> _capturedImages = [];
   bool _isLoading = false;
@@ -30,21 +31,15 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
     _initializeCamera();
   }
 
-  @override
-  void deactivate() {
-    if (!_isDisposed) {
-      try {
-        _controller.dispose();
-      } catch (_) {}
-      _isDisposed = true;
-    }
-    super.deactivate();
-  }
+  // Removed deactivate() to avoid double disposal conflicts
 
   @override
   void dispose() {
     _isDisposed = true;
-    _controller.dispose();
+    // Safe disposal check
+    if (_controller.value.isInitialized) {
+      _controller.dispose();
+    }
     super.dispose();
   }
 
@@ -58,17 +53,22 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
 
       _controller = CameraController(
         _cameras!.first,
-        ResolutionPreset.medium,
+        ResolutionPreset.low, // Lowered resolution to reduce buffer load
         enableAudio: false,
       );
 
       setState(() => _isCameraReady = false);
+      _cachedPreview = null; // Clear cache on re-init
 
       _initializeControllerFuture = _controller.initialize();
       await _initializeControllerFuture;
 
       if (mounted && !_isDisposed) {
-        setState(() => _isCameraReady = true);
+        setState(() {
+          _isCameraReady = true;
+          // Create the preview widget ONCE when ready
+          _cachedPreview = CameraPreview(_controller);
+        });
       }
     } catch (e) {
       if (mounted && !_isDisposed) {
@@ -85,11 +85,15 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
   // SAFE CAMERA PREVIEW WIDGET
   // ----------------------------------------
   Widget _buildSafeCameraPreview() {
-    if (!_isCameraReady || !_controller.value.isInitialized || _isDisposed) {
+    if (!_isCameraReady ||
+        !_controller.value.isInitialized ||
+        _isDisposed ||
+        _cachedPreview == null) {
       return _buildCameraLoadingWidget();
     }
 
-    return CameraPreview(_controller);
+    // Return the cached widget instead of creating a new one every frame
+    return _cachedPreview!;
   }
 
   Widget _buildCameraLoadingWidget() {
@@ -384,6 +388,7 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
       setState(() {
         _isLoading = true;
         _isCameraReady = false;
+        _cachedPreview = null; // Clear cached preview on switch
       });
 
       final newCamera = _controller.description == _cameras!.first
@@ -393,10 +398,10 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
       // Dispose current controller
       await _controller.dispose();
 
-      // Create new controller
+      // Create new controller with low resolution
       _controller = CameraController(
         newCamera,
-        ResolutionPreset.medium,
+        ResolutionPreset.low,
         enableAudio: false,
       );
 
@@ -407,6 +412,8 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
         setState(() {
           _isCameraReady = true;
           _isLoading = false;
+          // Re-create cached preview
+          _cachedPreview = CameraPreview(_controller);
         });
       }
 
@@ -427,8 +434,12 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
 
     final attendanceId = widget.sessionData['attendance_id'];
 
-    // 🚀 Dispose camera BEFORE navigation
     try {
+      // Pause preview first to stop buffer consumption
+      if (_controller.value.isInitialized) {
+        await _controller.pausePreview();
+      }
+      // Then dispose
       await _controller.dispose();
     } catch (_) {}
     _isDisposed = true;

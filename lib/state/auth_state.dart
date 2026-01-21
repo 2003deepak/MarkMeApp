@@ -6,7 +6,11 @@ import 'package:markmeapp/data/repositories/auth_repository.dart';
 import 'package:markmeapp/data/models/user_model.dart';
 import 'package:markmeapp/core/utils/app_logger.dart';
 
+/// Logout Reason
+enum LogoutReason { userInitiated, sessionExpired }
+
 /// AuthState - Simple state container
+
 class AuthState {
   final bool isLoggedIn;
   final bool isLoading;
@@ -22,7 +26,10 @@ class AuthState {
     this.accessToken,
     this.role,
     this.user,
+    this.logoutReason,
   });
+
+  final LogoutReason? logoutReason;
 
   AuthState copyWith({
     bool? isLoggedIn,
@@ -44,7 +51,7 @@ class AuthState {
 
   @override
   String toString() {
-    return 'AuthState(isLoggedIn: $isLoggedIn, isLoading: $isLoading, hasLoaded: $hasLoaded, role: $role)';
+    return 'AuthState(isLoggedIn: $isLoggedIn, isLoading: $isLoading, hasLoaded: $hasLoaded, role: $role, logoutReason: $logoutReason)';
   }
 }
 
@@ -89,18 +96,25 @@ class AuthStore extends StateNotifier<AuthState> {
   }
 
   /// Logout
+  /// Logout
   Future<void> setLogOut() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final fcmToken = prefs.getString('fcmToken');
 
-      await _authRepo.logoutUser(fcmToken ?? "");
+      if (fcmToken != null) {
+        try {
+          await _authRepo.logoutUser(fcmToken);
+        } catch (_) {}
+      }
 
-      await prefs.remove('refreshToken');
-      await prefs.remove('fcmToken');
-      await prefs.remove('role');
+      await clearSession(prefs);
 
-      state = const AuthState(hasLoaded: true);
+      state = const AuthState(
+        hasLoaded: true,
+        isLoggedIn: false,
+        logoutReason: LogoutReason.userInitiated,
+      );
     } catch (e) {
       AppLogger.error('🔴 Logout error: $e');
     }
@@ -351,6 +365,12 @@ class AuthStore extends StateNotifier<AuthState> {
       AppLogger.error('🔴 Restore session failed: $e');
       state = const AuthState(hasLoaded: true, isLoggedIn: false);
     }
+  }
+
+  Future<void> clearSession(SharedPreferences prefs) async {
+    await prefs.remove('refreshToken');
+    await prefs.remove('fcmToken');
+    await prefs.remove('role');
   }
 }
 

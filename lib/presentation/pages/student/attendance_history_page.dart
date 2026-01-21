@@ -822,7 +822,7 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
               if (record.isExceptionSession)
                 Tooltip(
                   message:
-                      "This session is either rescheduled or an extra class or cancelled",
+                      "This session is either rescheduled or an extra class",
                   triggerMode: TooltipTriggerMode.tap,
                   child: Container(
                     margin: const EdgeInsets.only(bottom: 8),
@@ -1074,9 +1074,11 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
   Color _getStatusColor(AttendanceStatus status) {
     switch (status) {
       case AttendanceStatus.present:
-        return const Color.fromARGB(255, 80, 177, 16);
+        return const Color(0xFF10B981); // Green
       case AttendanceStatus.absent:
-        return const Color.fromARGB(255, 202, 11, 11);
+        return const Color(0xFFEF4444); // Red
+      case AttendanceStatus.late:
+        return const Color(0xFFF59E0B);
       default:
         return Colors.transparent;
     }

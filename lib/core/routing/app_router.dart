@@ -38,6 +38,9 @@ import 'package:markmeapp/presentation/pages/clerk/profile_page.dart'
     as clerk_profile;
 import 'package:markmeapp/presentation/pages/clerk/add_subject_page.dart';
 import 'package:markmeapp/presentation/pages/clerk/add_teacher_page.dart';
+import 'package:markmeapp/presentation/pages/clerk/add_student_page.dart';
+import 'package:markmeapp/presentation/pages/clerk/defaulters_page.dart';
+import 'package:markmeapp/presentation/pages/clerk/defaulters_page.dart';
 import 'package:markmeapp/presentation/pages/student/weekly_bunk_safety_page.dart';
 import 'package:markmeapp/presentation/pages/teacher/attendance_camera_page.dart';
 import 'package:markmeapp/presentation/pages/teacher/attendance_marking_page.dart';
@@ -186,6 +189,11 @@ class AppRouter {
               name: 'student_timetable',
               builder: (context, state) => const TimeTablePage(),
             ),
+            GoRoute(
+              path: '/student/attendance-history',
+              name: 'student_attendance_history',
+              builder: (context, state) => const AttendanceHistoryPage(),
+            ),
 
             GoRoute(
               path: '/student/profile',
@@ -211,6 +219,11 @@ class AppRouter {
               name: 'teacher_timetable',
               builder: (context, state) =>
                   const teacher_time_table.TimeTablePage(),
+            ),
+            GoRoute(
+              path: '/teacher/attendance-history',
+              name: 'teacher_attendance_history',
+              builder: (context, state) => const AttendanceHistoryPage(),
             ),
 
             // =======================
@@ -272,11 +285,6 @@ class AppRouter {
               builder: (context, state) => const NotificationPage(),
             ),
             GoRoute(
-              path: '/attendance-history',
-              name: 'attendance-history',
-              builder: (context, state) => const AttendanceHistoryPage(),
-            ),
-            GoRoute(
               path: '/student/weekly-bunk-safety',
               name: 'student_weekly_bunk_safety',
               builder: (context, state) => const WeeklyBunkSafetyPage(),
@@ -287,6 +295,11 @@ class AppRouter {
               builder: (context, state) => const AddTeacherPage(),
             ),
             GoRoute(
+              path: '/clerk/new-student',
+              name: 'add_student',
+              builder: (context, state) => const AddStudentPage(),
+            ),
+            GoRoute(
               path: '/clerk/add-subject',
               name: 'add_subject',
               builder: (context, state) => const AddSubjectPage(),
@@ -295,6 +308,11 @@ class AppRouter {
               path: '/clerk/add-time-table',
               name: 'time-table',
               builder: (context, state) => const AddTimeTablePage(),
+            ),
+            GoRoute(
+              path: '/clerk/defaulters',
+              name: 'clerk_defaulters',
+              builder: (context, state) => const DefaultersPage(),
             ),
             GoRoute(
               path: '/:role/attendance-detail/:id',

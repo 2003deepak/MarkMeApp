@@ -30,7 +30,13 @@ class _StudentLayoutState extends ConsumerState<StudentLayout> {
 
         // If user was logged in and now is logged out → redirect + snackbar
         if (wasLoggedIn && !isNowLoggedIn) {
-          debugPrint('🔴 [Auth] Logged out → Redirecting to /login');
+          // Check if this was a manual logout
+          if (next.logoutReason == LogoutReason.userInitiated) {
+            debugPrint('🟢 [Auth] Manual logout detected - skipping session expiry logic');
+            return;
+          }
+
+          debugPrint('🔴 [Auth] Logged out (Session Expired) → Redirecting to /login');
 
           // Show snackbar before navigation
           ScaffoldMessenger.of(context).showSnackBar(

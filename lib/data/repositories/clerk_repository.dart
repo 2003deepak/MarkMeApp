@@ -521,6 +521,52 @@ class ClerkRepository {
       };
     }
   }
+
+  Future<Map<String, dynamic>> getDefaulters({
+    String? search,
+    String? subjectId,
+    int page = 1,
+    int limit = 10,
+    String? program,
+    int? semester,
+    int? threshold,
+  }) async {
+    try {
+      final Map<String, dynamic> params = {};
+
+      if (search != null && search.trim().isNotEmpty) params['search'] = search;
+      if (subjectId != null) params['subject_id'] = subjectId;
+      if (program != null) params['program'] = program;
+      if (semester != null) params['semester'] = semester;
+      if (threshold != null) params['threshold'] = threshold;
+
+      params['page'] = page;
+      params['limit'] = limit;
+
+      AppLogger.info('🔍 [ClerkRepository] Fetching defaulters: $params');
+
+      final response = await _dio.get(
+        '/clerk/defaulters',
+        queryParameters: params,
+      );
+
+      if (response.statusCode == 200) {
+        return response.data; // Raw JSON matching DefaultResponse structure
+      } else {
+        return {
+          'success': false,
+          'error': response.data['message'] ?? 'Failed to fetch defaulters',
+        };
+      }
+    } on DioException catch (e) {
+      return {
+        'success': false,
+        'error': e.response?.data?['message'] ?? e.message ?? 'Network error',
+      };
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
 }
 
 // Provider for ClerkRepository

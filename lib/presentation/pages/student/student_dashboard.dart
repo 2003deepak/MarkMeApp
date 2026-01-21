@@ -267,8 +267,6 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
         ),
 
         const SizedBox(height: 24),
-
-        RecentActivityWidget(isDesktop: isDesktop),
       ],
     );
   }

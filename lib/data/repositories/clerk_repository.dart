@@ -31,6 +31,42 @@ class ClerkRepository {
     }
   }
 
+  Future<Map<String, dynamic>> updateProfile(FormData formData) async {
+    try {
+      AppLogger.info('🔵 [ClerkRepository] Updating clerk profile...');
+
+      final response = await _dio.put(
+        '/clerk/me',
+        data: formData,
+        options: Options(
+          contentType: 'multipart/form-data',
+          headers: {'Accept': 'application/json'},
+        ),
+      );
+
+      final responseBody = response.data;
+
+      if (response.statusCode == 200) {
+        AppLogger.info('🟢 [ClerkRepository] Profile updated successfully');
+        return {'success': true, 'data': responseBody['data'], 'message': responseBody['message']};
+      } else {
+        return {
+          'success': false,
+          'error': responseBody['message'] ?? 'Failed to update profile',
+        };
+      }
+    } on DioException catch (e) {
+      AppLogger.error('🔴 [ClerkRepository] DioException: ${e.message}');
+      return {
+        'success': false,
+        'error': e.response?.data?['message'] ?? e.message ?? 'Network error',
+      };
+    } catch (e) {
+      AppLogger.error('🔴 [ClerkRepository] Exception: $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
   Future<Map<String, dynamic>> createSubject(Map<String, dynamic> data) async {
     try {
       final requestBody = {

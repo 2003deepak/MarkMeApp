@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 class MarkMeAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
+  final Widget? customTitle;
   final VoidCallback? onBackPressed;
   final bool isLoading;
   final List<Widget>? actions;
@@ -9,6 +10,7 @@ class MarkMeAppBar extends StatelessWidget implements PreferredSizeWidget {
   const MarkMeAppBar({
     super.key,
     required this.title,
+    this.customTitle,
     this.onBackPressed,
     this.isLoading = false,
     this.actions,
@@ -36,7 +38,7 @@ class MarkMeAppBar extends StatelessWidget implements PreferredSizeWidget {
           ),
         ),
       ),
-      title: Text(
+      title: customTitle ?? Text(
         title,
         style: const TextStyle(
           color: Colors.white,

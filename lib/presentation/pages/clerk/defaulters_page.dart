@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:markmeapp/data/models/defaulter_model.dart';
+import 'package:markmeapp/data/models/notification_model.dart';
 import 'package:markmeapp/data/repositories/clerk_repository.dart';
+import 'package:markmeapp/data/repositories/notification_repository.dart';
 import 'package:markmeapp/presentation/widgets/ui/custom_bottom_sheet_layout.dart';
 import 'package:markmeapp/presentation/widgets/ui/filter_chip.dart';
 import 'package:markmeapp/presentation/widgets/ui/app_bar.dart';
@@ -33,6 +35,10 @@ class _DefaultersPageState extends ConsumerState<DefaultersPage> {
   String? _selectedProgram;
   int? _selectedSemester;
   int _threshold = 75;
+
+  // Selection State
+  final Set<String> _selectedStudentIds = {};
+  bool _isSending = false;
 
   Timer? _debounceTimer;
   final _searchDebounceDuration = const Duration(milliseconds: 800);
@@ -169,6 +175,7 @@ class _DefaultersPageState extends ConsumerState<DefaultersPage> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = const Color(0xFF3B5BDB);
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF1A1A2E) : Colors.white,
@@ -183,6 +190,7 @@ class _DefaultersPageState extends ConsumerState<DefaultersPage> {
           const SizedBox(height: 10),
           _buildErrorMessage(),
           if (_activeFilterCount > 0) _buildFilterChips(isDark),
+          _buildSelectionHeader(isDark),
           _buildCountRow(isDark),
           Expanded(
             child: _isLoading && !_isLoadingMore
@@ -193,9 +201,106 @@ class _DefaultersPageState extends ConsumerState<DefaultersPage> {
           ),
         ],
       ),
+      // Floating Action Button for sending notifications
+      floatingActionButton: _selectedStudentIds.isNotEmpty
+          ? _buildFloatingActionButton(isDark, primaryColor)
+          : null,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 
+  Widget _buildSelectionHeader(bool isDark) {
+    if (_students.isEmpty || _selectedStudentIds.isEmpty) return const SizedBox();
+    
+    final allSelected = _students.isNotEmpty && 
+        _students.every((s) => _selectedStudentIds.contains(s.studentId));
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF252542) : const Color(0xFFF8F9FA),
+        border: Border(
+          bottom: BorderSide(color: isDark ? Colors.white12 : const Color(0xFFE9ECEF)),
+        ),
+      ),
+      child: Row(
+        children: [
+          // Selection Info with icon
+          Expanded(
+            child: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF3B5BDB).withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.notifications_active,
+                    color: const Color(0xFF3B5BDB),
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${_selectedStudentIds.length} selected',
+                        style: TextStyle(
+                          color: isDark ? Colors.white : Colors.black87,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        'Tap avatar to select more',
+                        style: TextStyle(
+                          color: isDark ? Colors.white60 : Colors.grey[600],
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          // Select All/Deselect All Button
+          if (_students.isNotEmpty)
+            GestureDetector(
+              onTap: () {
+                setState(() {
+                  if (allSelected) {
+                    _selectedStudentIds.clear();
+                  } else {
+                    _selectedStudentIds.addAll(_students.map((s) => s.studentId));
+                  }
+                });
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white10 : const Color(0xFFF1F3F4),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  allSelected ? 'Deselect All' : 'Select All',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: isDark ? Colors.white70 : Colors.grey[700],
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildSearchBar(bool isDark) {
     final primaryColor = const Color(0xFF3B5BDB);
@@ -267,6 +372,38 @@ class _DefaultersPageState extends ConsumerState<DefaultersPage> {
     );
   }
 
+  Widget _buildFloatingActionButton(bool isDark, Color primaryColor) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: FloatingActionButton.extended(
+        onPressed: _isSending ? null : _showSendNotificationBottomSheet,
+        backgroundColor: primaryColor,
+        foregroundColor: Colors.white,
+        elevation: 4,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        icon: _isSending 
+            ? SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+            : const Icon(Icons.send, size: 20),
+        label: Text(
+          'Notify ${_selectedStudentIds.length}',
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+  );
+  }
+
   Widget _buildErrorMessage() {
     if (_errorMessage.isEmpty) return const SizedBox();
 
@@ -295,7 +432,7 @@ class _DefaultersPageState extends ConsumerState<DefaultersPage> {
             ),
           ],
         ),
-      ),
+      )
     );
   }
 
@@ -343,25 +480,18 @@ class _DefaultersPageState extends ConsumerState<DefaultersPage> {
 
   Widget _buildCountRow(bool isDark) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
           Text(
             '$_totalStudents student${_totalStudents == 1 ? '' : 's'} found',
             style: TextStyle(
-              color: isDark ? Colors.white70 : Colors.grey,
-              fontSize: 14,
+              color: isDark ? Colors.white70 : Colors.grey[600],
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
             ),
           ),
           const Spacer(),
-          if (_hasMoreData && _students.isNotEmpty)
-            Text(
-              'Page ${_currentPage - 1}',
-              style: TextStyle(
-                color: isDark ? Colors.white60 : Colors.grey,
-                fontSize: 12,
-              ),
-            ),
         ],
       ),
     );
@@ -430,22 +560,505 @@ class _DefaultersPageState extends ConsumerState<DefaultersPage> {
             return _DefaulterCard(
               student: _students[index],
               isDark: isDark,
+              isSelected: _selectedStudentIds.contains(_students[index].studentId),
+              onLongPress: () {
+                setState(() {
+                  if (_selectedStudentIds.contains(_students[index].studentId)) {
+                    _selectedStudentIds.remove(_students[index].studentId);
+                  } else {
+                    _selectedStudentIds.add(_students[index].studentId);
+                  }
+                });
+              },
             );
           },
         ),
       ),
     );
   }
+
+  void _showSendNotificationBottomSheet() {
+    final primaryColor = const Color(0xFF3B5BDB);
+    final titleController = TextEditingController(text: 'Attendance Warning');
+    final messageController = TextEditingController(
+      text: 'Your attendance is below the required threshold. Please meet your class coordinator immediately.'
+    );
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        
+        return Container(
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF252542) : Colors.white,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(24),
+              topRight: Radius.circular(24),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(
+                      color: isDark ? Colors.white10 : const Color(0xFFE9ECEF),
+                    ),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: primaryColor.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.notifications_active,
+                        color: primaryColor,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Send Notification',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${_selectedStudentIds.length} student${_selectedStudentIds.length == 1 ? '' : 's'} will be notified',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: isDark ? Colors.white60 : Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: Icon(
+                        Icons.close,
+                        color: isDark ? Colors.white60 : Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              // Content
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Title Input
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Notification Title',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: isDark ? Colors.white70 : Colors.grey[700],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: isDark ? Colors.white10 : const Color(0xFFF8F9FA),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isDark ? Colors.white12 : const Color(0xFFE9ECEF),
+                            ),
+                          ),
+                          child: TextField(
+                            controller: titleController,
+                            style: TextStyle(
+                              color: isDark ? Colors.white : Colors.black87,
+                              fontSize: 15,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: 'Enter notification title',
+                              hintStyle: TextStyle(
+                                color: isDark ? Colors.white38 : Colors.grey,
+                              ),
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    
+                    const SizedBox(height: 20),
+                    
+                    // Message Input
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Message',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: isDark ? Colors.white70 : Colors.grey[700],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: isDark ? Colors.white10 : const Color(0xFFF8F9FA),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isDark ? Colors.white12 : const Color(0xFFE9ECEF),
+                            ),
+                          ),
+                          child: TextField(
+                            controller: messageController,
+                            style: TextStyle(
+                              color: isDark ? Colors.white : Colors.black87,
+                              fontSize: 15,
+                            ),
+                            maxLines: 4,
+                            decoration: InputDecoration(
+                              hintText: 'Write your notification message here...',
+                              hintStyle: TextStyle(
+                                color: isDark ? Colors.white38 : Colors.grey,
+                              ),
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Quick Message Options
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Quick Messages:',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: isDark ? Colors.white60 : Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            _buildQuickMessageChip(
+                              'Please improve your attendance',
+                              messageController,
+                              isDark,
+                            ),
+                            _buildQuickMessageChip(
+                              'Meet class coordinator immediately',
+                              messageController,
+                              isDark,
+                            ),
+                            _buildQuickMessageChip(
+                              'Attendance below required threshold',
+                              messageController,
+                              isDark,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              
+              // Action Buttons
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  border: Border(
+                    top: BorderSide(
+                      color: isDark ? Colors.white10 : const Color(0xFFE9ECEF),
+                    ),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          side: BorderSide(
+                            color: isDark ? Colors.white30 : const Color(0xFFDEE2E6),
+                          ),
+                        ),
+                        child: Text(
+                          'Cancel',
+                          style: TextStyle(
+                            color: isDark ? Colors.white70 : Colors.grey[700],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _isSending 
+                            ? null 
+                            : () {
+                                Navigator.pop(context);
+                                _sendNotification(
+                                  titleController.text,
+                                  messageController.text,
+                                );
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: _isSending
+                            ? SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.send, size: 18),
+                                  const SizedBox(width: 8),
+                                  const Text(
+                                    'Send Now',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildQuickMessageChip(String text, TextEditingController controller, bool isDark) {
+    return GestureDetector(
+      onTap: () => controller.text = text,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isDark ? Colors.white10 : const Color(0xFFF8F9FA),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isDark ? Colors.white24 : const Color(0xFFE9ECEF),
+          ),
+        ),
+        child: Text(
+          text,
+          style: TextStyle(
+            fontSize: 12,
+            color: isDark ? Colors.white70 : Colors.grey[700],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _sendNotification(String title, String message) async {
+    setState(() => _isSending = true);
+
+    try {
+      final notification = AppNotification(
+        user: "student", 
+        title: title,
+        message: message,
+        targetIds: _selectedStudentIds.toList(),
+      );
+
+      final repo = ref.read(notificationRepositoryProvider);
+      final result = await repo.pushNotification(notification);
+
+      if (result['success'] == true) {
+        setState(() {
+          _selectedStudentIds.clear();
+        });
+        if (mounted) {
+          // Show success overlay
+          _showSuccessOverlay();
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['error'] ?? 'Failed to send notifications'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      setState(() => _isSending = false);
+    }
+  }
+
+  void _showSuccessOverlay() {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black54,
+      barrierDismissible: true,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          child: Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: Theme.of(context).brightness == Brightness.dark 
+                  ? const Color(0xFF252542)
+                  : Colors.white,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF37B24D).withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.check_circle,
+                    color: Color(0xFF37B24D),
+                    size: 40,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Notifications Sent!',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).brightness == Brightness.dark 
+                        ? Colors.white 
+                        : Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'All selected students have been notified successfully.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Theme.of(context).brightness == Brightness.dark 
+                        ? Colors.white70 
+                        : Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF3B5BDB),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    minimumSize: const Size(120, 44),
+                  ),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // Helper to sync selection when loading more
+  @override
+  void setState(VoidCallback fn) {
+    if (mounted) super.setState(fn);
+  }
 }
 
-class _DefaulterCard extends StatelessWidget {
+class _DefaulterCard extends StatefulWidget {
   final DefaulterStudent student;
   final bool isDark;
+  final bool isSelected;
+  final VoidCallback? onLongPress; // Maintained for backward compatibility or if needed
 
-  const _DefaulterCard({required this.student, required this.isDark});
+  const _DefaulterCard({
+    required this.student,
+    required this.isDark,
+    required this.isSelected,
+    this.onLongPress,
+  });
+
+  @override
+  State<_DefaulterCard> createState() => _DefaulterCardState();
+}
+
+class _DefaulterCardState extends State<_DefaulterCard> with SingleTickerProviderStateMixin {
+  bool _isExpanded = false;
 
   Color _getRiskColor() {
-    switch (student.risk.toUpperCase()) {
+    switch (widget.student.risk.toUpperCase()) {
       case 'HIGH': return const Color(0xFFDC2626);
       case 'MEDIUM': return const Color(0xFFD97706);
       default: return const Color(0xFF166534);
@@ -453,7 +1066,7 @@ class _DefaulterCard extends StatelessWidget {
   }
 
   Color _getRiskBgColor(bool isDark) {
-    switch (student.risk.toUpperCase()) {
+    switch (widget.student.risk.toUpperCase()) {
       case 'HIGH': return isDark ? const Color(0xFF7F1D1D) : const Color(0xFFFEE2E2);
       case 'MEDIUM': return isDark ? const Color(0xFF78350F) : const Color(0xFFFEF3C7);
       default: return isDark ? const Color(0xFF14532D) : const Color(0xFFDCFCE7);
@@ -474,176 +1087,264 @@ class _DefaulterCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final avatarColor = _getAvatarColor(student.name);
+    final avatarColor = _getAvatarColor(widget.student.name);
+    // Use the primary color 0xFF3B5BDB as the theme color
+    final primaryColor = const Color(0xFF3B5BDB);
+    final themeColor = widget.isDark ? primaryColor : primaryColor;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 16), // Increased bottom margin
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF252542) : Colors.white,
+        // Add a subtle tint when selected
+        color: widget.isSelected 
+            ? (widget.isDark ? themeColor.withOpacity(0.15) : themeColor.withOpacity(0.05))
+            : (widget.isDark ? const Color(0xFF252542) : Colors.white),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isDark ? Colors.white10 : const Color(0xFFF1F3F4),
+          color: widget.isSelected 
+              ? themeColor 
+              : (widget.isDark ? Colors.white10 : const Color(0xFFF1F3F4)),
+          width: widget.isSelected ? 2 : 1, // Reduced width slightly for cleaner look
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.2 : 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        boxShadow: widget.isSelected
+            ? [
+                BoxShadow(
+                  color: themeColor.withOpacity(0.2),
+                  blurRadius: 12,
+                  spreadRadius: 2,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : [
+                BoxShadow(
+                  color: Colors.black.withOpacity(widget.isDark ? 0.2 : 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
       ),
-      child: Theme(
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          tilePadding: const EdgeInsets.all(16),
-          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          // Leading Avatar
-          leading: Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: avatarColor.withOpacity(isDark ? 0.3 : 0.2),
-              shape: BoxShape.circle,
-              image: student.profilePicture != null && student.profilePicture!.isNotEmpty
-                  ? DecorationImage(
-                      image: NetworkImage(student.profilePicture!),
-                      fit: BoxFit.cover,
-                    )
-                  : null,
+      child: Column(
+        children: [
+          // Header Row
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 8, 16), // Increased padding
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Avatar with Tap to Select
+                GestureDetector(
+                  onTap: widget.onLongPress,
+                  child: Stack(
+                    children: [
+                      Container(
+                        width: 52, // Slightly larger avatar
+                        height: 52,
+                        decoration: BoxDecoration(
+                          color: avatarColor.withOpacity(widget.isDark ? 0.3 : 0.2),
+                          shape: BoxShape.circle,
+                          image: widget.student.profilePicture != null && widget.student.profilePicture!.isNotEmpty
+                              ? DecorationImage(
+                                  image: NetworkImage(widget.student.profilePicture!),
+                                  fit: BoxFit.cover,
+                                )
+                              : null,
+                        ),
+                        child: widget.student.profilePicture != null && widget.student.profilePicture!.isNotEmpty
+                            ? null
+                            : Center(
+                                child: Text(
+                                  widget.student.name.isNotEmpty ? widget.student.name[0] : '?',
+                                  style: TextStyle(
+                                    color: avatarColor,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 20,
+                                  ),
+                                ),
+                              ),
+                      ),
+                      if (widget.isSelected)
+                        Positioned(
+                          right: 0,
+                          bottom: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: themeColor,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: widget.isDark ? const Color(0xFF252542) : Colors.white,
+                                width: 2,
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.check,
+                              color: Colors.white,
+                              size: 14,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16), // Increased spacing
+                // Main Info
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center, // Center vertically
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              widget.student.name,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold, // Bolder name
+                                color: widget.isDark ? Colors.white : Colors.black87,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            margin: const EdgeInsets.only(left: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4), // Larger badge
+                            decoration: BoxDecoration(
+                              color: _getRiskBgColor(widget.isDark),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              widget.student.risk,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: _getRiskColor(),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6), // More spacing
+                      Text(
+                        'Roll: ${widget.student.roll} • ${widget.student.program} Sem ${widget.student.semester}',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: widget.isDark ? Colors.white70 : Colors.grey[600],
+                          height: 1.3, // Better line height
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Overall Attendance: ${widget.student.overallPercentage.toStringAsFixed(1)}%',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: widget.student.overallPercentage < 75 ? const Color(0xFFDC2626) : const Color(0xFF37B24D),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Expand Icon Button
+                IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(), // Minify constraints
+                  onPressed: () => setState(() => _isExpanded = !_isExpanded),
+                  icon: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: widget.isDark ? Colors.white.withOpacity(0.05) : Colors.grey.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      _isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                      color: widget.isDark ? Colors.white70 : Colors.grey[700],
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            child: student.profilePicture != null && student.profilePicture!.isNotEmpty
-                ? null
-                : Center(
+          ),
+          
+          // Expanded Content
+          AnimatedCrossFade(
+            firstChild: const SizedBox(width: double.infinity),
+            secondChild: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Column(
+                children: [
+                  Divider(color: widget.isDark ? Colors.white10 : Colors.grey[200]),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerLeft,
                     child: Text(
-                      student.name.isNotEmpty ? student.name[0] : '?',
+                      'Defaulter in Subjects:',
                       style: TextStyle(
-                        color: avatarColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: widget.isDark ? Colors.white70 : Colors.grey[800],
+                        fontStyle: FontStyle.italic,
                       ),
                     ),
                   ),
-          ),
-          // Title: Name & Risk Badge
-          title: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  student.name,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.white : Colors.black87,
-                  ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: _getRiskBgColor(isDark),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  student.risk,
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: _getRiskColor(),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          // Subtitle: Info & Overall %
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 4),
-               Text(
-                'Roll: ${student.roll} • ${student.program} Sem ${student.semester}',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: isDark ? Colors.white70 : Colors.grey[600],
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Overall Attendance: ${student.overallPercentage.toStringAsFixed(1)}%',
-                 style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: student.overallPercentage < 75 ? Colors.red : Colors.green,
-                ),
-              ),
-            ],
-          ),
-          children: [
-            Divider(color: isDark ? Colors.white10 : Colors.grey[200]),
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'Defaulter in Subjects:',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: isDark ? Colors.white70 : Colors.grey[800],
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            ...student.defaulterSubjects.map((subject) => Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: isDark ? Colors.white.withOpacity(0.05) : const Color(0xFFF9FAFB),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  const SizedBox(height: 8),
+                  ...widget.student.defaulterSubjects.map((subject) => Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: widget.isDark ? Colors.white.withOpacity(0.05) : const Color(0xFFF9FAFB),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          subject.name,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: isDark ? Colors.white : const Color(0xFF1F2937),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                subject.name,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: widget.isDark ? Colors.white : const Color(0xFF1F2937),
+                                ),
+                              ),
+                              Text(
+                                subject.code,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: widget.isDark ? Colors.white38 : const Color(0xFF6B7280),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        Text(
-                          subject.code,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isDark ? Colors.white38 : const Color(0xFF6B7280),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEE2E2),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            '${subject.percentage}%',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFFDC2626),
+                            ),
                           ),
                         ),
                       ],
                     ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFEE2E2),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      '${subject.percentage}%',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFFDC2626),
-                      ),
-                    ),
-                  ),
+                  )),
                 ],
               ),
-            )),
-          ],
-        ),
+            ),
+            crossFadeState: _isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 300),
+          ),
+        ],
       ),
     );
   }
@@ -706,7 +1407,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
           const SizedBox(height: 24),
           Text(
             'Attendance Threshold: $_threshold%',
-             style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
           ),
           Slider(
             value: _threshold.toDouble(),

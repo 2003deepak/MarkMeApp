@@ -36,6 +36,7 @@ import 'package:markmeapp/presentation/pages/student/notification_page.dart';
 import 'package:markmeapp/presentation/pages/clerk/dashboard_page.dart';
 import 'package:markmeapp/presentation/pages/clerk/profile_page.dart'
     as clerk_profile;
+import 'package:markmeapp/presentation/pages/clerk/edit_profile.dart' as clerk_edit_profile;
 import 'package:markmeapp/presentation/pages/clerk/add_subject_page.dart';
 import 'package:markmeapp/presentation/pages/clerk/add_teacher_page.dart';
 import 'package:markmeapp/presentation/pages/clerk/add_student_page.dart';
@@ -50,12 +51,18 @@ import 'package:markmeapp/presentation/pages/teacher/request_details_page.dart';
 import 'package:markmeapp/presentation/pages/teacher/requests_page.dart';
 import 'package:markmeapp/presentation/pages/teacher/session_page.dart';
 
-// Teacher & Admin Pages
+// Teacher Pages
 import 'package:markmeapp/presentation/pages/teacher/teacher_dashboard_page.dart';
 import 'package:markmeapp/presentation/pages/teacher/profile_page.dart'
     as teacher_profile;
 import 'package:markmeapp/presentation/pages/teacher/timetable.dart'
     as teacher_time_table;
+
+// Admin Pages
+import 'package:markmeapp/presentation/pages/admin/dashboard_page.dart';
+import 'package:markmeapp/presentation/pages/admin/profile_page.dart'
+    as admin_profile;
+import 'package:markmeapp/presentation/pages/admin/defaulter_teacher_page.dart';
 
 // State
 import 'package:markmeapp/state/auth_state.dart';
@@ -256,10 +263,13 @@ class AppRouter {
             GoRoute(
               path: '/admin',
               name: 'admin_dashboard',
-              builder: (context, state) => const Scaffold(
-                body: Center(child: Text('Admin Dashboard Page')),
-              ),
+              builder: (context, state) => const AdminDashboardPage(),
             ),
+            GoRoute(
+              path: '/admin/profile',
+              name: 'admin_profile',
+              builder: (context, state) => const admin_profile.ProfilePage(),
+            )
           ],
         ),
 
@@ -293,6 +303,16 @@ class AppRouter {
               path: '/clerk/add-teacher',
               name: 'add_teacher',
               builder: (context, state) => const AddTeacherPage(),
+            ),
+             GoRoute(
+              path: '/clerk/edit-profile',
+              name: 'clerk_edit_profile',
+              builder: (context, state) => const clerk_edit_profile.ClerkEditProfilePage(),
+            ),
+            GoRoute(
+              path: '/clerk/attendance-history',
+              name: 'clerk_attendance_history',
+              builder: (context, state) => const AttendanceHistoryPage(),
             ),
             GoRoute(
               path: '/clerk/new-student',
@@ -431,6 +451,14 @@ class AppRouter {
                   subjectId: subjectId,
                 );
               },
+            ),
+
+
+            // Admin Page
+            GoRoute(
+              path: '/admin/defaulter-teachers',
+              name: 'admin_defaulter_teachers',
+              builder: (context, state) => const AdminDefaulterTeacherPage(),
             ),
           ],
         ),

@@ -7,6 +7,8 @@ import 'package:markmeapp/presentation//layout/guest_layout.dart';
 import 'package:markmeapp/state/auth_state.dart';
 import 'package:markmeapp/core/utils/app_logger.dart';
 
+import 'package:markmeapp/presentation/layout/admin_layout.dart';
+
 class RoleBasedLayout extends ConsumerWidget {
   final Widget child;
 
@@ -26,7 +28,7 @@ class RoleBasedLayout extends ConsumerWidget {
       case 'clerk':
         return ClerkLayout(child: child);
       case 'admin':
-        return Scaffold(body: child);
+        return AdminLayout(child: child);
       case 'null':
         return GuestLayout(child: child);
 

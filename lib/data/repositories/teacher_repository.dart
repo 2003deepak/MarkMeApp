@@ -112,64 +112,7 @@ class TeacherRepository {
     }
   }
 
-  Future<Map<String, dynamic>> pushNotification(
-    AppNotification notification,
-  ) async {
-    try {
-      AppLogger.info("🔵 Preparing notification request body…");
 
-      // Build raw body
-      final Map<String, dynamic> body = {
-        "user": notification.user,
-        "title": notification.title,
-        "message": notification.message,
-      };
-
-      // Add selective target_ids only when not empty
-      if (notification.targetIds != null &&
-          notification.targetIds!.isNotEmpty) {
-        body["target_ids"] = notification.targetIds;
-      }
-
-      // Add filter groups only when not empty
-      if (notification.filters != null && notification.filters!.isNotEmpty) {
-        body["filters"] = notification.filters!.map((f) {
-          return {
-            if (f.dept != null && f.dept!.isNotEmpty) "dept": f.dept,
-            if (f.program != null && f.program!.isNotEmpty)
-              "program": f.program,
-            if (f.semester != null) "semester": f.semester,
-            if (f.batchYear != null) "batch_year": f.batchYear,
-          };
-        }).toList();
-      }
-
-      AppLogger.info("📤 Final Request Body → $body");
-
-      final response = await _dio.post(
-        '/notification/push-notification',
-        data: body,
-      );
-
-      return {
-        'success': true,
-        'message': "Notification sent successfully",
-        'data': response.data,
-      };
-    } on DioException catch (e) {
-      return {
-        'success': false,
-        'error': e.response?.data?['message'] ?? 'Failed to send notification',
-      };
-    } catch (e) {
-      return {'success': false, 'error': 'An unexpected error occurred'};
-    }
-  }
-
-  // Legacy support or alias
-  Future<Map<String, dynamic>> notify(AppNotification notification) async {
-    return pushNotification(notification);
-  }
 
   Future<Map<String, dynamic>> fetchStudentsForNotification(
     int page,

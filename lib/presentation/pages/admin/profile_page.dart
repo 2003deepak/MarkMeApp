@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:markmeapp/core/theme/app_theme.dart';
 import 'package:markmeapp/state/auth_state.dart';
-import 'package:markmeapp/state/clerk_state.dart';
+import 'package:markmeapp/state/admin_state.dart';
 
 class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
@@ -19,7 +19,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(clerkStoreProvider.notifier).loadProfile();
+      ref.read(adminStoreProvider.notifier).loadProfile();
     });
   }
 
@@ -63,7 +63,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   }
 
   void _openEditProfile() {
-    context.push('/clerk/edit-profile');
+    // context.push('/admin/edit-profile');
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Edit Profile - Coming Soon')),
+    );
   }
 
   SizedBox gap(double v) => SizedBox(height: v);
@@ -187,9 +190,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     final w = MediaQuery.of(context).size.width;
     final hPad = w < 380 ? 16.0 : 20.0;
     
-    final clerkState = ref.watch(clerkStoreProvider);
-    final profile = clerkState.profile;
-    final isLoading = clerkState.isLoading;
+    final adminState = ref.watch(adminStoreProvider);
+    final profile = adminState.profile;
+    final isLoading = adminState.isLoading;
 
     if (isLoading && profile == null) {
       return const Scaffold(
@@ -197,11 +200,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       );
     }
 
-    final firstName = profile?.firstName ?? 'Clerk';
+    final firstName = profile?.firstName ?? 'Admin';
     final lastName = profile?.lastName ?? '';
-    final email = profile?.email ?? 'clerk@markme.com';
-    final program = profile?.program ?? 'N/A';
-    final dept = profile?.department ?? 'N/A';
+    final email = profile?.email ?? 'admin@markme.com';
     final profilePic = profile?.profilePicture;
 
     return Theme(
@@ -270,58 +271,34 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                             ),
                           ),
                           const SizedBox(height: 12),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEEF2FF),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.verified_user,
+                                  size: 14,
+                                  color: Color(0xFF4F46E5),
                                 ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFEEF2FF),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(
-                                      Icons.school,
-                                      size: 14,
-                                      color: Color(0xFF4F46E5),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      program,
-                                      style: GoogleFonts.inter(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
-                                        color: const Color(0xFF4F46E5),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF0F9FF),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  dept,
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Administrator',
                                   style: GoogleFonts.inter(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w500,
-                                    color: const Color(0xFF0369A1),
+                                    color: const Color(0xFF4F46E5),
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ],
                       ),
@@ -345,28 +322,17 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               ),
 
               gap(24),
-
+              
               _sectionHeader('ATTENDANCE'),
               Container(
                 decoration: _cardDecoration,
                 child: Column(
                   children: [
                     _infoTile(
-                      icon: Icons.bar_chart_rounded,
-                      label: 'Attendance Summary',
-                      subtitle: 'View your attendance statistics',
-                      onTap: () => context.push('/clerk/attendance-history'),
-                    ),
-                    Container(
-                      height: 1,
-                      margin: const EdgeInsets.symmetric(horizontal: 16),
-                      color: const Color(0xFFF1F5F9),
-                    ),
-                    _infoTile(
                       icon: Icons.warning_amber_rounded,
-                      label: 'Defaulters List',
-                      subtitle: 'View students with low attendance',
-                      onTap: () => context.push('/clerk/defaulters'),
+                      label: 'Defaulter Teachers',
+                      subtitle: 'View teachers with high reschedule/cancellation rates',
+                      onTap: () => context.push('/admin/defaulter-teachers'),
                     ),
                   ],
                 ),
@@ -379,13 +345,11 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 decoration: _cardDecoration,
                 child: Column(
                   children: [
-                    
-
                     _infoTile(
-                      icon: Icons.lock_outline_rounded,
-                      label: 'Update Password',
-                      subtitle: 'Change your account password',
-                      onTap: _onUpdatePassword,
+                      icon: Icons.person_outline_rounded,
+                      label: 'Edit Profile',
+                      subtitle: 'Update your personal information',
+                      onTap: _openEditProfile,
                     ),
                     Container(
                       height: 1,
@@ -393,14 +357,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       color: const Color(0xFFF1F5F9),
                     ),
                     _infoTile(
-                      icon: Icons.help_outline_rounded,
-                      label: 'Help & Support',
-                      subtitle: 'Get assistance',
-                      onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Open Help & Support')),
-                        );
-                      },
+                      icon: Icons.lock_outline_rounded,
+                      label: 'Update Password',
+                      subtitle: 'Change your account password',
+                      onTap: _onUpdatePassword,
                     ),
                     Container(
                       height: 1,

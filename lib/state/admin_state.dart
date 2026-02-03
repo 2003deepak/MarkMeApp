@@ -1,23 +1,23 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:markmeapp/data/repositories/clerk_repository.dart';
-import 'package:markmeapp/data/models/clerk_model.dart';
-import 'package:dio/dio.dart';
+import 'package:markmeapp/data/models/admin_model.dart';
+import 'package:markmeapp/data/repositories/admin_repository.dart';
 
 @immutable
-class ClerkState {
-  final Clerk? profile;
+class AdminState {
+  final Admin? profile;
   final bool isLoading;
   final String? errorMessage;
 
-  const ClerkState({this.profile, this.isLoading = false, this.errorMessage});
+  const AdminState({this.profile, this.isLoading = false, this.errorMessage});
 
-  ClerkState copyWith({
-    Clerk? profile,
+  AdminState copyWith({
+    Admin? profile,
     bool? isLoading,
     String? errorMessage,
   }) {
-    return ClerkState(
+    return AdminState(
       profile: profile ?? this.profile,
       isLoading: isLoading ?? this.isLoading,
       errorMessage: errorMessage,
@@ -26,25 +26,25 @@ class ClerkState {
 
   @override
   String toString() {
-    return 'ClerkState(profile: $profile, isLoading: $isLoading, errorMessage: $errorMessage)';
+    return 'AdminState(profile: $profile, isLoading: $isLoading, errorMessage: $errorMessage)';
   }
 }
 
-class ClerkStore extends StateNotifier<ClerkState> {
-  final ClerkRepository _clerkRepo;
+class AdminStore extends StateNotifier<AdminState> {
+  final AdminRepository _adminRepo;
 
-  ClerkStore(this._clerkRepo) : super(const ClerkState());
+  AdminStore(this._adminRepo) : super(const AdminState());
 
   Future<Map<String, dynamic>> loadProfile() async {
     try {
       state = state.copyWith(isLoading: true);
 
-      final result = await _clerkRepo.fetchProfile();
+      final result = await _adminRepo.fetchProfile();
 
       if (result['success'] == true) {
-        final clerkProfile = Clerk.fromJson(result['data']);
+        final adminProfile = Admin.fromJson(result['data']);
         state = state.copyWith(
-          profile: clerkProfile,
+          profile: adminProfile,
           isLoading: false,
           errorMessage: null,
         );
@@ -59,15 +59,14 @@ class ClerkStore extends StateNotifier<ClerkState> {
     }
   }
 
-  Future<Map<String, dynamic>> updateProfile(FormData clerkProfile) async {
+  Future<Map<String, dynamic>> updateProfile(FormData adminProfile) async {
     try {
-      
       state = state.copyWith(errorMessage: null);
 
-      final result = await _clerkRepo.updateProfile(clerkProfile);
+      final result = await _adminRepo.updateProfile(adminProfile);
 
       if (result['success'] == true) {
-        // Option 1: Refresh profile from server
+        // Refresh profile from server
         await loadProfile();
         
         return {"success": true, "message": result['message'] ?? "Profile updated"};
@@ -82,7 +81,7 @@ class ClerkStore extends StateNotifier<ClerkState> {
   }
 }
 
-final clerkStoreProvider = StateNotifierProvider<ClerkStore, ClerkState>((ref) {
-  final repo = ref.watch(clerkRepositoryProvider);
-  return ClerkStore(repo);
+final adminStoreProvider = StateNotifierProvider<AdminStore, AdminState>((ref) {
+  final repo = ref.watch(adminRepositoryProvider);
+  return AdminStore(repo);
 });

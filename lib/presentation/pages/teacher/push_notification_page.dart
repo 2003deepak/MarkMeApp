@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:markmeapp/data/models/notification_model.dart'
     as notification_model;
+import 'package:markmeapp/data/repositories/notification_repository.dart';
 import 'package:markmeapp/data/repositories/teacher_repository.dart';
 import 'class_selection_page.dart';
 import 'student_selection_page.dart';
@@ -700,10 +701,10 @@ class _PushNotificationPageState extends ConsumerState<PushNotificationPage> {
     setState(() => _isLoading = true);
 
     try {
-      final teacherRepo = ref.read(teacherRepositoryProvider);
+      final notificationRepo = ref.read(notificationRepositoryProvider);
       final notification = _createNotification();
 
-      final response = await teacherRepo.notify(notification);
+      final response = await notificationRepo.pushNotification(notification);
 
       debugPrint("The response is: $response");
 

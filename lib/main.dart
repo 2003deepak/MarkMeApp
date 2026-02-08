@@ -248,8 +248,22 @@ class _MyAppState extends ConsumerState<MyApp> {
   void _navigateFromNotification(Map<String, dynamic> data) {
     final route = data['route'];
     if (route is String) {
-      context.push(route);
+      ref.read(AppRouter.routerProvider).push(route);
     }
+  }
+
+  void _showSnack(String message) {
+    final ctx = AppRouter.navigatorKey.currentContext;
+    if (ctx == null) return;
+
+    ScaffoldMessenger.of(ctx).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 
   @override

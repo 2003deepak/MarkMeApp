@@ -94,7 +94,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       'email': nullIfEmpty(_emailCtrl.text),
       'phone': nullIfEmpty(_phoneCtrl.text),
       'dob': _dob != null
-          ? '${_dob!.day.toString().padLeft(2, '0')}/${_dob!.month.toString().padLeft(2, '0')}/${_dob!.year}'
+          ? '${_dob!.day.toString().padLeft(2, '0')}-${_dob!.month.toString().padLeft(2, '0')}-${_dob!.year}'
           : null,
       'roll_number': nullIfEmpty(_rollCtrl.text),
       'program': _program,
@@ -318,6 +318,18 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       if (dobString.contains('/')) {
         // Parse dd/MM/yyyy format
         final parts = dobString.split('/');
+        if (parts.length == 3) {
+          final day = int.tryParse(parts[0]);
+          final month = int.tryParse(parts[1]);
+          final year = int.tryParse(parts[2]);
+          if (day != null && month != null && year != null) {
+            _dob = DateTime(year, month, day);
+            _dobCtrl.text = _formatDateForDisplay(_dob!);
+          }
+        }
+      } else if (dobString.contains('-')) {
+        // Parse dd-MM-yyyy format
+        final parts = dobString.split('-');
         if (parts.length == 3) {
           final day = int.tryParse(parts[0]);
           final month = int.tryParse(parts[1]);

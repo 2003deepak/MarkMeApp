@@ -11,10 +11,18 @@ import 'package:markmeapp/data/models/user_model.dart';
 import 'package:markmeapp/presentation/widgets/ui/input_field.dart';
 import 'package:markmeapp/presentation/widgets/ui/otp_field.dart';
 import 'package:markmeapp/state/auth_state.dart';
+import 'package:markmeapp/presentation/widgets/ui/confirmation_card.dart';
 import 'package:markmeapp/core/utils/app_logger.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
-  const LoginPage({super.key});
+  final bool verified;
+  final String? verificationError;
+
+  const LoginPage({
+    super.key,
+    this.verified = false,
+    this.verificationError,
+  });
 
   @override
   ConsumerState<LoginPage> createState() => _LoginPageState();
@@ -27,6 +35,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   bool _rememberMe = false;
   String _selectedRole = 'student'; // Default role
   bool _permissionsInitialized = false; // Add this flag
+
 
   @override
   void initState() {
@@ -161,10 +170,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final isDesktop = screenWidth > 600;
     final primaryColor = Colors.blue.shade600;
 
-    // REMOVED: appPermissions.initialize(context) from here
-
     // Watch the auth state for loading & errors
     final authState = ref.watch(authStoreProvider);
+
+    AppLogger.info('🔍 [LoginPage] Widget verified: ${widget.verified}');
+    AppLogger.info('🔍 [LoginPage] Widget verification error: ${widget.verificationError}');
 
     return Scaffold(
       body: SingleChildScrollView(

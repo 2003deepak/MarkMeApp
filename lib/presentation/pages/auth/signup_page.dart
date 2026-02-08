@@ -72,17 +72,21 @@ class _SignupPageState extends ConsumerState<SignupPage> {
       AppLogger.info(result.toString());
 
       // Handle the response from auth store
-      if (result['success'] == true) {
+      if (result['success']) {
         _showSnackBar(
-          result['message'] ?? 'Registration successful! Please login.',
+          result['message'] ?? 'Registration successful! Please verify your email.',
           isError: false,
         );
 
-        if (mounted) {
-          context.go('/login');
-        }
-
-        // Navigation is handled in the auth store, but we can also navigate here if needed
+        
+          context.push(
+            '/otp-verification',
+            extra: {
+              'email': _emailController.text.trim(),
+              'role': 'student', // Default role for now, or get from form if added later
+            },
+          );
+        
       } else {
         _showSnackBar(
           result['message'] ?? 'Registration failed. Please try again.',

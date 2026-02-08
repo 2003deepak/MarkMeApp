@@ -432,6 +432,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
         const SizedBox(height: 8),
         Center(
           child: OTPField(
+            key: const ValueKey('otp_field'),
             onCompleted: _onOtpCompleted,
             autoFocus: false,
             borderColor: Colors.grey.shade400,
@@ -543,6 +544,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
         const SizedBox(height: 8),
         Center(
           child: OTPField(
+            key: const ValueKey('new_password_field'),
             onCompleted: _onNewPasswordCompleted,
             autoFocus: false,
             borderColor: Colors.grey.shade300,
@@ -567,6 +569,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
         const SizedBox(height: 8),
         Center(
           child: OTPField(
+            key: const ValueKey('confirm_password_field'),
             onCompleted: _onConfirmPasswordCompleted,
             autoFocus: false,
             borderColor: Colors.grey.shade300,

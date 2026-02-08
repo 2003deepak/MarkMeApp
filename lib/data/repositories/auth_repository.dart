@@ -233,6 +233,40 @@ class AuthRepository {
     }
   }
 
+  Future<Map<String, dynamic>> resendOtp(String email, String role) async {
+    try {
+      final url = '/student/resend-verify-email';
+      final response = await _dio.post(
+        url,
+        data: {'email': email, 'role': role},
+      );
+
+      final responseBody = response.data;
+
+      if (response.statusCode == 200) {
+         if (responseBody['success'] == true) {
+          return {'success': true, 'message': responseBody['message']};
+        } else {
+          return {
+            'success': false,
+            'error': responseBody['message'] ?? 'Failed to resend OTP',
+          };
+        }
+      } else {
+        return {
+          'success': false,
+          'error': responseBody['message'] ?? 'Server error',
+        };
+      }
+    } on DioException catch (e) {
+      final errorMessage =
+          e.response?.data?['message'] ?? e.message ?? 'Network error occurred';
+      return {'success': false, 'error': errorMessage};
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
   Future<Map<String, dynamic>> resetPassword(
     String email,
     String role,

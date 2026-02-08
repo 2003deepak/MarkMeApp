@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dio/dio.dart';
 import 'package:markmeapp/core/utils/app_logger.dart';
 import 'package:markmeapp/data/repositories/teacher_repository.dart';
 
@@ -73,6 +74,27 @@ class TeacherStore extends StateNotifier<TeacherState> {
     } catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.toString());
 
+      return {"success": false, "message": "Error: $e"};
+    }
+  }
+
+  Future<Map<String, dynamic>> updateProfile(FormData data) async {
+    try {
+      AppLogger.info("Updating Teacher Profile");
+      state = state.copyWith(isLoading: true);
+
+      final result = await _teacherRepo.updateProfile(data);
+
+      if (result['success'] == true) {
+        // Reload profile to get fresh data
+        await loadProfile();
+        return result;
+      }
+
+      state = state.copyWith(isLoading: false, errorMessage: result['message']);
+      return result;
+    } catch (e) {
+      state = state.copyWith(isLoading: false, errorMessage: e.toString());
       return {"success": false, "message": "Error: $e"};
     }
   }

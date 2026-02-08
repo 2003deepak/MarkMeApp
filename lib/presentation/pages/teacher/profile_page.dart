@@ -58,7 +58,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   }
 
   void _openEditProfile() {
-    // context.push('/student/edit-profile');
+    context.push('/teacher/edit-profile');
   }
 
   SizedBox gap(double v) => SizedBox(height: v);
@@ -188,6 +188,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   Widget build(BuildContext context) {
     final w = MediaQuery.of(context).size.width;
     final hPad = w < 380 ? 16.0 : 20.0;
+    final state = ref.watch(teacherStoreProvider);
 
     return Theme(
       data: AppTheme.theme,

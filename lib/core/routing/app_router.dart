@@ -19,6 +19,7 @@ import 'package:markmeapp/presentation/pages/clerk/teacher_menu_page.dart';
 import 'package:markmeapp/presentation/pages/splash/splash_page.dart';
 import 'package:markmeapp/presentation/pages/auth/login_page.dart';
 import 'package:markmeapp/presentation/pages/auth/signup_page.dart';
+import 'package:markmeapp/presentation/pages/auth/otp_verification_page.dart';
 import 'package:markmeapp/presentation/pages/auth/forgot_password_page.dart';
 import 'package:markmeapp/presentation/pages/auth/reset_password_page.dart';
 import 'package:markmeapp/presentation/pages/student/attendance_history_page.dart';
@@ -57,6 +58,8 @@ import 'package:markmeapp/presentation/pages/teacher/profile_page.dart'
     as teacher_profile;
 import 'package:markmeapp/presentation/pages/teacher/timetable.dart'
     as teacher_time_table;
+import 'package:markmeapp/presentation/pages/teacher/edit_profile.dart'
+    as teacher_edit_profile;
 
 // Admin Pages
 import 'package:markmeapp/presentation/pages/admin/dashboard_page.dart';
@@ -101,6 +104,7 @@ class AppRouter {
           '/',
           '/login',
           '/signup',
+          '/otp-verification',
           '/forgot-password',
           '/reset-password',
         ];
@@ -149,8 +153,22 @@ class AppRouter {
         ),
         GoRoute(
           path: '/login',
-          name: 'login',
-          builder: (context, state) => const GuestLayout(child: LoginPage()),
+          builder: (context, state) {
+            return GuestLayout(child: LoginPage());
+          },
+        ),
+
+        GoRoute(
+          path: '/otp-verification',
+          name: 'otp_verification',
+          builder: (context, state) {
+            final extra = state.extra as Map<String, dynamic>? ?? {};
+            final email = extra['email'] as String? ?? '';
+            final role = extra['role'] as String? ?? 'student';
+            return GuestLayout(
+              child: OTPVerificationPage(email: email, role: role),
+            );
+          },
         ),
         GoRoute(
           path: '/signup',
@@ -406,6 +424,16 @@ class AppRouter {
                   images: images,
                 );
               },
+            ),
+
+
+            // Teacher Profile Edit
+            GoRoute(
+              path: '/teacher/edit-profile',
+              name: 'teacher_edit_profile',
+              builder:
+                  (context, state) =>
+                      const teacher_edit_profile.TeacherEditProfilePage(),
             ),
 
             // Clerk Analytics Routes

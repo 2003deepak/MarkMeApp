@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 class OTPField extends StatefulWidget {
   final int length;
   final ValueChanged<String> onCompleted;
+  final ValueChanged<String>? onChanged;
   final bool autoFocus;
   final bool enabled;
   final TextStyle? textStyle;
@@ -21,6 +22,7 @@ class OTPField extends StatefulWidget {
     super.key,
     this.length = 6,
     required this.onCompleted,
+    this.onChanged,
     this.autoFocus = false,
     this.enabled = true,
     this.textStyle,
@@ -88,6 +90,8 @@ class OTPFieldState extends State<OTPField> {
 
     // Check if OTP is complete
     _checkOTPCompletion();
+    // Notify change
+    widget.onChanged?.call(_otp.join(''));
   }
 
   void _handlePaste(String pastedText, int startIndex) {
@@ -110,6 +114,7 @@ class OTPFieldState extends State<OTPField> {
     _focusNodes[lastIndex].requestFocus();
 
     _checkOTPCompletion();
+    widget.onChanged?.call(_otp.join(''));
   }
 
   void _onFocusChanged(int index) {
@@ -129,6 +134,8 @@ class OTPFieldState extends State<OTPField> {
     }
   }
 
+
+
   void _onKeyPressed(KeyEvent event, int index) {
     if (event is KeyDownEvent) {
       if (event.logicalKey == LogicalKeyboardKey.backspace) {
@@ -137,6 +144,7 @@ class OTPFieldState extends State<OTPField> {
           _focusNodes[index - 1].requestFocus();
           _controllers[index - 1].text = '';
           _otp[index - 1] = '';
+          widget.onChanged?.call(_otp.join(''));
         }
       }
     }

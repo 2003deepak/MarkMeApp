@@ -199,6 +199,12 @@ class AuthStore extends StateNotifier<AuthState> {
 
   /// Register User
   Future<Map<String, dynamic>> registerUser(User userModel) async {
+    if (state.isLoading) {
+      return {'status': 'fail', 'message': 'Operation already in progress'};
+    }
+
+    state = state.copyWith(isLoading: true);
+
     try {
       final response = await _authRepo.registerUser(userModel);
 
@@ -222,7 +228,6 @@ class AuthStore extends StateNotifier<AuthState> {
       );
       return {
         'status': 'fail',
-        // ✅ Preserve backend message here
         'message':
             e.response?.data['message'] ??
             'Registration failed. Please try again.',
@@ -233,6 +238,8 @@ class AuthStore extends StateNotifier<AuthState> {
         'status': 'fail',
         'message': 'Unexpected error occurred. Please try again.',
       };
+    } finally {
+      state = state.copyWith(isLoading: false);
     }
   }
 
@@ -255,7 +262,7 @@ class AuthStore extends StateNotifier<AuthState> {
           'message': result['message'] ?? 'OTP sent to your email.',
         };
       } else {
-        final error = result['message'] ?? 'Failed to send OTP';
+        final error = result['message'] ?? result['error'] ?? 'Failed to send OTP';
         state = state.copyWith(isLoading: false);
         return {'status': 'fail', 'message': error};
       }
@@ -290,7 +297,7 @@ class AuthStore extends StateNotifier<AuthState> {
           'message': result['message'] ?? 'OTP verified successfully.',
         };
       } else {
-        final error = result['message'] ?? 'OTP verification failed';
+        final error = result['message'] ?? result['error'] ?? 'OTP verification failed';
         state = state.copyWith(isLoading: false);
         return {'status': 'fail', 'message': error};
       }
@@ -325,7 +332,7 @@ class AuthStore extends StateNotifier<AuthState> {
           'message': result['message'] ?? 'Password reset successfully.',
         };
       } else {
-        final error = result['message'] ?? 'Password reset failed';
+        final error = result['message'] ?? result['error'] ?? 'Password reset failed';
         state = state.copyWith(isLoading: false);
         return {'status': 'fail', 'message': error};
       }

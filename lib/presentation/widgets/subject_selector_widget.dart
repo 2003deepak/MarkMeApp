@@ -14,30 +14,38 @@ class SubjectSelectorWidget extends StatelessWidget {
     required this.isDesktop,
   });
 
+  bool _hasData() {
+    return attendances.isNotEmpty;
+  }
+
   @override
   Widget build(BuildContext context) {
-    // ✅ Group subjects with their components
+    final bool hasData = _hasData();
+    
+    // ✅ Group subjects with their components (only if has data)
     final Map<String, List<String>> subjectComponents = {};
     final List<String> allSubjects = [];
     final List<String> lectureSubjects = [];
     final List<String> labSubjects = [];
 
-    for (var att in attendances) {
-      final subject = att['subject_name'] as String? ?? 'Unknown';
-      final component = att['component'] as String? ?? 'Lecture';
+    if (hasData) {
+      for (var att in attendances) {
+        final subject = att['subject_name'] as String? ?? 'Unknown';
+        final component = att['component'] as String? ?? 'Lecture';
 
-      if (!subjectComponents.containsKey(subject)) {
-        subjectComponents[subject] = [];
-        allSubjects.add(subject);
-      }
+        if (!subjectComponents.containsKey(subject)) {
+          subjectComponents[subject] = [];
+          allSubjects.add(subject);
+        }
 
-      if (!subjectComponents[subject]!.contains(component)) {
-        subjectComponents[subject]!.add(component);
+        if (!subjectComponents[subject]!.contains(component)) {
+          subjectComponents[subject]!.add(component);
 
-        if (component == 'Lecture') {
-          lectureSubjects.add(subject);
-        } else if (component == 'Lab') {
-          labSubjects.add(subject);
+          if (component == 'Lecture') {
+            lectureSubjects.add(subject);
+          } else if (component == 'Lab') {
+            labSubjects.add(subject);
+          }
         }
       }
     }
@@ -64,50 +72,70 @@ class SubjectSelectorWidget extends StatelessWidget {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                // Global filters section
+                // Global filters section (always show these)
                 _buildFilterSection(
                   chips: [
                     _buildSubjectChip(
-                      'All Subjects',
+                      hasData ? 'All Subjects' : 'No Subjects',
                       null,
                       'Lecture',
-                    ), // Use Lecture behavior
-                    _buildSubjectChip(
-                      'All Lectures',
-                      'all-lectures',
-                      'Lecture', // Treat as Lecture type
+                      hasData,
                     ),
                     _buildSubjectChip(
-                      'All Labs',
+                      hasData ? 'All Lectures' : '--',
+                      'all-lectures',
+                      'Lecture',
+                      hasData,
+                    ),
+                    _buildSubjectChip(
+                      hasData ? 'All Labs' : '--',
                       'all-labs',
                       'Lab',
-                    ), // Treat as Lab type
+                      hasData,
+                    ),
                   ],
                 ),
 
-                // Lectures section
-                if (lectureSubjects.isNotEmpty) ...[
+                // Lectures section (only if has data and lectures exist)
+                if (hasData && lectureSubjects.isNotEmpty) ...[
                   _buildFilterSection(
                     chips: lectureSubjects.map((subject) {
                       return _buildSubjectChip(
                         subject,
                         "$subject - Lecture",
                         'Lecture',
+                        hasData,
                       );
                     }).toList(),
                   ),
                 ],
 
-                // Labs section
-                if (labSubjects.isNotEmpty) ...[
+                // Labs section (only if has data and labs exist)
+                if (hasData && labSubjects.isNotEmpty) ...[
                   _buildFilterSection(
                     chips: labSubjects.map((subject) {
                       return _buildSubjectChip(
                         subject,
                         "$subject - Lab",
                         'Lab',
+                        hasData,
                       );
                     }).toList(),
+                  ),
+                ],
+
+                // Empty state hint (only if no data)
+                if (!hasData) ...[
+                  Container(
+                    margin: const EdgeInsets.only(left: 8),
+                    child: Text(
+                      '• Enroll to see subjects',
+                      style: TextStyle(
+                        fontSize: isDesktop ? 13 : 11,
+                        color: Colors.grey.shade400,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
                   ),
                 ],
               ],
@@ -128,50 +156,52 @@ class SubjectSelectorWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildSubjectChip(String label, String? value, String? component) {
-    final isSelected = selectedSubject == value;
+  Widget _buildSubjectChip(String label, String? value, String? component, bool hasData) {
+    final isSelected = selectedSubject == value && hasData;
     final isLab = component == 'Lab' || value == 'all-labs';
     final isLecture =
         component == 'Lecture' ||
         value == 'all-lectures' ||
-        value == null; // All Subjects uses Lecture behavior
+        value == null;
 
     Color backgroundColor = Colors.transparent;
-    Color textColor = Colors.grey.shade700;
-    Color borderColor = Colors.grey.shade300;
+    Color textColor = hasData ? Colors.grey.shade700 : Colors.grey.shade400;
+    Color borderColor = hasData ? Colors.grey.shade300 : Colors.grey.shade200;
 
-    if (isSelected) {
-      if (isLab) {
-        backgroundColor = const Color.fromARGB(
-          255,
-          224,
-          89,
-          48,
-        ); // Professional dark orange
-        textColor = Colors.white;
-        borderColor = const Color(0xFFD84315);
-      } else if (isLecture) {
-        backgroundColor = const Color(0xFF1565C0); // Professional dark blue
-        textColor = Colors.white;
-        borderColor = const Color(0xFF1565C0);
+    if (hasData) {
+      if (isSelected) {
+        if (isLab) {
+          backgroundColor = const Color.fromARGB(255, 224, 89, 48);
+          textColor = Colors.white;
+          borderColor = const Color(0xFFD84315);
+        } else if (isLecture) {
+          backgroundColor = const Color(0xFF1565C0);
+          textColor = Colors.white;
+          borderColor = const Color(0xFF1565C0);
+        }
+      } else {
+        if (isLab) {
+          backgroundColor = const Color(0xFFFFF3E0);
+          textColor = const Color(0xFFE64A19);
+          borderColor = const Color(0xFFFFCCBC);
+        } else if (isLecture) {
+          backgroundColor = const Color(0xFFE3F2FD);
+          textColor = const Color(0xFF1976D2);
+          borderColor = const Color(0xFFBBDEFB);
+        }
       }
     } else {
-      if (isLab) {
-        backgroundColor = const Color(0xFFFFF3E0); // Light orange
-        textColor = const Color(0xFFE64A19);
-        borderColor = const Color(0xFFFFCCBC);
-      } else if (isLecture) {
-        backgroundColor = const Color(0xFFE3F2FD); // Light blue
-        textColor = const Color(0xFF1976D2);
-        borderColor = const Color(0xFFBBDEFB);
-      }
+      // Empty state styling - all chips are greyed out
+      backgroundColor = Colors.grey.shade50;
+      textColor = Colors.grey.shade400;
+      borderColor = Colors.grey.shade300;
     }
 
     return MouseRegion(
-      cursor: SystemMouseCursors.click,
+      cursor: hasData ? SystemMouseCursors.click : SystemMouseCursors.basic,
       child: GestureDetector(
         key: Key(value ?? 'all'),
-        onTap: () => onSubjectSelected(value),
+        onTap: hasData ? () => onSubjectSelected(value) : null,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
@@ -183,7 +213,7 @@ class SubjectSelectorWidget extends StatelessWidget {
             color: backgroundColor,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: borderColor, width: 1.5),
-            boxShadow: isSelected
+            boxShadow: (hasData && isSelected)
                 ? [
                     BoxShadow(
                       color: backgroundColor.withValues(alpha: 0.4),
@@ -211,7 +241,11 @@ class SubjectSelectorWidget extends StatelessWidget {
                 ),
                 const SizedBox(width: 6),
               ] else if (isLecture) ...[
-                Icon(Icons.school, size: isDesktop ? 16 : 14, color: textColor),
+                Icon(
+                  Icons.school, 
+                  size: isDesktop ? 16 : 14, 
+                  color: textColor,
+                ),
                 const SizedBox(width: 6),
               ],
 
@@ -219,7 +253,7 @@ class SubjectSelectorWidget extends StatelessWidget {
                 label,
                 style: TextStyle(
                   fontSize: isDesktop ? 14 : 12,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                  fontWeight: (hasData && isSelected) ? FontWeight.w600 : FontWeight.w500,
                   color: textColor,
                   letterSpacing: 0.2,
                 ),

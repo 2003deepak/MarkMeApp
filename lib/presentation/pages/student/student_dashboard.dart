@@ -60,35 +60,55 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
     await studentStore.loadProfile();
   }
 
-  Future<void> _fetchAttendanceData() async {
-    try {
-      final studentRepo = ref.read(studentRepositoryProvider);
-      final response = await studentRepo.fetchStudentAttendance();
+Future<void> _fetchAttendanceData() async {
+  try {
+    final studentRepo = ref.read(studentRepositoryProvider);
+    final response = await studentRepo.fetchStudentAttendance();
 
-      if (response['success'] == true) {
-        final rawData = response['data'];
-        final dataProcessor = StudentDataProcessor(rawData: rawData);
+    if (response['success'] == true) {
+      final rawData = response['data'];
+      final dataProcessor = StudentDataProcessor(rawData: rawData);
 
-        setState(() {
-          responseData = rawData;
-          subjectData = dataProcessor.processSubjectData();
-          componentData = dataProcessor.processComponentData();
+      setState(() {
+        responseData = rawData;
+        subjectData = dataProcessor.processSubjectData();
+        componentData = dataProcessor.processComponentData();
+        isLoading = false;
+      });
+    } 
+    // 🔥 ADD THIS BLOCK
+    else if (response['missing_fields'] != null) {
+      setState(() {
+        responseData = null;
+        subjectData = {};
+        componentData = {};
+        errorMessage = '';   // IMPORTANT
+        isLoading = false;
+      });
+    } 
+    else {
+      setState(() {
+        if (response['message'] == "Student academic details are incomplete") {
+          responseData = null;
+          subjectData = {};
+          componentData = {};
+          errorMessage = ''; 
           isLoading = false;
-        });
-      } else {
-        setState(() {
+        } else {
           errorMessage =
               response['message'] ?? 'Failed to load attendance data';
           isLoading = false;
-        });
-      }
-    } catch (e) {
-      setState(() {
-        errorMessage = 'An error occurred: $e';
-        isLoading = false;
+        }
       });
     }
+  } catch (e) {
+    setState(() {
+      errorMessage = 'An error occurred: $e';
+      isLoading = false;
+    });
   }
+}
+
 
   Future<void> _fetchUpcomingSessions() async {
     try {
@@ -100,10 +120,23 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
           upcomingSessions = response['data']['upcoming'] ?? [];
           isLoadingUpcoming = false;
         });
+      } else if (response['missing_fields'] != null) {
+        // 🔥 Handle incomplete profile as empty state
+        setState(() {
+          upcomingErrorMessage = '';
+          upcomingSessions = [];
+          isLoadingUpcoming = false;
+        });
       } else {
         setState(() {
-          upcomingErrorMessage =
-              response['error'] ?? 'Failed to load upcoming sessions';
+          final errorMsg = (response['error'] ?? response['message'] ?? '').toString();
+          
+          if (errorMsg.contains("Student academic details are incomplete")) {
+            upcomingErrorMessage = '';
+            upcomingSessions = [];
+          } else {
+            upcomingErrorMessage = errorMsg.isNotEmpty ? errorMsg : 'Failed to load upcoming sessions';
+          }
           isLoadingUpcoming = false;
         });
       }
@@ -125,10 +158,23 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
           bunkSafetyData = response['data'];
           isLoadingBunkSafety = false;
         });
+      } else if (response['missing_fields'] != null) {
+        // 🔥 Handle incomplete profile as empty state
+        setState(() {
+          bunkSafetyError = '';
+          bunkSafetyData = null;
+          isLoadingBunkSafety = false;
+        });
       } else {
         setState(() {
-          bunkSafetyError =
-              response['error'] ?? 'Failed to load bunk safety info';
+          final errorMsg = (response['error'] ?? response['message'] ?? '').toString();
+
+          if (errorMsg.contains("Student academic details are incomplete")) {
+            bunkSafetyError = '';
+            bunkSafetyData = null;
+          } else {
+            bunkSafetyError = errorMsg.isNotEmpty ? errorMsg : 'Failed to load bunk safety info';
+          }
           isLoadingBunkSafety = false;
         });
       }

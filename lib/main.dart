@@ -248,7 +248,11 @@ class _MyAppState extends ConsumerState<MyApp> {
   void _navigateFromNotification(Map<String, dynamic> data) {
     final route = data['route'];
     if (route is String) {
-      ref.read(AppRouter.routerProvider).push(route);
+
+      final router = ref.read(AppRouter.routerProvider);
+      if (router.routerDelegate.navigatorKey.currentContext != null) {
+        router.push(route);
+      }
     }
   }
 
@@ -268,7 +272,9 @@ class _MyAppState extends ConsumerState<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    final router = ref.watch(AppRouter.routerProvider);
+    final router = ref.read(AppRouter.routerProvider);;
+
+    print("APP ROOT REBUILD");
 
     return MaterialApp.router(
       title: 'Mark Me',

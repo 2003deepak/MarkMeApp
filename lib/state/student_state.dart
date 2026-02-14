@@ -45,7 +45,6 @@ class StudentStore extends StateNotifier<StudentState> {
   Future<Map<String, dynamic>> loadProfile() async {
     try {
       final result = await _studentRepo.fetchProfile();
-      AppLogger.info("The result in state is $result");
 
       if (result['success'] == true) {
         state = state.copyWith(profile: result['data']);

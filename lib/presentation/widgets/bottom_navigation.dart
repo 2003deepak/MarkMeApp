@@ -5,8 +5,13 @@ import 'package:markmeapp/core/utils/app_logger.dart';
 /// Custom Bottom Navigation Bar for GoRouter-based navigation
 class BottomNavigation extends StatefulWidget {
   final String userRole; // 'student', 'clerk', 'teacher', 'admin'
+  final StatefulNavigationShell? navigationShell;
 
-  const BottomNavigation({super.key, required this.userRole});
+  const BottomNavigation({
+    super.key,
+    required this.userRole,
+    this.navigationShell,
+  });
 
   @override
   State<BottomNavigation> createState() => _BottomNavigationState();
@@ -22,7 +27,7 @@ class _BottomNavigationState extends State<BottomNavigation> {
       case 'student':
         return [
           NavigationDestination(
-            route: '$baseRoute/',
+            route: '$baseRoute', // Ensure exact match
             icon: Icons.home_outlined,
             activeIcon: Icons.home,
             label: 'Home',
@@ -51,7 +56,7 @@ class _BottomNavigationState extends State<BottomNavigation> {
       case 'clerk':
         return [
           NavigationDestination(
-            route: '$baseRoute/',
+            route: '$baseRoute',
             icon: Icons.home_outlined,
             activeIcon: Icons.home,
             label: 'Home',
@@ -79,7 +84,7 @@ class _BottomNavigationState extends State<BottomNavigation> {
       case 'teacher':
         return [
           NavigationDestination(
-            route: '$baseRoute/',
+            route: '$baseRoute',
             icon: Icons.home_outlined,
             activeIcon: Icons.home,
             label: 'Home',
@@ -107,7 +112,7 @@ class _BottomNavigationState extends State<BottomNavigation> {
       case 'admin':
         return [
           NavigationDestination(
-            route: '$baseRoute/dashboard',
+            route: '$baseRoute',
             icon: Icons.home_outlined,
             activeIcon: Icons.home,
             label: 'Home',
@@ -153,9 +158,9 @@ class _BottomNavigationState extends State<BottomNavigation> {
 
   @override
   Widget build(BuildContext context) {
-    // Get the current route using GoRouter
-    final String location = GoRouterState.of(context).uri.toString();
-    final int currentIndex = _getSelectedIndex(location);
+    // Determine the current index
+    // If navigationShell is provided, use it. Otherwise, parse the location.
+    final int currentIndex = widget.navigationShell?.currentIndex ?? _getSelectedIndex(GoRouterState.of(context).uri.toString());
 
     return Container(
       decoration: BoxDecoration(
@@ -187,7 +192,7 @@ class _BottomNavigationState extends State<BottomNavigation> {
   /// Returns the selected index based on the current location
   int _getSelectedIndex(String location) {
     // Normalize location by removing trailing slash
-    final normalizedLocation = location.endsWith('/')
+    final normalizedLocation = location.endsWith('/') && location.length > 1
         ? location.substring(0, location.length - 1)
         : location;
 
@@ -197,7 +202,7 @@ class _BottomNavigationState extends State<BottomNavigation> {
 
     for (int i = 0; i < _destinations.length; i++) {
       final route = _destinations[i].route;
-      final normalizedRoute = route.endsWith('/')
+      final normalizedRoute = route.endsWith('/') && route.length > 1
           ? route.substring(0, route.length - 1)
           : route;
 
@@ -225,15 +230,24 @@ class _BottomNavigationState extends State<BottomNavigation> {
 
     return GestureDetector(
       onTap: () {
-        final route = destination.route;
-        final currentLocation = GoRouterState.of(context).uri.toString();
+        if (widget.navigationShell != null) {
+          // Use StatefulShellRoute navigation
+          widget.navigationShell!.goBranch(
+            index,
+            initialLocation: index == widget.navigationShell!.currentIndex,
+          );
+        } else {
+          // Use standard GoRouter navigation
+          final route = destination.route;
+          final currentLocation = GoRouterState.of(context).uri.toString();
 
-        AppLogger.info(
-          'BottomNavigation: Navigating to: $route, current: $currentLocation, role: ${widget.userRole}',
-        );
+          AppLogger.info(
+            'BottomNavigation: Navigating to: $route, current: $currentLocation, role: ${widget.userRole}',
+          );
 
-        if (currentLocation != route) {
-          context.push(route);
+          if (currentLocation != route) {
+             context.go(route); // Use context.go to switch branches/routes
+          }
         }
       },
       child: AnimatedContainer(
@@ -250,27 +264,19 @@ class _BottomNavigationState extends State<BottomNavigation> {
           children: [
             Stack(
               children: [
-                Icon(
-                  isSelected ? destination.activeIcon : destination.icon,
-                  color: isSelected
-                      ? const Color(0xFF2563EB)
-                      : Colors.grey.shade600,
-                  size: 24,
-                ),
-                if (destination.route.contains('notifications'))
-                  Positioned(
-                    right: -2,
-                    top: -2,
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: Colors.red.shade500,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 1.5),
-                      ),
-                    ),
+               Badge(
+                  isLabelVisible: destination.route.contains('notifications') &&
+                          false, // TODO: Add real notification count check here if needed
+                  label: const Text(''), // Dot only
+                  smallSize: 8,
+                  child: Icon(
+                    isSelected ? destination.activeIcon : destination.icon,
+                    color: isSelected
+                        ? const Color(0xFF2563EB)
+                        : Colors.grey.shade600,
+                    size: 24,
                   ),
+                ),
               ],
             ),
             const SizedBox(height: 4),

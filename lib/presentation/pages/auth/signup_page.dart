@@ -6,6 +6,7 @@ import 'package:markmeapp/data/models/user_model.dart';
 import 'package:markmeapp/presentation/widgets/ui/input_field.dart';
 import 'package:markmeapp/presentation/widgets/ui/otp_field.dart';
 import 'package:markmeapp/state/auth_state.dart';
+import 'package:markmeapp/presentation/widgets/ui/app_bar.dart';
 import 'package:markmeapp/core/utils/app_logger.dart';
 
 class SignupPage extends ConsumerStatefulWidget {
@@ -133,6 +134,10 @@ class _SignupPageState extends ConsumerState<SignupPage> {
     final authState = ref.watch(authStoreProvider);
 
     return Scaffold(
+
+      appBar: MarkMeAppBar(
+        title: '',
+      ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(isDesktop ? 32.0 : 24.0),
         child: Column(
@@ -395,7 +400,7 @@ class _SignupPageState extends ConsumerState<SignupPage> {
                     height: 56,
                     child: OutlinedButton(
                       onPressed: () {
-                        context.go('/login');
+                        context.push('/login');
                       },
                       style: OutlinedButton.styleFrom(
                         foregroundColor: primaryColor,

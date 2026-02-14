@@ -4,9 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 // Layouts
-import 'package:markmeapp/presentation/layout/guest_layout.dart';
-import 'package:markmeapp/presentation/layout/role_based_layout.dart';
 import 'package:markmeapp/presentation/layout/protected_layout.dart';
+import 'package:markmeapp/presentation/layout/student_dashboard_scaffold.dart';
 import 'package:markmeapp/presentation/pages/clerk/add_time_table_page.dart';
 import 'package:markmeapp/presentation/pages/clerk/attendance_detail_page.dart';
 import 'package:markmeapp/presentation/pages/clerk/student_list_page.dart';
@@ -14,6 +13,10 @@ import 'package:markmeapp/presentation/pages/clerk/teacher_list_page.dart';
 import 'package:markmeapp/presentation/pages/clerk/teacher_overview_page.dart';
 import 'package:markmeapp/presentation/pages/clerk/subject_analytics_detail_page.dart';
 import 'package:markmeapp/presentation/pages/clerk/teacher_menu_page.dart';
+
+import 'package:markmeapp/presentation/layout/teacher_dashboard_scaffold.dart';
+import 'package:markmeapp/presentation/layout/clerk_dashboard_scaffold.dart';
+import 'package:markmeapp/presentation/layout/admin_dashboard_scaffold.dart';
 
 // Auth Pages
 import 'package:markmeapp/presentation/pages/splash/splash_page.dart';
@@ -70,23 +73,29 @@ import 'package:markmeapp/presentation/pages/admin/defaulter_teacher_page.dart';
 // State
 import 'package:markmeapp/state/auth_state.dart';
 
-class RouterRefreshNotifier extends ChangeNotifier {
-  RouterRefreshNotifier(Ref ref) {
-    ref.listen<AuthState>(authStoreProvider, (_, __) {
-      notifyListeners();
-    });
-  }
-}
 
-/// =============================================================
+final routerRefreshProvider = Provider<ChangeNotifier>((ref) {
+  final notifier = ChangeNotifier();
+
+  ref.listen<AuthState>(authStoreProvider, (_, __) {
+    notifier.notifyListeners();
+  });
+
+  return notifier;
+});
+
+
 /// 🚀 APP ROUTER
-/// =============================================================
+
 class AppRouter {
   static final GlobalKey<NavigatorState> navigatorKey =
       GlobalKey<NavigatorState>();
 
   static final routerProvider = Provider<GoRouter>((ref) {
-    final refreshNotifier = RouterRefreshNotifier(ref);
+  final refreshNotifier = ref.read(routerRefreshProvider);
+
+  print("ROUTER REBUILD");
+
 
     return GoRouter(
       navigatorKey: navigatorKey,
@@ -154,7 +163,7 @@ class AppRouter {
         GoRoute(
           path: '/login',
           builder: (context, state) {
-            return GuestLayout(child: LoginPage());
+            return LoginPage();
           },
         ),
 
@@ -165,21 +174,18 @@ class AppRouter {
             final extra = state.extra as Map<String, dynamic>? ?? {};
             final email = extra['email'] as String? ?? '';
             final role = extra['role'] as String? ?? 'student';
-            return GuestLayout(
-              child: OTPVerificationPage(email: email, role: role),
-            );
+            return OTPVerificationPage(email: email, role: role);
           },
         ),
         GoRoute(
           path: '/signup',
           name: 'signup',
-          builder: (context, state) => const GuestLayout(child: SignupPage()),
+          builder: (context, state) => const SignupPage(),
         ),
         GoRoute(
           path: '/forgot-password',
           name: 'forgot_password',
-          builder: (context, state) =>
-              const GuestLayout(child: ForgotPasswordPage()),
+          builder: (context, state) => const ForgotPasswordPage(),
         ),
         GoRoute(
           path: '/reset-password',
@@ -188,9 +194,7 @@ class AppRouter {
             final extra = state.extra as Map<String, dynamic>?;
             final email = extra?['email'] as String? ?? '';
             final role = extra?['role'] as String? ?? '';
-            return GuestLayout(
-              child: ResetPasswordPage(email: email, role: role),
-            );
+            return ResetPasswordPage(email: email, role: role);
           },
         ),
 
@@ -199,94 +203,229 @@ class AppRouter {
         // --------------------------------------------------------
         ShellRoute(
           builder: (context, state, child) =>
-              ProtectedLayout(child: RoleBasedLayout(child: child)),
+              ProtectedLayout(child: child),
           routes: [
             // =======================
-            // 🧑‍🎓 STUDENT ROUTES
+            // 🧑‍🎓 STUDENT ROUTES (Persistent Tabs)
             // =======================
-            GoRoute(
-              path: '/student',
-              name: 'student_dashboard',
-              builder: (context, state) => const StudentDashboard(),
-            ),
-            GoRoute(
-              path: '/student/timetable',
-              name: 'student_timetable',
-              builder: (context, state) => const TimeTablePage(),
-            ),
-            GoRoute(
-              path: '/student/attendance-history',
-              name: 'student_attendance_history',
-              builder: (context, state) => const AttendanceHistoryPage(),
-            ),
-
-            GoRoute(
-              path: '/student/profile',
-              name: 'student_profile',
-              builder: (context, state) => student_profile.ProfilePage(),
+            StatefulShellRoute.indexedStack(
+              builder: (context, state, navigationShell) {
+                return StudentDashboardScaffold(navigationShell: navigationShell);
+              },
+              branches: [
+                // 1. Home
+                StatefulShellBranch(
+                  routes: [
+                    GoRoute(
+                      path: '/student',
+                      name: 'student_dashboard',
+                      builder: (context, state) => const StudentDashboard(),
+                    ),
+                  ],
+                ),
+                // 2. Schedule
+                StatefulShellBranch(
+                  routes: [
+                    GoRoute(
+                      path: '/student/timetable',
+                      name: 'student_timetable',
+                      builder: (context, state) => const TimeTablePage(),
+                    ),
+                  ],
+                ),
+                // 3. Attendance
+                StatefulShellBranch(
+                  routes: [
+                    GoRoute(
+                      path: '/student/attendance-history',
+                      name: 'student_attendance_history',
+                      builder: (context, state) =>
+                          const AttendanceHistoryPage(),
+                    ),
+                  ],
+                ),
+                // 4. Profile
+                StatefulShellBranch(
+                  routes: [
+                    GoRoute(
+                      path: '/student/profile',
+                      name: 'student_profile',
+                      builder: (context, state) =>
+                          student_profile.ProfilePage(),
+                    ),
+                  ],
+                ),
+              ],
             ),
 
             // =======================
             // 👨‍🏫 TEACHER ROUTES
             // =======================
-            GoRoute(
-              path: '/teacher',
-              name: 'teacher_dashboard',
-              builder: (context, state) => const TeacherDashboard(),
-            ),
-            GoRoute(
-              path: '/teacher/profile',
-              name: 'teacher_profile',
-              builder: (context, state) => const teacher_profile.ProfilePage(),
-            ),
-            GoRoute(
-              path: '/teacher/timetable',
-              name: 'teacher_timetable',
-              builder: (context, state) =>
-                  const teacher_time_table.TimeTablePage(),
-            ),
-            GoRoute(
-              path: '/teacher/attendance-history',
-              name: 'teacher_attendance_history',
-              builder: (context, state) => const AttendanceHistoryPage(),
+            // =======================
+            // 👨‍🏫 TEACHER ROUTES
+            // =======================
+            StatefulShellRoute.indexedStack(
+              builder: (context, state, navigationShell) {
+                return TeacherDashboardScaffold(navigationShell: navigationShell);
+              },
+              branches: [
+                // 1. Home
+                StatefulShellBranch(
+                  routes: [
+                    GoRoute(
+                      path: '/teacher',
+                      name: 'teacher_dashboard',
+                      builder: (context, state) => const TeacherDashboard(),
+                    ),
+                  ],
+                ),
+                // 2. Schedule
+                StatefulShellBranch(
+                  routes: [
+                    GoRoute(
+                      path: '/teacher/timetable',
+                      name: 'teacher_timetable',
+                      builder: (context, state) =>
+                          const teacher_time_table.TimeTablePage(),
+                    ),
+                  ],
+                ),
+                // 3. Attendance
+                StatefulShellBranch(
+                  routes: [
+                    GoRoute(
+                      path: '/teacher/attendance-history',
+                      name: 'teacher_attendance_history',
+                      builder: (context, state) =>
+                          const AttendanceHistoryPage(),
+                    ),
+                  ],
+                ),
+                // 4. Profile
+                StatefulShellBranch(
+                  routes: [
+                    GoRoute(
+                      path: '/teacher/profile',
+                      name: 'teacher_profile',
+                      builder: (context, state) =>
+                          const teacher_profile.ProfilePage(),
+                    ),
+                  ],
+                ),
+              ],
             ),
 
             // =======================
             // 🧾 CLERK ROUTES
             // =======================
-            GoRoute(
-              path: '/clerk',
-              name: 'clerk_dashboard',
-              builder: (context, state) => const ClerkDashboardPage(),
-            ),
-            GoRoute(
-              path: '/clerk/profile',
-              name: 'clerk_profile',
-              builder: (context, state) => clerk_profile.ProfilePage(),
-            ),
-            GoRoute(
-              path: '/clerk/student-list',
-              name: 'student_list',
-              builder: (context, state) => StudentListPage(),
-            ),
-            GoRoute(
-              path: '/clerk/teacher-list',
-              name: 'teacher_list',
-              builder: (context, state) => TeacherListPage(),
+            // =======================
+            // 🧾 CLERK ROUTES
+            // =======================
+            StatefulShellRoute.indexedStack(
+              builder: (context, state, navigationShell) {
+                return ClerkDashboardScaffold(navigationShell: navigationShell);
+              },
+              branches: [
+                // 1. Home
+                StatefulShellBranch(
+                  routes: [
+                    GoRoute(
+                      path: '/clerk',
+                      name: 'clerk_dashboard',
+                      builder: (context, state) => const ClerkDashboardPage(),
+                    ),
+                  ],
+                ),
+                // 2. Students
+                StatefulShellBranch(
+                  routes: [
+                    GoRoute(
+                      path: '/clerk/student-list',
+                      name: 'student_list',
+                      builder: (context, state) => StudentListPage(),
+                    ),
+                  ],
+                ),
+                // 3. Teachers
+                StatefulShellBranch(
+                  routes: [
+                    GoRoute(
+                      path: '/clerk/teacher-list',
+                      name: 'teacher_list',
+                      builder: (context, state) => TeacherListPage(),
+                    ),
+                  ],
+                ),
+                // 4. Profile
+                StatefulShellBranch(
+                  routes: [
+                    GoRoute(
+                      path: '/clerk/profile',
+                      name: 'clerk_profile',
+                      builder: (context, state) => clerk_profile.ProfilePage(),
+                    ),
+                  ],
+                ),
+              ],
             ),
 
             // =======================
             // 🛡️ ADMIN ROUTES
             // =======================
-            GoRoute(
-              path: '/admin',
-              name: 'admin_dashboard',
-              builder: (context, state) => const AdminDashboardPage(),
-            ),
-            GoRoute(
-              path: '/admin/profile',
-              name: 'admin_profile',
-              builder: (context, state) => const admin_profile.ProfilePage(),
+            // =======================
+            // 🛡️ ADMIN ROUTES
+            // =======================
+            StatefulShellRoute.indexedStack(
+              builder: (context, state, navigationShell) {
+                return AdminDashboardScaffold(navigationShell: navigationShell);
+              },
+              branches: [
+                // 1. Home
+                StatefulShellBranch(
+                  routes: [
+                    GoRoute(
+                      path: '/admin',
+                      name: 'admin_dashboard',
+                      builder: (context, state) => const AdminDashboardPage(),
+                    ),
+                  ],
+                ),
+                // 2. Analytics (Placeholder)
+                StatefulShellBranch(
+                  routes: [
+                    GoRoute(
+                      path: '/admin/analytics',
+                      name: 'admin_analytics',
+                      builder: (context, state) => const Scaffold(
+                        body: Center(child: Text('Analytics Coming Soon')),
+                      ),
+                    ),
+                  ],
+                ),
+                // 3. Management (Placeholder)
+                StatefulShellBranch(
+                  routes: [
+                    GoRoute(
+                      path: '/admin/management',
+                      name: 'admin_management',
+                      builder: (context, state) => const Scaffold(
+                        body: Center(child: Text('Management Coming Soon')),
+                      ),
+                    ),
+                  ],
+                ),
+                // 4. Profile
+                StatefulShellBranch(
+                  routes: [
+                    GoRoute(
+                      path: '/admin/profile',
+                      name: 'admin_profile',
+                      builder: (context, state) =>
+                          const admin_profile.ProfilePage(),
+                    ),
+                  ],
+                ),
+              ],
             )
           ],
         ),

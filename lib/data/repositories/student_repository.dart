@@ -215,16 +215,14 @@ class StudentRepository {
       final response = await _dio.get('/attendance/student/summary');
 
       final responseBody = response.data;
-      AppLogger.info('🟢 [StudentRepository] API Response: $responseBody');
+      
 
       // ✅ Handle 200 OK response
       if (response.statusCode == 200) {
         final success = responseBody['success'] ?? false;
 
         if (success) {
-          AppLogger.info(
-            '✅ [StudentRepository] Attendance fetched successfully',
-          );
+        
           return {
             'success': true,
             'message': responseBody['message'] ?? 'Fetched successfully',
@@ -364,6 +362,17 @@ class StudentRepository {
         };
       }
     } on DioException catch (e) {
+      // 🔥 Handle 400 Bad Request (e.g., Incomplete Profile)
+      if (e.response != null && e.response!.statusCode == 400) {
+        final errorData = e.response!.data;
+        return {
+          'success': false,
+          'message': errorData['message'] ?? 'Bad Request',
+          'missing_fields': errorData['missing_fields'], // Pass this through
+          'error': errorData['message'], // For backward compat
+        };
+      }
+      
       AppLogger.error('🔴 [StudentRepository] DioException: ${e.message}');
 
       if (e.response?.statusCode == 401) {
@@ -401,6 +410,17 @@ class StudentRepository {
         };
       }
     } on DioException catch (e) {
+      
+      if (e.response != null && e.response!.statusCode == 400) {
+        final errorData = e.response!.data;
+        return {
+          'success': false,
+          'message': errorData['message'] ?? 'Bad Request',
+          'missing_fields': errorData['missing_fields'], // Pass this through
+          'error': errorData['message'], // For backward compat
+        };
+      }
+      
       AppLogger.error('🔴 [StudentRepository] DioException: ${e.message}');
       return {'success': false, 'error': e.message ?? 'Network error'};
     } catch (e) {

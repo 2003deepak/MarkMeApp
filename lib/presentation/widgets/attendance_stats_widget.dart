@@ -12,8 +12,17 @@ class AttendanceStatsWidget extends StatelessWidget {
     required this.isDesktop,
   });
 
+  bool _hasData() {
+    if (subjectData == null) return false;
+    final totalLectures = subjectData!['totalLectures'] ?? 0;
+    final attendedLectures = subjectData!['attendedLectures'] ?? 0;
+    return totalLectures > 0 || attendedLectures > 0;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final bool hasData = _hasData();
+    
     // Use safe defaults
     final data =
         subjectData ??
@@ -27,14 +36,18 @@ class AttendanceStatsWidget extends StatelessWidget {
       padding: EdgeInsets.all(isDesktop ? 24 : 20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.blue.shade600, Colors.blue.shade700],
+          colors: hasData 
+              ? [Colors.blue.shade600, Colors.blue.shade700]
+              : [Colors.grey.shade400, Colors.grey.shade500],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.blue.withValues(alpha: 0.3),
+            color: hasData 
+                ? Colors.blue.withValues(alpha: 0.3)
+                : Colors.grey.withValues(alpha: 0.2),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -45,24 +58,27 @@ class AttendanceStatsWidget extends StatelessWidget {
           Expanded(
             child: _buildStatItem(
               'Total Lectures',
-              totalLectures.toString(),
+              hasData ? totalLectures.toString() : '--',
               Icons.school,
+              hasData,
             ),
           ),
-          _divider(),
+          _divider(hasData),
           Expanded(
             child: _buildStatItem(
               'Attended',
-              attendedLectures.toString(),
+              hasData ? attendedLectures.toString() : '--',
               Icons.check_circle,
+              hasData,
             ),
           ),
-          _divider(),
+          _divider(hasData),
           Expanded(
             child: _buildStatItem(
               'Percentage',
-              '${percentage.toStringAsFixed(1)}%',
+              hasData ? '${percentage.toStringAsFixed(1)}%' : '--%',
               Icons.trending_up,
+              hasData,
             ),
           ),
         ],
@@ -70,30 +86,36 @@ class AttendanceStatsWidget extends StatelessWidget {
     );
   }
 
-  Widget _divider() => Container(
+  Widget _divider(bool hasData) => Container(
     width: 1,
     height: 50,
-    color: Colors.white.withValues(alpha: 0.3),
+    color: (hasData ? Colors.white : Colors.white.withValues(alpha: 0.3)).withValues(alpha: 0.3),
   );
 
-  Widget _buildStatItem(String label, String value, IconData icon) {
+  Widget _buildStatItem(String label, String value, IconData icon, bool hasData) {
+    final Color iconColor = hasData ? Colors.white : Colors.white.withValues(alpha: 0.5);
+    final Color valueColor = hasData ? Colors.white : Colors.white.withValues(alpha: 0.7);
+    final Color labelColor = hasData 
+        ? Colors.white.withValues(alpha: 0.8)
+        : Colors.white.withValues(alpha: 0.4);
+
     return Column(
       children: [
-        Icon(icon, color: Colors.white, size: isDesktop ? 28 : 24),
+        Icon(icon, color: iconColor, size: isDesktop ? 28 : 24),
         const SizedBox(height: 8),
         Text(
           value,
           style: TextStyle(
             fontSize: isDesktop ? 24 : 20,
             fontWeight: FontWeight.w700,
-            color: Colors.white,
+            color: valueColor,
           ),
         ),
         Text(
           label,
           style: TextStyle(
             fontSize: isDesktop ? 14 : 12,
-            color: Colors.white.withValues(alpha: 0.8),
+            color: labelColor,
           ),
           textAlign: TextAlign.center,
         ),

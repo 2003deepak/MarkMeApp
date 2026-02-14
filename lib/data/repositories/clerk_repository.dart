@@ -261,7 +261,8 @@ class ClerkRepository {
       );
 
       final body = response.data;
-      AppLogger.info("📦 API Response → $body");
+      
+      
 
       if (response.statusCode == 200) {
         return {
@@ -328,7 +329,6 @@ class ClerkRepository {
       );
 
       final body = response.data;
-      AppLogger.info("📦 API Response → $body");
 
       if (response.statusCode == 200) {
         return {

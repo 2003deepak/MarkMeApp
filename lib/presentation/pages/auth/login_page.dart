@@ -12,16 +12,15 @@ import 'package:markmeapp/presentation/widgets/ui/input_field.dart';
 import 'package:markmeapp/presentation/widgets/ui/otp_field.dart';
 import 'package:markmeapp/state/auth_state.dart';
 import 'package:markmeapp/presentation/widgets/ui/confirmation_card.dart';
+import 'package:markmeapp/presentation/widgets/ui/app_bar.dart';
 import 'package:markmeapp/core/utils/app_logger.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
-  final bool verified;
-  final String? verificationError;
+
 
   const LoginPage({
     super.key,
-    this.verified = false,
-    this.verificationError,
+   
   });
 
   @override
@@ -34,29 +33,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   String _enteredPassword = '';
   bool _rememberMe = false;
   String _selectedRole = 'student'; // Default role
-  bool _permissionsInitialized = false; // Add this flag
-
+ 
 
   @override
   void initState() {
     super.initState();
-    _initializePermissions();
   }
 
-  Future<void> _initializePermissions() async {
-    if (!_permissionsInitialized) {
-      // Skip permission initialization on desktop platforms
-      if (!Platform.isWindows && !Platform.isMacOS && !Platform.isLinux) {
-        await appPermissions.initialize(context);
-        AppLogger.info("✅ Permissions initialized for mobile platform");
-      } else {
-        AppLogger.info("🖥️ Skipping permissions on desktop platform");
-      }
-      setState(() {
-        _permissionsInitialized = true;
-      });
-    }
-  }
 
   @override
   void dispose() {
@@ -171,12 +154,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final primaryColor = Colors.blue.shade600;
 
     // Watch the auth state for loading & errors
-    final authState = ref.watch(authStoreProvider);
-
-    AppLogger.info('🔍 [LoginPage] Widget verified: ${widget.verified}');
-    AppLogger.info('🔍 [LoginPage] Widget verification error: ${widget.verificationError}');
+    final isLoading = ref.watch(
+      authStoreProvider.select((s) => s.isLoading),
+    );
 
     return Scaffold(
+      appBar: MarkMeAppBar(
+        title: '',
+      ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(isDesktop ? 32.0 : 24.0),
         child: Column(
@@ -514,7 +499,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     height: 56,
                     decoration: BoxDecoration(
                       gradient:
-                          (_enteredPassword.length != 6 || authState.isLoading)
+                          (_enteredPassword.length != 6 || isLoading)
                           ? LinearGradient(
                               colors: [
                                 Colors.grey.shade400,
@@ -528,7 +513,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             ),
                       borderRadius: BorderRadius.circular(16),
                       boxShadow:
-                          (_enteredPassword.length != 6 || authState.isLoading)
+                          (_enteredPassword.length != 6 || isLoading)
                           ? []
                           : [
                               BoxShadow(
@@ -540,7 +525,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     ),
                     child: ElevatedButton(
                       onPressed:
-                          (_enteredPassword.length != 6 || authState.isLoading)
+                          (_enteredPassword.length != 6 || isLoading)
                           ? null
                           : _handleLogin,
                       style: ElevatedButton.styleFrom(
@@ -551,7 +536,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         ),
                         elevation: 0,
                       ),
-                      child: authState.isLoading
+                      child: isLoading
                           ? const SizedBox(
                               width: 20,
                               height: 20,
@@ -622,10 +607,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     width: double.infinity,
                     height: 56,
                     child: OutlinedButton(
-                      onPressed: authState.isLoading
+                      onPressed: isLoading
                           ? null
                           : () {
-                              context.go('/signup');
+                              context.push('/signup');
                             },
                       style: OutlinedButton.styleFrom(
                         foregroundColor: primaryColor,

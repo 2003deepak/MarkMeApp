@@ -82,6 +82,13 @@ class _AttendanceChartWidgetState extends State<AttendanceChartWidget>
     );
   }
 
+  bool _hasData() {
+    if (widget.selectedData == null) return false;
+    final attended = widget.selectedData!['attendedLectures'] as int? ?? 0;
+    final total = widget.selectedData!['totalLectures'] as int? ?? 0;
+    return attended > 0 || total > 0;
+  }
+
   List<PieChartSectionData> _getPieChartSections({
     required double percentage,
     required int attended,
@@ -195,6 +202,7 @@ class _AttendanceChartWidgetState extends State<AttendanceChartWidget>
     }
 
     final stats = _currentStats();
+    final bool hasData = _hasData();
 
     final bool isDesktop = widget.isDesktop;
     final double centerSpaceRadius = isDesktop ? 52 : 46;
@@ -279,9 +287,11 @@ class _AttendanceChartWidgetState extends State<AttendanceChartWidget>
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Text(
-                                    '${stats.percentage.toStringAsFixed(1)}%',
+                                    hasData 
+                                        ? '${stats.percentage.toStringAsFixed(1)}%'
+                                        : 'No Data',
                                     style: TextStyle(
-                                      fontSize: isDesktop ? 26 : 22,
+                                      fontSize: hasData ? (isDesktop ? 26 : 22) : (isDesktop ? 20 : 18),
                                       fontWeight: FontWeight.w800,
                                       color: stats.attended == 0
                                           ? _absentColor
@@ -290,10 +300,10 @@ class _AttendanceChartWidgetState extends State<AttendanceChartWidget>
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    'present',
+                                    hasData ? 'present' : 'add attendance',
                                     style: TextStyle(
                                       fontSize: isDesktop ? 13 : 12,
-                                      color: Colors.grey.shade600,
+                                      color: Colors.grey.shade400,
                                     ),
                                   ),
                                 ],

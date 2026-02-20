@@ -79,6 +79,9 @@ class AdminStore extends StateNotifier<AdminState> {
       return {"success": false, "message": "Error: $e"};
     }
   }
+  void reset() {
+    state = const AdminState();
+  }
 }
 
 final adminStoreProvider = StateNotifierProvider<AdminStore, AdminState>((ref) {

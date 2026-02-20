@@ -54,6 +54,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         ),
       );
 
+      ref.read(adminStoreProvider.notifier).reset();
       await ref.read(authStoreProvider.notifier).setLogOut();
     }
   }

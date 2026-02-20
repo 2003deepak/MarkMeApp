@@ -13,6 +13,7 @@ import 'package:markmeapp/data/repositories/teacher_repository.dart';
 import 'package:intl/intl.dart';
 import 'package:markmeapp/presentation/widgets/ui/custom_bottom_sheet_layout.dart';
 import 'package:markmeapp/presentation/widgets/ui/multi_select_dropdown.dart';
+import 'package:markmeapp/state/refresh_state.dart';
 
 class AttendanceHistoryPage extends ConsumerStatefulWidget {
   const AttendanceHistoryPage({super.key});
@@ -352,6 +353,12 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(dashboardRefreshProvider, (previous, next) {
+      if (next > 0) {
+        _fetchAttendanceData();
+      }
+    });
+
     final role = ref.watch(authStoreProvider.select((s) => s.role));
     final isStudent = role == 'student';
 
@@ -383,17 +390,14 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
               Expanded(
                 child: _isLoading
                     ? const Center(child: CircularProgressIndicator())
-                    : RefreshIndicator(
-                        onRefresh: _fetchAttendanceData,
-                        child: ListView(
-                          padding: const EdgeInsets.fromLTRB(
-                            20,
-                            8,
-                            20,
-                            80,
-                          ), // Added bottom padding for FAB
-                          children: _buildContent(),
-                        ),
+                    : ListView(
+                        padding: const EdgeInsets.fromLTRB(
+                          20,
+                          8,
+                          20,
+                          80,
+                        ), // Added bottom padding for FAB
+                        children: _buildContent(),
                       ),
               ),
             ],

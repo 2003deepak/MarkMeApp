@@ -8,6 +8,7 @@ import 'package:markmeapp/core/utils/app_logger.dart';
 import 'package:markmeapp/data/repositories/clerk_repository.dart';
 import 'package:markmeapp/data/repositories/teacher_repository.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:markmeapp/presentation/widgets/ui/search_bar.dart';
 
 class AttendanceMarkingPage extends ConsumerStatefulWidget {
   final Map<String, dynamic> sessionData;
@@ -612,57 +613,11 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
       color: Colors.white,
       child: Column(
         children: [
-          // Search bar
-          Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: TextField(
-              controller: _searchController,
-              style: const TextStyle(
-                fontSize: 16,
-                color: Colors.black87,
-                fontWeight: FontWeight.w500,
-              ),
-              decoration: InputDecoration(
-                hintText: 'Search students...',
-                hintStyle: TextStyle(color: Colors.grey.shade400),
-                prefixIcon: Icon(
-                  Icons.search,
-                  color: Colors.grey.shade500,
-                  size: 20,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(
-                    color: Color(0xFF2563EB),
-                    width: 2,
-                  ),
-                ),
-                filled: true,
-                fillColor: const Color(0xFFF8FAFC),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 16,
-                ),
-              ),
-              onChanged: (value) => _filterStudents(),
-            ),
+          AppSearchBar(
+            controller: _searchController,
+            hintText: 'Search students...',
+            onChanged: (value) => _filterStudents(),
+            padding: EdgeInsets.zero,
           ),
           const SizedBox(height: 16),
           // Filter chips

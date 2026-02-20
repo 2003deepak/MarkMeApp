@@ -10,6 +10,7 @@ import 'package:markmeapp/data/repositories/notification_repository.dart';
 import 'package:markmeapp/presentation/widgets/ui/custom_bottom_sheet_layout.dart';
 import 'package:markmeapp/presentation/widgets/ui/filter_chip.dart';
 import 'package:markmeapp/presentation/widgets/ui/app_bar.dart';
+import 'package:markmeapp/presentation/widgets/ui/search_bar.dart';
 
 class DefaultersPage extends ConsumerStatefulWidget {
   const DefaultersPage({super.key});
@@ -185,9 +186,13 @@ class _DefaultersPageState extends ConsumerState<DefaultersPage> {
       ),
       body: Column(
         children: [
-          const SizedBox(height: 16),
-          _buildSearchBar(isDark),
-          const SizedBox(height: 10),
+          AppSearchBar(
+            controller: _searchController,
+            hintText: 'Search by name...',
+            onChanged: (txt) => _fetchDefaulters(),
+            onFilterTap: _showFilterSheet,
+            activeFilterCount: _activeFilterCount,
+          ),
           _buildErrorMessage(),
           if (_activeFilterCount > 0) _buildFilterChips(isDark),
           _buildSelectionHeader(isDark),
@@ -302,75 +307,6 @@ class _DefaultersPageState extends ConsumerState<DefaultersPage> {
     );
   }
 
-  Widget _buildSearchBar(bool isDark) {
-    final primaryColor = const Color(0xFF3B5BDB);
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Container(
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF252542) : const Color(0xFFF8F9FA),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isDark ? Colors.white12 : const Color(0xFFE9ECEF),
-          ),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _searchController,
-                style: TextStyle(color: isDark ? Colors.white : Colors.black87),
-                decoration: InputDecoration(
-                  hintText: 'Search by name...',
-                  hintStyle: TextStyle(
-                    color: isDark ? Colors.white38 : Colors.grey,
-                  ),
-                  prefixIcon: Icon(
-                    Icons.search,
-                    color: isDark ? Colors.white38 : Colors.grey,
-                  ),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                ),
-              ),
-            ),
-            Stack(
-              children: [
-                IconButton(
-                  onPressed: _showFilterSheet,
-                  icon: Icon(
-                    Icons.tune,
-                    color: isDark ? Colors.white70 : primaryColor,
-                  ),
-                ),
-                if (_activeFilterCount > 0)
-                  Positioned(
-                    right: 8,
-                    top: 8,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF3B5BDB),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Text(
-                        '$_activeFilterCount',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildFloatingActionButton(bool isDark, Color primaryColor) {
     return Container(

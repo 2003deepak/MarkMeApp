@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:markmeapp/data/repositories/teacher_repository.dart';
+import 'package:markmeapp/state/refresh_state.dart';
 
 class TimeTablePage extends ConsumerStatefulWidget {
   const TimeTablePage({super.key});
@@ -9,7 +10,8 @@ class TimeTablePage extends ConsumerStatefulWidget {
   ConsumerState<TimeTablePage> createState() => _TimeTableState();
 }
 
-class _TimeTableState extends ConsumerState<TimeTablePage> {
+class _TimeTableState extends ConsumerState<TimeTablePage>
+    with SingleTickerProviderStateMixin {
   int selectedDayIndex = 0; // Monday as default
   final List<String> days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -17,6 +19,8 @@ class _TimeTableState extends ConsumerState<TimeTablePage> {
   Map<String, dynamic>? timetableData;
   bool isLoading = true;
   String errorMessage = '';
+  late AnimationController _animationController;
+  late Animation<double> _opacityAnimation;
 
   // Timeline configuration
   static const double pixelsPerHour = 100.0;
@@ -38,7 +42,22 @@ class _TimeTableState extends ConsumerState<TimeTablePage> {
   @override
   void initState() {
     super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+
+    _opacityAnimation = Tween<double>(begin: 0.3, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
+
     _fetchTimetable();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchTimetable() async {
@@ -71,30 +90,6 @@ class _TimeTableState extends ConsumerState<TimeTablePage> {
       });
     }
   }
-
-  // Convert API day name to index (0=Monday, 1=Tuesday, etc.)
-  /*
-  int _getDayIndex(String dayName) {
-    switch (dayName.toLowerCase()) {
-      case 'monday':
-        return 0;
-      case 'tuesday':
-        return 1;
-      case 'wednesday':
-        return 2;
-      case 'thursday':
-        return 3;
-      case 'friday':
-        return 4;
-      case 'saturday':
-        return 5;
-      case 'sunday':
-        return 6;
-      default:
-        return 0;
-    }
-  }
-  */
 
   // Get the full day name from index
   String _getFullDayName(int index) {
@@ -186,6 +181,12 @@ class _TimeTableState extends ConsumerState<TimeTablePage> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(dashboardRefreshProvider, (previous, next) {
+      if (next > 0) {
+        _fetchTimetable();
+      }
+    });
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -201,21 +202,16 @@ class _TimeTableState extends ConsumerState<TimeTablePage> {
               ),
               child: Stack(
                 children: [
-                  // Centered title and program info
-                  Align(
+                  // Centered title
+                  const Align(
                     alignment: Alignment.topCenter,
-                    child: Column(
-                      children: [
-                        const Text(
-                          'Time Table',
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                      ],
+                    child: Text(
+                      'Time Table',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
                     ),
                   ),
 
@@ -356,9 +352,7 @@ class _TimeTableState extends ConsumerState<TimeTablePage> {
 
   Widget _buildContent() {
     if (isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(color: Color(0xFF1E3A8A)),
-      );
+      return _buildLoadingSkeleton();
     }
 
     if (errorMessage.isNotEmpty && timetableData == null) {
@@ -572,39 +566,137 @@ class _TimeTableState extends ConsumerState<TimeTablePage> {
     final borderColor =
         componentBorderColors[event.component] ?? const Color(0xFF1E3A8A);
 
+    // Prepare tooltip message
+    final tooltipMessage =
+        '${event.title}\n${event.program} - Sem ${event.semester}\n${event.startTime} - ${event.endTime}';
+
     return Positioned(
       top: top,
       left: 0,
       right: 0,
-      child: Container(
-        height: height,
-        margin: const EdgeInsets.only(bottom: 8.0),
+      child: Tooltip(
+        message: tooltipMessage,
+        padding: const EdgeInsets.all(12),
+        margin: const EdgeInsets.all(16),
+        showDuration: const Duration(seconds: 3),
         decoration: BoxDecoration(
-          color: componentColor,
+          color: Colors.black.withAlpha(230), // 0.9
           borderRadius: BorderRadius.circular(8),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withAlpha(13), // 0.05
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
+        textStyle: const TextStyle(color: Colors.white, fontSize: 13),
+        triggerMode: TooltipTriggerMode.tap,
+        child: Container(
+          height: height,
+          margin: const EdgeInsets.only(bottom: 8.0),
+          decoration: BoxDecoration(
+            color: componentColor,
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(13), // 0.05
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
                 width: 4,
-                height: height - 24, // Adjusted height for padding
+                height: height > 16 ? height - 12 : height - 4,
                 decoration: BoxDecoration(
                   color: borderColor,
                   borderRadius: BorderRadius.circular(2),
                 ),
                 margin: const EdgeInsets.only(right: 12),
               ),
-              Expanded(child: _buildEventContent(event, height)),
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    // Adaptive rendering based on available height
+                    if (height >= 80) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            event.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${event.program} - Sem ${event.semester}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF666666),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${event.startTime} - ${event.endTime}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF999999),
+                            ),
+                          ),
+                        ],
+                      );
+                    } else if (height >= 50) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            event.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${event.startTime} - ${event.endTime}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF999999),
+                            ),
+                          ),
+                        ],
+                      );
+                    } else {
+                      return Center(
+                        child: Text(
+                          event.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black,
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                ),
+              ),
             ],
           ),
         ),
@@ -612,92 +704,153 @@ class _TimeTableState extends ConsumerState<TimeTablePage> {
     );
   }
 
-  // FIXED: Separate method to build event content with proper constraints
-  Widget _buildEventContent(EventData event, double containerHeight) {
-    // Calculate available height for content (subtract padding)
-    final availableHeight =
-        containerHeight - 24; // 12px top + 12px bottom padding
+  // Skeleton Loading Widget
+  Widget _buildLoadingSkeleton() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final timelineHeight = totalHours * pixelsPerHour;
+        final eventAreaWidth = constraints.maxWidth - 80 - 16;
 
-    // Determine content layout based on available height
-    if (availableHeight < 50) {
-      // Very small height - show only subject name
-      return Center(
-        child: Text(
-          event.title,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: Colors.black,
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          textAlign: TextAlign.center,
-        ),
-      );
-    } else if (availableHeight < 70) {
-      // Medium height - show subject name and time
-      return Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            event.title,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: Colors.black,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '${event.startTime} - ${event.endTime}',
-            style: const TextStyle(fontSize: 10, color: Color(0xFF999999)),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      );
-    } else {
-      // Full height - show all information
-      return Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            event.title,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: Colors.black,
-            ),
-            maxLines: availableHeight < 90 ? 1 : 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          if (availableHeight >= 90) ...[
-            const SizedBox(height: 4),
-            Text(
-              '${event.program} - Sem ${event.semester}',
-              style: const TextStyle(
-                fontSize: 12,
-                color: Color(0xFF666666),
-                fontWeight: FontWeight.w500,
+        return FadeTransition(
+          opacity: _opacityAnimation,
+          child: SingleChildScrollView(
+            physics: const NeverScrollableScrollPhysics(),
+            child: SizedBox(
+              height: timelineHeight,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Skeleton Time Labels
+                  SizedBox(
+                    width: 80,
+                    child: Column(
+                      children: List.generate(totalHours, (i) {
+                        return SizedBox(
+                          height: pixelsPerHour,
+                          child: Padding(
+                            padding: const EdgeInsets.only(
+                              top: 8.0,
+                              left: 16.0,
+                            ),
+                            child: Container(
+                              width: 40,
+                              height: 14,
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade200,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+
+                  // Skeleton Event Area
+                  SizedBox(
+                    width: eventAreaWidth,
+                    height: timelineHeight,
+                    child: Stack(
+                      children: [
+                        // Horizontal Lines
+                        ...List.generate(totalHours, (i) {
+                          return Positioned(
+                            top: i * pixelsPerHour,
+                            left: 0,
+                            right: 0,
+                            child: Container(
+                              height: 1,
+                              color: Colors.grey.shade200,
+                            ),
+                          );
+                        }),
+
+                        // Fake Events
+                        _buildSkeletonEvent(
+                          top: 100,
+                          height: 120,
+                          color: Colors.blue.shade50,
+                        ),
+                        _buildSkeletonEvent(
+                          top: 350,
+                          height: 90,
+                          color: Colors.orange.shade50,
+                        ),
+                        _buildSkeletonEvent(
+                          top: 500,
+                          height: 180,
+                          color: Colors.blue.shade50,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSkeletonEvent({
+    required double top,
+    required double height,
+    required Color color,
+  }) {
+    return Positioned(
+      top: top,
+      left: 0,
+      right: 0,
+      child: Container(
+        height: height,
+        margin: const EdgeInsets.only(bottom: 8.0),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 4,
+              height: height - 24,
+              decoration: BoxDecoration(
+                color: Colors.black.withAlpha(26), // 0.1
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 120,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: Colors.black.withAlpha(13), // 0.05
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    width: 80,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: Colors.black.withAlpha(13), // 0.05
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
-          const SizedBox(height: 2),
-          Text(
-            '${event.startTime} - ${event.endTime}',
-            style: const TextStyle(fontSize: 11, color: Color(0xFF999999)),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      );
-    }
+        ),
+      ),
+    );
   }
 }
 

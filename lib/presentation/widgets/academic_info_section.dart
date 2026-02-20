@@ -45,12 +45,10 @@ class AcademicInfoSection extends StatelessWidget {
             label: 'Roll number',
             controller: rollCtrl,
             isRequired: true,
-            maxLength: 3,
-            hintText: 'Enter exactly 3 digits',
+            hintText: 'Enter your roll number',
             keyboardType: TextInputType.number,
             inputFormatters: [
               FilteringTextInputFormatter.digitsOnly,
-              LengthLimitingTextInputFormatter(3),
             ],
             validator:
                 validateRollNumber ??

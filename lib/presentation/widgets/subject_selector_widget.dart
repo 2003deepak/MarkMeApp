@@ -64,85 +64,101 @@ class SubjectSelectorWidget extends StatelessWidget {
         ],
         border: Border.all(color: Colors.grey.shade200, width: 1),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Scrollable chips container
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                // Global filters section (always show these)
-                _buildFilterSection(
-                  chips: [
-                    _buildSubjectChip(
-                      hasData ? 'All Subjects' : 'No Subjects',
-                      null,
-                      'Lecture',
-                      hasData,
+      child: !hasData
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                   Container(
+                    padding: const EdgeInsets.all(12),
+                    margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      shape: BoxShape.circle,
                     ),
-                    _buildSubjectChip(
-                      hasData ? 'All Lectures' : '--',
-                      'all-lectures',
-                      'Lecture',
-                      hasData,
+                    child: Icon(
+                      Icons.menu_book_rounded,
+                      size: 24,
+                      color: Colors.grey.shade400,
                     ),
-                    _buildSubjectChip(
-                      hasData ? 'All Labs' : '--',
-                      'all-labs',
-                      'Lab',
-                      hasData,
+                  ),
+                  Text(
+                    'No Subjects Found',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Enroll in subjects to start tracking',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade500,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  // Global filters section (always show these)
+                  _buildFilterSection(
+                    chips: [
+                      _buildSubjectChip(
+                        'All Subjects',
+                        null,
+                        'Lecture',
+                        true,
+                      ),
+                      _buildSubjectChip(
+                        'All Lectures',
+                        'all-lectures',
+                        'Lecture',
+                        true,
+                      ),
+                      _buildSubjectChip(
+                        'All Labs',
+                        'all-labs',
+                        'Lab',
+                        true,
+                      ),
+                    ],
+                  ),
+
+                  // Lectures section
+                  if (lectureSubjects.isNotEmpty) ...[
+                    _buildFilterSection(
+                      chips: lectureSubjects.map((subject) {
+                        return _buildSubjectChip(
+                          subject,
+                          "$subject - Lecture",
+                          'Lecture',
+                          true,
+                        );
+                      }).toList(),
                     ),
                   ],
-                ),
 
-                // Lectures section (only if has data and lectures exist)
-                if (hasData && lectureSubjects.isNotEmpty) ...[
-                  _buildFilterSection(
-                    chips: lectureSubjects.map((subject) {
-                      return _buildSubjectChip(
-                        subject,
-                        "$subject - Lecture",
-                        'Lecture',
-                        hasData,
-                      );
-                    }).toList(),
-                  ),
-                ],
-
-                // Labs section (only if has data and labs exist)
-                if (hasData && labSubjects.isNotEmpty) ...[
-                  _buildFilterSection(
-                    chips: labSubjects.map((subject) {
-                      return _buildSubjectChip(
-                        subject,
-                        "$subject - Lab",
-                        'Lab',
-                        hasData,
-                      );
-                    }).toList(),
-                  ),
-                ],
-
-                // Empty state hint (only if no data)
-                if (!hasData) ...[
-                  Container(
-                    margin: const EdgeInsets.only(left: 8),
-                    child: Text(
-                      '• Enroll to see subjects',
-                      style: TextStyle(
-                        fontSize: isDesktop ? 13 : 11,
-                        color: Colors.grey.shade400,
-                        fontStyle: FontStyle.italic,
-                      ),
+                  // Labs section
+                  if (labSubjects.isNotEmpty) ...[
+                    _buildFilterSection(
+                      chips: labSubjects.map((subject) {
+                        return _buildSubjectChip(
+                          subject,
+                          "$subject - Lab",
+                          'Lab',
+                          true,
+                        );
+                      }).toList(),
                     ),
-                  ),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
-        ],
-      ),
     );
   }
 

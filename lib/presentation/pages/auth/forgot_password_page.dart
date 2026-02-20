@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:markmeapp/state/auth_state.dart';
 import 'package:markmeapp/presentation/widgets/ui/app_bar.dart';
 import 'package:markmeapp/presentation/widgets/ui/input_field.dart';
+import 'package:markmeapp/core/utils/snackbar_utils.dart';
 
 class ForgotPasswordPage extends ConsumerStatefulWidget {
   const ForgotPasswordPage({super.key});
@@ -30,17 +31,6 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
     super.dispose();
   }
 
-  void _showSnackBar(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? Colors.red.shade600 : Colors.green.shade600,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        duration: const Duration(seconds: 3),
-      ),
-    );
-  }
 
   Future<void> _sendResetLink() async {
     if (_formKey.currentState!.validate()) {
@@ -55,10 +45,13 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
           _selectedRole.toLowerCase(),
         );
 
+        if (!mounted) return;
+
         // Fixed: Check specifically for success boolean
         if (response['success'] == true) {
-          _showSnackBar(
+          showAppSnackBar(
             response['message'] ?? 'OTP sent successfully to your email',
+            context: context,
           );
 
           // Navigate to reset password page after a short delay
@@ -74,13 +67,16 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
             }
           });
         } else {
-          _showSnackBar(
+          showAppSnackBar(
             response['message'] ?? 'Failed to send OTP',
             isError: true,
+            context: context,
           );
         }
       } catch (e) {
-        _showSnackBar('An error occurred. Please try again.', isError: true);
+        if (mounted) {
+          showAppSnackBar('An error occurred. Please try again.', isError: true, context: context);
+        }
       } finally {
         if (mounted) {
           setState(() {

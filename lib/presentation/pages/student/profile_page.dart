@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:markmeapp/core/theme/app_theme.dart';
 import 'package:markmeapp/state/auth_state.dart';
 import 'package:markmeapp/state/student_state.dart';
+import 'package:markmeapp/state/refresh_state.dart';
 
 /// Professional Profile Page for attendance management system
 class ProfilePage extends ConsumerStatefulWidget {
@@ -75,8 +76,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         ),
       );
       
-      // Perform logout
+      // Perform logout - Postpone reset to keep name visible during loading
       await ref.read(authStoreProvider.notifier).setLogOut();
+      ref.read(studentStoreProvider.notifier).reset();
       // AppRouter will handle the redirection automatically
     }
   }
@@ -301,6 +303,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(dashboardRefreshProvider, (previous, next) {
+      if (next > 0) {
+        ref.read(studentStoreProvider.notifier).loadProfile();
+      }
+    });
+
     final studentState = ref.watch(studentStoreProvider);
     final profile = studentState.profile;
     final w = MediaQuery.of(context).size.width;
@@ -441,45 +449,45 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
               gap(24),
 
-              _sectionHeader('ATTENDANCE'),
-              Container(
-                decoration: _cardDecoration,
-                child: Column(
-                  children: [
-                    _infoTile(
-                      icon: Icons.bar_chart_rounded,
-                      label: 'Attendance Summary',
-                      subtitle: 'View your attendance statistics',
-                      onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Open Attendance Summary'),
-                          ),
-                        );
-                      },
-                    ),
-                    Container(
-                      height: 1,
-                      margin: const EdgeInsets.symmetric(horizontal: 16),
-                      color: const Color(0xFFF1F5F9),
-                    ),
-                    _infoTile(
-                      icon: Icons.calendar_today_rounded,
-                      label: 'Classes & Timetable',
-                      subtitle: 'View your schedule',
-                      onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Open Classes & Timetable'),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
+              // _sectionHeader('ATTENDANCE'),
+              // Container(
+              //   decoration: _cardDecoration,
+              //   child: Column(
+              //     children: [
+              //       _infoTile(
+              //         icon: Icons.bar_chart_rounded,
+              //         label: 'Attendance Summary',
+              //         subtitle: 'View your attendance statistics',
+              //         onTap: () {
+              //           ScaffoldMessenger.of(context).showSnackBar(
+              //             const SnackBar(
+              //               content: Text('Open Attendance Summary'),
+              //             ),
+              //           );
+              //         },
+              //       ),
+              //       Container(
+              //         height: 1,
+              //         margin: const EdgeInsets.symmetric(horizontal: 16),
+              //         color: const Color(0xFFF1F5F9),
+              //       ),
+              //       _infoTile(
+              //         icon: Icons.calendar_today_rounded,
+              //         label: 'Classes & Timetable',
+              //         subtitle: 'View your schedule',
+              //         onTap: () {
+              //           ScaffoldMessenger.of(context).showSnackBar(
+              //             const SnackBar(
+              //               content: Text('Open Classes & Timetable'),
+              //             ),
+              //           );
+              //         },
+              //       ),
+              //     ],
+              //   ),
+              // ),
 
-              gap(24),
+              // gap(24),
 
               _sectionHeader('ACCOUNT'),
               Container(

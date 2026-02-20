@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:markmeapp/state/auth_state.dart';
 import 'package:markmeapp/presentation/widgets/ui/otp_field.dart';
 import 'package:markmeapp/presentation/widgets/ui/app_bar.dart';
+import 'package:markmeapp/core/utils/snackbar_utils.dart';
 import 'dart:async';
 
 class ResetPasswordPage extends ConsumerStatefulWidget {
@@ -46,6 +47,10 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
 
   void _startCountdown() {
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
       if (_countdown > 0) {
         setState(() {
           _countdown--;
@@ -56,17 +61,6 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
     });
   }
 
-  void _showSnackBar(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? Colors.red.shade600 : Colors.green.shade600,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        duration: const Duration(seconds: 3),
-      ),
-    );
-  }
 
   void _onOtpCompleted(String otp) {
     setState(() {
@@ -115,8 +109,10 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
           _enteredOtp,
         );
 
+        if (!mounted) return;
+
         if (response['success'] == true) {
-          _showSnackBar(response['message'] ?? 'OTP verified successfully');
+          showAppSnackBar(response['message'] ?? 'OTP verified successfully', context: context);
           if (mounted) {
             setState(() {
               _isOtpStep = false;
@@ -124,9 +120,10 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
             });
           }
         } else {
-          _showSnackBar(
+          showAppSnackBar(
             response['message'] ?? 'OTP verification failed',
             isError: true,
+            context: context,
           );
           if (mounted) {
             setState(() {
@@ -135,7 +132,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
           }
         }
       } catch (e) {
-        _showSnackBar('An error occurred. Please try again.', isError: true);
+        showAppSnackBar('An error occurred. Please try again.', isError: true, context: context);
         if (mounted) {
           setState(() {
             _isLoading = false;
@@ -165,17 +162,23 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
           widget.role.toLowerCase(),
           _newPassword,
         );
+        
+        if (!mounted) return;
+
         if (response['success'] == true) {
-          _showSnackBar(response['message'] ?? 'Password reset successfully');
+          showAppSnackBar(response['message'] ?? 'Password reset successfully', context: context);
           _showSuccessDialog();
         } else {
-          _showSnackBar(
+          showAppSnackBar(
             response['message'] ?? 'Password reset failed',
             isError: true,
+            context: context,
           );
         }
       } catch (e) {
-        _showSnackBar('An error occurred. Please try again.', isError: true);
+        if (mounted) {
+          showAppSnackBar('An error occurred. Please try again.', isError: true, context: context);
+        }
       } finally {
         if (mounted) {
           setState(() {
@@ -263,10 +266,11 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
     authNotifier.forgotPassword(widget.email, widget.role.toLowerCase()).then((
       response,
     ) {
+      if (!mounted) return;
       if (response['success'] == true) {
-        _showSnackBar('OTP resent successfully');
+        showAppSnackBar('OTP resent successfully', context: context);
       } else {
-        _showSnackBar('Failed to resend OTP', isError: true);
+        showAppSnackBar('Failed to resend OTP', isError: true, context: context);
       }
     });
   }

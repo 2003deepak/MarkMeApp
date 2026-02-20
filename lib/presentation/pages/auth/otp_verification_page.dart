@@ -5,6 +5,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:markmeapp/presentation/widgets/ui/otp_field.dart';
 import 'package:markmeapp/state/auth_state.dart';
+import 'package:markmeapp/core/utils/snackbar_utils.dart';
 import 'package:markmeapp/core/utils/app_logger.dart';
 import 'package:markmeapp/data/repositories/auth_repository.dart';
 
@@ -51,6 +52,10 @@ class _OTPVerificationPageState extends ConsumerState<OTPVerificationPage> {
     });
 
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
       if (_remainingSeconds > 0) {
         setState(() {
           _remainingSeconds--;
@@ -72,7 +77,7 @@ class _OTPVerificationPageState extends ConsumerState<OTPVerificationPage> {
 
   Future<void> _handleVerify() async {
     if (_otp.length != 6) {
-      _showSnackBar('Please enter a valid 6-digit OTP', isError: true);
+      showAppSnackBar('Please enter a valid 6-digit OTP', isError: true, context: context);
       return;
     }
 
@@ -83,20 +88,22 @@ class _OTPVerificationPageState extends ConsumerState<OTPVerificationPage> {
       final authRepo = ref.read(authRepositoryProvider);
       final result = await authRepo.verifyOtp(widget.email, widget.role, _otp);
       
+      if (!mounted) return;
       _showLoading(false);
 
       if (result['success'] == true) {
-        _showSnackBar(result['message'] ?? 'Email verified successfully!', isError: false);
+        showAppSnackBar(result['message'] ?? 'Email verified successfully!', isError: false, context: context);
         if (mounted) {
            // Navigate to Login with verified=true
            context.go('/login', extra: {'verified': true, 'error': ''});
         }
       } else {
-         _showSnackBar(result['error'] ?? 'Verification failed', isError: true);
+         showAppSnackBar(result['error'] ?? 'Verification failed', isError: true, context: context);
       }
     } catch (e) {
+      if (!mounted) return;
       _showLoading(false);
-      _showSnackBar('An error occurred: $e', isError: true);
+      showAppSnackBar('An error occurred: $e', isError: true, context: context);
     }
   }
 
@@ -109,25 +116,24 @@ class _OTPVerificationPageState extends ConsumerState<OTPVerificationPage> {
       final authRepo = ref.read(authRepositoryProvider);
       final result = await authRepo.resendOtp(widget.email, widget.role);
 
-      if (mounted) {
-        setState(() {
-          _isResending = false;
-        });
+      if (!mounted) return;
 
-        if (result['success'] == true) {
-          _showSnackBar(result['message'] ?? 'OTP resent successfully!', isError: false);
-          _startTimer();
-        } else {
-          _showSnackBar(result['error'] ?? 'Failed to resend OTP', isError: true);
-        }
+      setState(() {
+        _isResending = false;
+      });
+
+      if (result['success'] == true) {
+        showAppSnackBar(result['message'] ?? 'OTP resent successfully!', isError: false, context: context);
+        _startTimer();
+      } else {
+        showAppSnackBar(result['error'] ?? 'Failed to resend OTP', isError: true, context: context);
       }
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isResending = false;
-        });
-        _showSnackBar('An error occurred: $e', isError: true);
-      }
+      if (!mounted) return;
+      setState(() {
+        _isResending = false;
+      });
+      showAppSnackBar('An error occurred: $e', isError: true, context: context);
     }
   }
   
@@ -139,16 +145,6 @@ class _OTPVerificationPageState extends ConsumerState<OTPVerificationPage> {
       }
   }
 
-  void _showSnackBar(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? Colors.red.shade600 : Colors.green.shade600,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 3),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {

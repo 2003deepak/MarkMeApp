@@ -15,12 +15,11 @@ import 'package:markmeapp/presentation/widgets/ui/confirmation_card.dart';
 import 'package:markmeapp/presentation/widgets/ui/app_bar.dart';
 import 'package:markmeapp/core/utils/app_logger.dart';
 
+import 'package:markmeapp/core/utils/snackbar_utils.dart'; // Add import
+
 class LoginPage extends ConsumerStatefulWidget {
-
-
   const LoginPage({
     super.key,
-   
   });
 
   @override
@@ -66,7 +65,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       AppLogger.info('🟢 [LoginPage] Form validation passed');
 
       if (_enteredPassword.isEmpty || _enteredPassword.length != 6) {
-        _showSnackBar('Please enter a 6-digit password', isError: true);
+        showAppSnackBar('Please enter a 6-digit password', isError: true);
         return;
       }
 
@@ -118,33 +117,24 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       // ✅ Await here
       final result = await authStore.loginUser(user, _selectedRole);
 
+      if (!mounted) return;
+
       AppLogger.info('🟢 [LoginPage] The response from state is = $result');
 
       if (result['success'] == true) {
-        _showSnackBar(result['message'] ?? 'Login successful!', isError: false);
+        showAppSnackBar(result['message'] ?? 'Login successful!', isError: false);
+        
+        // Final check before navigation
         if (mounted) {
-          // Navigate based on role
           final route = authStore.getRouteForRole(_selectedRole);
           context.go(route);
         }
       } else {
-        _showSnackBar(result['message'] ?? 'Login failed', isError: true);
+        showAppSnackBar(result['message'] ?? 'Login failed', isError: true);
       }
     } else {
       AppLogger.warning('🔴 [LoginPage] Form validation failed');
     }
-  }
-
-  void _showSnackBar(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? Colors.red.shade600 : Colors.green.shade600,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        duration: const Duration(seconds: 3),
-      ),
-    );
   }
 
   @override
@@ -161,6 +151,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     return Scaffold(
       appBar: MarkMeAppBar(
         title: '',
+        showBackButton : false
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(isDesktop ? 32.0 : 24.0),

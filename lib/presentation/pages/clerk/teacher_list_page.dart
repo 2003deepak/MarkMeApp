@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:markmeapp/data/models/teacher_model.dart';
 import 'package:markmeapp/data/repositories/clerk_repository.dart';
+import 'package:markmeapp/state/refresh_state.dart';
+import 'package:markmeapp/presentation/widgets/ui/search_bar.dart';
 
 class TeacherListPage extends ConsumerStatefulWidget {
   const TeacherListPage({super.key});
@@ -141,13 +143,28 @@ class _TeacherListPageState extends ConsumerState<TeacherListPage> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    ref.listen(dashboardRefreshProvider, (previous, next) {
+      if (next > 0) {
+        _fetchTeachers();
+      }
+    });
+
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF1A1A2E) : Colors.white,
       body: Column(
         children: [
-          _buildHeader(isDark),
-          _buildSearchBar(isDark),
-          const SizedBox(height: 10),
+          const SizedBox(height: 24),
+          AppSearchBar(
+            controller: _searchController,
+            hintText: 'Search by name, email, or ID...',
+            onChanged: (txt) {
+              if (txt.isEmpty) _fetchTeachers();
+            },
+            onClear: () {
+              _searchController.clear();
+              _fetchTeachers();
+            },
+          ),
           _buildErrorMessage(),
           _buildCountRow(isDark),
           Expanded(
@@ -179,81 +196,7 @@ class _TeacherListPageState extends ConsumerState<TeacherListPage> {
     );
   }
 
-  // ------------------------------
-  // HEADER
-  // ------------------------------
-  Widget _buildHeader(bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          const SizedBox(width: 8),
-          Text(
-            'Teacher List',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : Colors.black87,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
-  // ------------------------------
-  // SEARCH BAR
-  // ------------------------------
-  Widget _buildSearchBar(bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Container(
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF252542) : const Color(0xFFF8F9FA),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isDark ? Colors.white12 : const Color(0xFFE9ECEF),
-          ),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _searchController,
-                style: TextStyle(color: isDark ? Colors.white : Colors.black87),
-                decoration: InputDecoration(
-                  hintText: 'Search by name, email, or ID...',
-                  hintStyle: TextStyle(
-                    color: isDark ? Colors.white38 : Colors.grey,
-                  ),
-                  prefixIcon: Icon(
-                    Icons.search,
-                    color: isDark ? Colors.white38 : Colors.grey,
-                  ),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 14,
-                  ),
-                ),
-              ),
-            ),
-            if (_searchController.text.isNotEmpty)
-              IconButton(
-                icon: Icon(
-                  Icons.clear,
-                  color: isDark ? Colors.white38 : Colors.grey,
-                ),
-                onPressed: () {
-                  _searchController.clear();
-                  _fetchTeachers();
-                },
-              ),
-          ],
-        ),
-      ),
-    );
-  }
 
   // ------------------------------
   // ERROR MESSAGE BOX
@@ -359,9 +302,7 @@ class _TeacherListPageState extends ConsumerState<TeacherListPage> {
   // TEACHER LIST + INFINITE SCROLL
   // ------------------------------
   Widget _buildTeacherList(bool isDark) {
-    return RefreshIndicator(
-      onRefresh: () => _fetchTeachers(),
-      child: NotificationListener<ScrollNotification>(
+    return NotificationListener<ScrollNotification>(
         onNotification: (scroll) {
           if (!_isLoadingMore &&
               _hasMoreData &&
@@ -399,8 +340,7 @@ class _TeacherListPageState extends ConsumerState<TeacherListPage> {
             );
           },
         ),
-      ),
-    );
+      );
   }
 }
 

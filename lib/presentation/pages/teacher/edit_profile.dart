@@ -319,7 +319,7 @@ class _TeacherEditProfilePageState
           title: 'Edit Profile',
           onBackPressed: _isUpdating ? null : _handleBackPressed,
           isLoading: _isUpdating,
-          customTitle: Row(
+          titleWidget: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               const Text(

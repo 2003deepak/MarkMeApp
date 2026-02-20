@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:markmeapp/data/repositories/student_repository.dart';
+import 'package:markmeapp/state/student_state.dart';
+import 'package:markmeapp/state/refresh_state.dart';
 
 class TimeTablePage extends ConsumerStatefulWidget {
   const TimeTablePage({super.key});
@@ -68,13 +70,37 @@ class _TimeTableState extends ConsumerState<TimeTablePage>
 
       // Get repository using Riverpod
       final studentRepo = ref.read(studentRepositoryProvider);
+      
+      // Get profile from state
+      final studentState = ref.read(studentStoreProvider);
+      final profile = studentState.profile;
 
-      // Replace these with actual values from your app state/context
+      if (profile == null) {
+         setState(() {
+          errorMessage = 'Profile data not found. Please refresh.';
+          isLoading = false;
+        });
+        return;
+      }
+      
+      final program = profile['program'];
+      final dept = profile['department'];
+      final sem = profile['semester']?.toString();
+      final batch = profile['batch_year']?.toString();
+
+      if (program == null || dept == null || sem == null || batch == null) {
+          setState(() {
+            errorMessage = 'Incomplete profile data. Please update your profile.';
+            isLoading = false;
+          });
+          return;
+      }
+
       final result = await studentRepo.fetchTimeTable(
-        program: 'MCA', // Get from your app state
-        dept: 'BTECH', // Get from your app state
-        sem: '2', // Get from your app state
-        batch: '2025', // Get from your app state
+        program: program,
+        dept: dept,
+        sem: sem,
+        batch: batch,
       );
 
       if (result['success'] == true) {
@@ -191,6 +217,12 @@ class _TimeTableState extends ConsumerState<TimeTablePage>
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(dashboardRefreshProvider, (previous, next) {
+      if (next > 0) {
+        _fetchTimetable();
+      }
+    });
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -380,9 +412,10 @@ class _TimeTableState extends ConsumerState<TimeTablePage>
           children: [
             const Icon(Icons.error_outline, size: 64, color: Colors.grey),
             const SizedBox(height: 16),
-            const Text(
-              'Failed to load timetable',
-              style: TextStyle(fontSize: 16, color: Colors.grey),
+            Text(
+              errorMessage.isNotEmpty ? errorMessage : 'Failed to load timetable',
+              style: const TextStyle(fontSize: 16, color: Colors.grey),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             TextButton(

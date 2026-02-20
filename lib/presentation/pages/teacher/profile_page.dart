@@ -6,6 +6,8 @@ import 'package:markmeapp/core/theme/app_theme.dart';
 import 'package:markmeapp/state/auth_state.dart';
 import 'package:markmeapp/state/teacher_state.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:markmeapp/state/refresh_state.dart';
+import 'package:intl/intl.dart';
 
 /// Professional Profile Page for attendance management system
 class ProfilePage extends ConsumerStatefulWidget {
@@ -186,9 +188,28 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(dashboardRefreshProvider, (previous, next) {
+      if (next > 0) {
+        ref.read(teacherStoreProvider.notifier).loadProfile();
+      }
+    });
     final w = MediaQuery.of(context).size.width;
     final hPad = w < 380 ? 16.0 : 20.0;
     final state = ref.watch(teacherStoreProvider);
+    final profile = state.profile ?? {};
+
+    final firstName = profile['first_name']?.toString() ?? '';
+    final middleName = profile['middle_name']?.toString() ?? '';
+    final lastName = profile['last_name']?.toString() ?? '';
+    final name = [
+      firstName,
+      middleName,
+      lastName,
+    ].where((s) => s.isNotEmpty).join(' ');
+
+    final email = profile['email']?.toString() ?? '';
+    final profileImage = profile['profile_picture']?.toString() ?? '';
+    final department = state.department ?? profile['department']?.toString() ?? '';
 
     return Theme(
       data: AppTheme.theme,
@@ -205,131 +226,106 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               Container(
                 decoration: _cardDecoration,
                 padding: const EdgeInsets.all(20),
-                child: Consumer(
-                  builder: (context, ref, child) {
-                    final state = ref.watch(teacherStoreProvider);
-                    final profile = state.profile ?? {};
-
-                    final firstName = profile['first_name']?.toString() ?? '';
-                    final middleName = profile['middle_name']?.toString() ?? '';
-                    final lastName = profile['last_name']?.toString() ?? '';
-                    final name = [
-                      firstName,
-                      middleName,
-                      lastName,
-                    ].where((s) => s.isNotEmpty).join(' ');
-
-                    final email = profile['email']?.toString() ?? '';
-                    final profileImage =
-                        profile['profile_picture']?.toString() ?? '';
-                    // Assuming department is part of profile or state directly
-                    final department =
-                        state.department ??
-                        profile['department']?.toString() ??
-                        '';
-
-                    return Row(
-                      children: [
-                        Container(
-                          width: 64,
-                          height: 64,
-                          decoration: BoxDecoration(
-                            gradient: profileImage.isEmpty
-                                ? const LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: [
-                                      Color(0xFF6366F1),
-                                      Color(0xFF4F46E5),
-                                    ],
-                                  )
-                                : null,
-                            borderRadius: BorderRadius.circular(16),
-                            image: profileImage.isNotEmpty
-                                ? DecorationImage(
-                                    image: CachedNetworkImageProvider(
-                                      profileImage,
-                                    ),
-                                    fit: BoxFit.cover,
-                                  )
-                                : null,
+                child: Row(
+                  children: [
+                    Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        gradient: profileImage.isEmpty
+                            ? const LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  Color(0xFF6366F1),
+                                  Color(0xFF4F46E5),
+                                ],
+                              )
+                            : null,
+                        borderRadius: BorderRadius.circular(16),
+                        image: profileImage.isNotEmpty
+                            ? DecorationImage(
+                                image: CachedNetworkImageProvider(
+                                  profileImage,
+                                ),
+                                fit: BoxFit.cover,
+                              )
+                            : null,
+                      ),
+                      child: profileImage.isEmpty
+                          ? const Icon(
+                              Icons.person,
+                              color: Colors.white,
+                              size: 32,
+                            )
+                          : null,
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            name,
+                            style: GoogleFonts.inter(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF111827),
+                              height: 1.3,
+                            ),
                           ),
-                          child: profileImage.isEmpty
-                              ? const Icon(
-                                  Icons.person,
-                                  color: Colors.white,
-                                  size: 32,
-                                )
-                              : null,
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                name,
+                          if (email.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              email,
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w400,
+                                color: const Color(0xFF6B7280),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                          if (department.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEEF2FF),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                department,
                                 style: GoogleFonts.inter(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                  color: const Color(0xFF111827),
-                                  height: 1.3,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  color: const Color(0xFF4F46E5),
                                 ),
                               ),
-                              if (email.isNotEmpty) ...[
-                                const SizedBox(height: 4),
-                                Text(
-                                  email,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w400,
-                                    color: const Color(0xFF6B7280),
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                              if (department.isNotEmpty) ...[
-                                const SizedBox(height: 4),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFEEF2FF),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Text(
-                                    department,
-                                    style: GoogleFonts.inter(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w500,
-                                      color: const Color(0xFF4F46E5),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                        Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF1F5F9),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: IconButton(
-                            onPressed: _openEditProfile,
-                            icon: const Icon(Icons.edit_outlined, size: 18),
-                            color: const Color(0xFF475569),
-                            padding: EdgeInsets.zero,
-                          ),
-                        ),
-                      ],
-                    );
-                  },
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: IconButton(
+                        onPressed: _openEditProfile,
+                        icon: const Icon(Icons.edit_outlined, size: 18),
+                        color: const Color(0xFF475569),
+                        padding: EdgeInsets.zero,
+                      ),
+                    ),
+                  ],
                 ),
               ),
 
@@ -491,7 +487,16 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                '2023',
+                                () {
+                                  final createdAt = profile['created_at']?.toString();
+                                  if (createdAt == null || createdAt.isEmpty) return '2023';
+                                  try {
+                                    final date = DateTime.parse(createdAt);
+                                    return DateFormat('MMM yyyy').format(date);
+                                  } catch (e) {
+                                    return '2023';
+                                  }
+                                }(),
                                 style: GoogleFonts.inter(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w500,

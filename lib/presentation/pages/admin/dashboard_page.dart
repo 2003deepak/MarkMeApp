@@ -2,15 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:markmeapp/presentation/widgets/dashboard_action_card.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:markmeapp/state/refresh_state.dart';
 
-class AdminDashboardPage extends StatefulWidget {
+class AdminDashboardPage extends ConsumerStatefulWidget {
   const AdminDashboardPage({super.key});
 
   @override
-  State<AdminDashboardPage> createState() => _AdminDashboardPageState();
+  ConsumerState<AdminDashboardPage> createState() => _AdminDashboardPageState();
 }
 
-class _AdminDashboardPageState extends State<AdminDashboardPage> {
+class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
   @override
   void initState() {
     super.initState();
@@ -24,6 +26,11 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(dashboardRefreshProvider, (previous, next) {
+      if (next > 0) {
+        // Trigger refresh logic here if any.
+      }
+    });
     return Scaffold(body: _buildDashboardContent());
   }
 

@@ -110,6 +110,8 @@ class StudentPersonalInfoSection extends StatelessWidget {
             label: 'Date of Birth',
             isRequired: true,
             hintText: 'Select your date of birth',
+            firstDate: DateTime(1900),
+            lastDate: DateTime.now(),
             validator: (_) => dob == null ? 'Select a date' : null,
             onDateSelected: onDobChanged,
           ),

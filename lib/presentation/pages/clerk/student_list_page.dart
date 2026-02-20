@@ -6,6 +6,8 @@ import 'package:markmeapp/data/models/student_model.dart';
 import 'package:markmeapp/data/repositories/clerk_repository.dart';
 import 'package:markmeapp/presentation/widgets/ui/custom_bottom_sheet_layout.dart';
 import 'package:markmeapp/presentation/widgets/ui/filter_chip.dart';
+import 'package:markmeapp/state/refresh_state.dart';
+import 'package:markmeapp/presentation/widgets/ui/search_bar.dart';
 
 class StudentListPage extends ConsumerStatefulWidget {
   const StudentListPage({super.key});
@@ -231,102 +233,25 @@ class _StudentListPageState extends ConsumerState<StudentListPage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = const Color(0xFF3B5BDB);
 
+    ref.listen(dashboardRefreshProvider, (previous, next) {
+      if (next > 0) {
+        _fetchStudents();
+      }
+    });
+
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF1A1A2E) : Colors.white,
       body: Column(
         children: [
-          // Header
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                const SizedBox(width: 8),
-                Text(
-                  'Student List',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : Colors.black87,
-                  ),
-                ),
-                const Spacer(),
-              ],
-            ),
-          ),
 
-          // Search and Filter Bar
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Container(
-              decoration: BoxDecoration(
-                color: isDark
-                    ? const Color(0xFF252542)
-                    : const Color(0xFFF8F9FA),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: isDark ? Colors.white12 : const Color(0xFFE9ECEF),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _searchController,
-                      style: TextStyle(
-                        color: isDark ? Colors.white : Colors.black87,
-                      ),
-                      decoration: InputDecoration(
-                        hintText:
-                            'Search students by name, email, or roll number...',
-                        hintStyle: TextStyle(
-                          color: isDark ? Colors.white38 : Colors.grey,
-                        ),
-                        prefixIcon: Icon(
-                          Icons.search,
-                          color: isDark ? Colors.white38 : Colors.grey,
-                        ),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 14,
-                        ),
-                      ),
-                    ),
-                  ),
-                  Stack(
-                    children: [
-                      IconButton(
-                        onPressed: _showFilterBottomSheet,
-                        icon: Icon(
-                          Icons.tune,
-                          color: isDark ? Colors.white70 : primaryColor,
-                        ),
-                      ),
-                      if (_activeFilterCount > 0)
-                        Positioned(
-                          right: 8,
-                          top: 8,
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: const BoxDecoration(
-                              color: Color(0xFF3B5BDB),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Text(
-                              '$_activeFilterCount',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+
+          const SizedBox(height: 24),
+          AppSearchBar(
+            controller: _searchController,
+            hintText: 'Search students by name, email, or roll number...',
+            onChanged: (txt) => _debounceSearch(),
+            onFilterTap: _showFilterBottomSheet,
+            activeFilterCount: _activeFilterCount,
           ),
 
           const SizedBox(height: 16),
@@ -476,11 +401,7 @@ class _StudentListPageState extends ConsumerState<StudentListPage> {
                       ],
                     ),
                   )
-                : RefreshIndicator(
-                    onRefresh: () async {
-                      await _fetchStudents();
-                    },
-                    child: NotificationListener<ScrollNotification>(
+                : NotificationListener<ScrollNotification>(
                       onNotification: (ScrollNotification scrollInfo) {
                         if (!_isLoadingMore &&
                             _hasMoreData &&
@@ -526,7 +447,6 @@ class _StudentListPageState extends ConsumerState<StudentListPage> {
                         },
                       ),
                     ),
-                  ),
           ),
         ],
       ),

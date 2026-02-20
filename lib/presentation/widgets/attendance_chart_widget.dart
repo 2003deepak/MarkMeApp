@@ -298,14 +298,7 @@ class _AttendanceChartWidgetState extends State<AttendanceChartWidget>
                                           : stats.color,
                                     ),
                                   ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    hasData ? 'present' : 'add attendance',
-                                    style: TextStyle(
-                                      fontSize: isDesktop ? 13 : 12,
-                                      color: Colors.grey.shade400,
-                                    ),
-                                  ),
+                                  
                                 ],
                               ),
                             ],

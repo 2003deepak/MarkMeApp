@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:markmeapp/state/auth_state.dart';
+import 'package:markmeapp/core/utils/snackbar_utils.dart';
 
 class ProtectedLayout extends ConsumerWidget {
   final Widget child;
@@ -14,17 +15,11 @@ class ProtectedLayout extends ConsumerWidget {
       // When user logs out → redirect
       if (previous?.isLoggedIn == true && next.isLoggedIn == false) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          // ✅ Ensure a Scaffold exists before showing snackbar
-          final messenger = ScaffoldMessenger.maybeOf(context);
-          if (messenger != null) {
-            messenger.showSnackBar(
-              const SnackBar(
-                content: Text('Logged out successfully'),
-                backgroundColor: Colors.redAccent,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
+          showAppSnackBar(
+            'Logged out successfully',
+            isError: true,
+            context: context,
+          );
           context.go('/login');
         });
       }

@@ -8,6 +8,7 @@ import 'package:markmeapp/presentation/widgets/ui/otp_field.dart';
 import 'package:markmeapp/state/auth_state.dart';
 import 'package:markmeapp/presentation/widgets/ui/app_bar.dart';
 import 'package:markmeapp/core/utils/app_logger.dart';
+import 'package:markmeapp/core/utils/snackbar_utils.dart';
 
 class SignupPage extends ConsumerStatefulWidget {
   const SignupPage({super.key});
@@ -41,22 +42,11 @@ class _SignupPageState extends ConsumerState<SignupPage> {
     _emailController.addListener(_checkFormValidity);
   }
 
-  void _showSnackBar(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? Colors.red.shade600 : Colors.green.shade600,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        duration: const Duration(seconds: 3),
-      ),
-    );
-  }
 
   Future<void> _handleSignup() async {
     if (_formKey.currentState!.validate()) {
       if (_enteredPassword.isEmpty || _enteredPassword.length != 6) {
-        _showSnackBar('Please enter a 6-digit password', isError: true);
+        showAppSnackBar('Please enter a 6-digit password', isError: true, context: context);
         return;
       }
 
@@ -70,28 +60,32 @@ class _SignupPageState extends ConsumerState<SignupPage> {
       final authStore = ref.read(authStoreProvider.notifier);
       final result = await authStore.registerUser(user);
 
+      if (!mounted) return;
+
       AppLogger.info(result.toString());
 
       // Handle the response from auth store
       if (result['success']) {
-        _showSnackBar(
+        showAppSnackBar(
           result['message'] ?? 'Registration successful! Please verify your email.',
           isError: false,
+          context: context,
         );
 
-        
+        if (mounted) {
           context.push(
             '/otp-verification',
             extra: {
               'email': _emailController.text.trim(),
-              'role': 'student', // Default role for now, or get from form if added later
+              'role': 'student',
             },
           );
-        
+        }
       } else {
-        _showSnackBar(
+        showAppSnackBar(
           result['message'] ?? 'Registration failed. Please try again.',
           isError: true,
+          context: context,
         );
       }
     }
@@ -137,6 +131,7 @@ class _SignupPageState extends ConsumerState<SignupPage> {
 
       appBar: MarkMeAppBar(
         title: '',
+        showBackButton : false
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(isDesktop ? 32.0 : 24.0),

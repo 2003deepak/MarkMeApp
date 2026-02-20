@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import 'package:go_router/go_router.dart';
 import 'package:markmeapp/core/theme/app_theme.dart';
-import 'package:markmeapp/presentation/skeleton/student_edit_profile_skeleton.dart';
+import 'package:markmeapp/presentation/skeleton/pages/student/student_edit_profile_skeleton.dart';
 import 'package:markmeapp/presentation/widgets/academic_info_section.dart';
 import 'package:markmeapp/presentation/widgets/save_button_section.dart';
 import 'package:markmeapp/presentation/widgets/student_gallery_section.dart';
@@ -12,7 +12,9 @@ import 'package:markmeapp/presentation/widgets/student_personal_info_section.dar
 import 'package:markmeapp/presentation/widgets/ui/profile_picture.dart';
 import 'package:markmeapp/state/student_state.dart';
 import 'package:markmeapp/presentation/widgets/ui/app_bar.dart';
+import 'package:markmeapp/state/refresh_state.dart';
 import 'package:flutter/foundation.dart';
+import 'package:markmeapp/core/utils/snackbar_utils.dart';
 
 class EditProfilePage extends ConsumerStatefulWidget {
   const EditProfilePage({super.key});
@@ -125,6 +127,21 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
 
   bool get _isSaveEnabled {
     if (!_isFormDirty || _isUpdating) return false;
+
+    // Check mandatory fields (all except middle name)
+    if (_firstNameCtrl.text.trim().isEmpty ||
+        _lastNameCtrl.text.trim().isEmpty ||
+        _emailCtrl.text.trim().isEmpty ||
+        _phoneCtrl.text.trim().isEmpty ||
+        _rollCtrl.text.trim().isEmpty ||
+        _batchYearCtrl.text.trim().isEmpty ||
+        _semesterCtrl.text.trim().isEmpty ||
+        _program.trim().isEmpty ||
+        _department.trim().isEmpty ||
+        _dob == null) {
+      return false;
+    }
+
     if (!_isEmbeddings && _gallery.whereType<String>().length != 4) {
       return false;
     }
@@ -132,6 +149,9 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   }
 
   Future<void> _fetchProfileData() async {
+    setState(() {
+      _initialDataLoaded = false;
+    });
     final studentStore = ref.read(studentStoreProvider.notifier);
     await studentStore.loadProfile();
   }
@@ -139,9 +159,14 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   Future<void> _updateProfile() async {
     if (!_initialDataLoaded || _isUpdating) return;
 
+    if (!_formKey.currentState!.validate()) {
+      showAppSnackBar("Please fix numerical or length errors before saving.", isError: true);
+      return;
+    }
+
     final changedData = _getChangedData();
     if (changedData.isEmpty) {
-      _showSnackBar("No changes to save.", Colors.orange);
+      showAppSnackBar("No changes to save.", isError: true);
       return;
     }
 
@@ -155,13 +180,13 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       if (result['success'] == true) {
         await _handleUpdateSuccess();
       } else {
-        _showSnackBar(
+        showAppSnackBar(
           result['message'] ?? 'Failed to update profile',
-          Colors.red,
+          isError: true,
         );
       }
     } catch (e) {
-      _showSnackBar('An error occurred: ${e.toString()}', Colors.red);
+      showAppSnackBar('An error occurred: ${e.toString()}', isError: true);
     } finally {
       if (mounted) setState(() => _isUpdating = false);
     }
@@ -244,17 +269,10 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
 
     if (mounted) {
       setState(() => _isFormDirty = false);
-      _showSnackBar('Profile updated successfully', Colors.green);
+      showAppSnackBar('Profile updated successfully', isError: false);
     }
   }
 
-  void _showSnackBar(String message, Color backgroundColor) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: backgroundColor),
-      );
-    }
-  }
 
   void _populateFormFromState(Map<String, dynamic> profile) {
     // 🔥 Always update is_embeddings (because backend may change it later)
@@ -437,9 +455,6 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
 
   String? _validateNumeric(String? value, String field) {
     if (value != null && value.trim().isNotEmpty) {
-      if (value.trim().length < 3) {
-        return '$field must be at least 3 characters';
-      }
       if (int.tryParse(value.trim()) == null) return '$field must be a number';
     }
     return null;
@@ -516,13 +531,19 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   Widget build(BuildContext context) {
     final studentState = ref.watch(studentStoreProvider);
 
+    ref.listen(dashboardRefreshProvider, (previous, next) {
+      if (next > 0) {
+        _fetchProfileData();
+      }
+    });
+
     if (studentState.profile != null) {
       _populateFormFromState(studentState.profile!);
     }
 
     if (_isUpdating) return _buildLoadingOverlay();
     if (studentState.profile == null && !_initialDataLoaded) {
-      return const StudentEditProfileSkeleton();
+      return StudentEditProfileSkeleton();
     }
 
     return Theme(
@@ -530,19 +551,42 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       child: Scaffold(
         backgroundColor: const Color(0xFFF8FAFC),
         appBar: MarkMeAppBar(
-          title: 'Edit Profile',
+          titleWidget: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              const Text(
+                'Edit Profile',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Positioned(
+                bottom: -4,
+                right: -55,
+                child: AnimatedOpacity(
+                  opacity: _isFormDirty ? 1.0 : 0.0,
+                  duration: const Duration(milliseconds: 300),
+                  child: _buildStatusBadge('Unsaved', const Color(0xFFEF4444)),
+                ),
+              ),
+            ],
+          ),
           onBackPressed: _isUpdating ? null : _handleBackPressed,
           isLoading: _isUpdating,
-          actions: _isFormDirty
-              ? _buildStatusBadge('Unsaved', const Color(0xFFEF4444))
-              : null,
         ),
-        body: Form(
-          key: _formKey,
-          autovalidateMode: AutovalidateMode.onUserInteraction,
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-            children: _buildFormContent(studentState),
+        body: RefreshIndicator(
+          onRefresh: _fetchProfileData,
+          color: Theme.of(context).primaryColor,
+          child: Form(
+            key: _formKey,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              children: _buildFormContent(studentState),
+            ),
           ),
         ),
       ),
@@ -594,25 +638,29 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     );
   }
 
-  List<Widget> _buildStatusBadge(String text, Color color) {
-    return [
-      const SizedBox(width: 8),
-      Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Text(
-          text,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 10,
-            fontWeight: FontWeight.w500,
+  Widget _buildStatusBadge(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(6),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
           ),
+        ],
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
         ),
       ),
-    ];
+    );
   }
 
   void _handleBackPressed() {

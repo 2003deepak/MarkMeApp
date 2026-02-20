@@ -148,7 +148,6 @@ class TeacherRepository {
       );
 
       final responseBody = response.data;
-      AppLogger.info("📦 Response: $responseBody");
 
       if (response.statusCode == 200) {
         return {
@@ -184,7 +183,7 @@ class TeacherRepository {
       final response = await _dio.get('/teacher/teacher-class');
 
       final responseBody = response.data;
-      AppLogger.info("📦 Response: $responseBody");
+
 
       if (response.statusCode == 200) {
         return {

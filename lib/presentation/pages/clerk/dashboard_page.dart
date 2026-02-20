@@ -2,16 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:markmeapp/presentation/widgets/dashboard_action_card.dart';
-import 'package:markmeapp/presentation/widgets/recent_activity.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:markmeapp/state/refresh_state.dart';
 
-class ClerkDashboardPage extends StatefulWidget {
+class ClerkDashboardPage extends ConsumerStatefulWidget {
   const ClerkDashboardPage({super.key});
 
   @override
-  State<ClerkDashboardPage> createState() => _ClerkDashboardPageState();
+  ConsumerState<ClerkDashboardPage> createState() => _ClerkDashboardPageState();
 }
 
-class _ClerkDashboardPageState extends State<ClerkDashboardPage> {
+class _ClerkDashboardPageState extends ConsumerState<ClerkDashboardPage> {
   @override
   void initState() {
     super.initState();
@@ -25,6 +26,12 @@ class _ClerkDashboardPageState extends State<ClerkDashboardPage> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(dashboardRefreshProvider, (previous, next) {
+      if (next > 0) {
+        // Trigger refresh logic here if any. 
+        // For now, it's mostly static, but we provide the hook.
+      }
+    });
     return Scaffold(body: _buildDashboardContent());
   }
 
@@ -42,16 +49,7 @@ class _ClerkDashboardPageState extends State<ClerkDashboardPage> {
                 const SizedBox(height: 24),
                 _buildActionButtons(),
                 const SizedBox(height: 24),
-                Text(
-                  'Recent Activity',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey.shade800,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                buildRecentActivitySection(),
+                
               ],
             ),
           ),

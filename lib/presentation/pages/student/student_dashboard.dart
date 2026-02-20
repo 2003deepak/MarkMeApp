@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:markmeapp/data/repositories/student_repository.dart';
-import 'package:markmeapp/presentation/skeleton/student_dashboard_skeleton.dart';
+import 'package:markmeapp/presentation/skeleton/pages/student/student_dashboard_skeleton.dart';
 import 'package:markmeapp/presentation/widgets/attendance_chart_widget.dart';
 import 'package:markmeapp/presentation/widgets/subject_selector_widget.dart';
 import 'package:markmeapp/presentation/widgets/attendance_stats_widget.dart';
 import 'package:markmeapp/presentation/widgets/lectures_widget.dart';
-import 'package:markmeapp/presentation/widgets/recent_activity_widget.dart';
 import 'package:markmeapp/presentation/widgets/bunk_safety/tomorrow_bunk_safety_card.dart';
 import 'package:markmeapp/presentation/widgets/ui/error.dart';
 import 'package:markmeapp/core/utils/student_data_processor.dart';
 import 'package:markmeapp/state/student_state.dart';
+import 'package:markmeapp/state/refresh_state.dart';
 
 class StudentDashboard extends ConsumerStatefulWidget {
   const StudentDashboard({super.key});
@@ -53,6 +53,8 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
 
     // 🔥 If profile already exists in state → do NOT fetch again
     if (state.profile != null) {
+      print("Profile already exists in state");
+      print(state.profile);
       return;
     }
 
@@ -220,6 +222,12 @@ Future<void> _fetchAttendanceData() async {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(dashboardRefreshProvider, (previous, next) {
+      if (next > 0) {
+        _retryFetch();
+      }
+    });
+
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth > 600;
 

@@ -6,6 +6,7 @@ import 'package:markmeapp/core/utils/app_logger.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:markmeapp/data/models/notification_model.dart';
 import 'package:markmeapp/data/repositories/notification_repository.dart';
+import 'package:markmeapp/state/refresh_state.dart';
 class StudentDashboardScaffold extends ConsumerWidget {
   final StatefulNavigationShell navigationShell;
   const StudentDashboardScaffold({
@@ -61,7 +62,14 @@ class StudentDashboardScaffold extends ConsumerWidget {
           const SizedBox(width: 8),
         ],
       ),
-      body: navigationShell,
+      body: RefreshIndicator(
+        onRefresh: () async {
+          ref.read(dashboardRefreshProvider.notifier).state++;
+          // Give it a small delay to show the indicator
+          await Future.delayed(const Duration(milliseconds: 1000));
+        },
+        child: navigationShell,
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: navigationShell.currentIndex,
         onDestinationSelected: (index) => _onTap(context, index),

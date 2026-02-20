@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:markmeapp/presentation/widgets/ui/notification_badge.dart';
+import 'package:markmeapp/state/refresh_state.dart';
 class AdminDashboardScaffold extends ConsumerWidget {
   final StatefulNavigationShell navigationShell;
   const AdminDashboardScaffold({
@@ -54,7 +55,13 @@ class AdminDashboardScaffold extends ConsumerWidget {
           const SizedBox(width: 8),
         ],
       ),
-      body: navigationShell,
+      body: RefreshIndicator(
+        onRefresh: () async {
+          ref.read(dashboardRefreshProvider.notifier).state++;
+          await Future.delayed(const Duration(milliseconds: 1000));
+        },
+        child: navigationShell,
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: navigationShell.currentIndex,
         onDestinationSelected: (index) => _onTap(context, index),

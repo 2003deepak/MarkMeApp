@@ -3,10 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:markmeapp/data/repositories/teacher_repository.dart';
 import 'package:markmeapp/state/teacher_state.dart';
+import 'package:markmeapp/state/refresh_state.dart';
 import 'package:markmeapp/core/utils/app_logger.dart';
 import 'package:markmeapp/presentation/widgets/dashboard_action_card.dart';
 import 'package:markmeapp/presentation/widgets/lectures_widget.dart';
-import 'package:markmeapp/presentation/widgets/recent_activity_widget.dart';
 import 'package:markmeapp/presentation/widgets/ui/error.dart';
 
 class TeacherDashboard extends ConsumerStatefulWidget {
@@ -89,6 +89,12 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(dashboardRefreshProvider, (previous, next) {
+      if (next > 0) {
+        _retryFetch();
+      }
+    });
+
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth > 600;
 
@@ -183,9 +189,6 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
           entityType: 'teacher',
         ),
         const SizedBox(height: 24),
-
-        // 🔹 Recent Activity
-        RecentActivityWidget(isDesktop: isDesktop),
       ],
     );
   }

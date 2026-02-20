@@ -18,6 +18,9 @@ import 'package:markmeapp/data/repositories/notification_repository.dart';
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
 
+final GlobalKey<ScaffoldMessengerState> rootScaffoldMessengerKey =
+    GlobalKey<ScaffoldMessengerState>();
+
 /// 🔥 BACKGROUND FCM HANDLER (MOBILE ONLY)
 
 Future<void> _firebaseMessagingHandler(RemoteMessage message) async {
@@ -256,27 +259,12 @@ class _MyAppState extends ConsumerState<MyApp> {
     }
   }
 
-  void _showSnack(String message) {
-    final ctx = AppRouter.navigatorKey.currentContext;
-    if (ctx == null) return;
-
-    ScaffoldMessenger.of(ctx).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
-    final router = ref.read(AppRouter.routerProvider);;
-
-    print("APP ROOT REBUILD");
+    final router = ref.read(AppRouter.routerProvider);
 
     return MaterialApp.router(
+      scaffoldMessengerKey: rootScaffoldMessengerKey,
       title: 'Mark Me',
       debugShowCheckedModeBanner: false,
       themeMode: ThemeMode.light,

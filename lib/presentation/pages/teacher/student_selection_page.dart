@@ -5,6 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:markmeapp/data/repositories/teacher_repository.dart';
 import 'package:debounce_throttle/debounce_throttle.dart';
 import 'package:markmeapp/presentation/widgets/ui/app_bar.dart';
+import 'package:markmeapp/presentation/widgets/ui/custom_bottom_sheet_layout.dart';
+import 'package:markmeapp/presentation/widgets/ui/filter_chip.dart';
+import 'package:markmeapp/presentation/widgets/ui/search_bar.dart';
 
 class StudentSelectionPage extends ConsumerStatefulWidget {
   const StudentSelectionPage({super.key});
@@ -191,11 +194,47 @@ class _StudentSelectionPageState extends ConsumerState<StudentSelectionPage> {
     _loadStudents(reset: true);
   }
 
+  void _showFilterBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => FilterBottomSheet(
+        currentBatchYear: _selectedBatchYear?.toString(),
+        currentProgram: _selectedProgram,
+        currentSemester: _selectedSemester?.toString(),
+        onApply: (batchYear, program, semester) {
+          setState(() {
+            _selectedBatchYear = batchYear != null ? int.tryParse(batchYear) : null;
+            _selectedProgram = program;
+            _selectedSemester = semester != null ? int.tryParse(semester) : null;
+          });
+          _loadStudents(reset: true);
+        },
+        onReset: () {
+          setState(() {
+            _selectedBatchYear = null;
+            _selectedProgram = null;
+            _selectedSemester = null;
+          });
+          _loadStudents(reset: true);
+        },
+      ),
+    );
+  }
+
+  int get _activeFilterCount {
+    int count = 0;
+    if (_selectedProgram != null) count++;
+    if (_selectedBatchYear != null) count++;
+    if (_selectedSemester != null) count++;
+    return count;
+  }
+
   bool _hasActiveFilters() {
     return _selectedProgram != null ||
         _selectedBatchYear != null ||
-        _selectedSemester != null ||
-        _searchController.text.isNotEmpty;
+        _selectedSemester != null;
   }
 
   @override
@@ -217,7 +256,14 @@ class _StudentSelectionPageState extends ConsumerState<StudentSelectionPage> {
       body: SafeArea(
         child: Column(
           children: [
-            _buildSearchBar(),
+            AppSearchBar(
+              controller: _searchController,
+              hintText: 'Search by name or roll number...',
+              onChanged: (txt) => _searchDebouncer.value = txt,
+              onFilterTap: _showFilterBottomSheet,
+              activeFilterCount: _activeFilterCount,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            ),
             _buildFiltersSection(),
             Expanded(child: _buildContent()),
             if (_selectedStudentIds.isNotEmpty) _buildBottomActionButton(),
@@ -227,162 +273,67 @@ class _StudentSelectionPageState extends ConsumerState<StudentSelectionPage> {
     );
   }
 
-  Widget _buildSearchBar() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.blue.withValues(alpha: 0.1),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: TextField(
-          controller: _searchController,
-          onChanged: (txt) => _searchDebouncer.value = txt,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-          decoration: InputDecoration(
-            hintText: 'Search by name or roll number...',
-            hintStyle: TextStyle(color: Colors.grey.shade400),
-            prefixIcon: Icon(
-              Icons.search,
-              color: Colors.blue.shade400,
-              size: 20,
-            ),
-            suffixIcon: _searchController.text.isNotEmpty
-                ? IconButton(
-                    icon: Icon(
-                      Icons.clear,
-                      color: Colors.grey.shade400,
-                      size: 20,
-                    ),
-                    onPressed: () {
-                      _searchController.clear();
-                      _loadStudents(reset: true);
-                    },
-                  )
-                : null,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.blue.shade600, width: 2),
-            ),
-            filled: true,
-            fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 16,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 
   Widget _buildFiltersSection() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      color: Colors.white,
-      child: Column(
-        children: [
-          // Filter Header
-          Row(
-            children: [
-              if (_hasActiveFilters())
-                GestureDetector(
-                  onTap: _clearFilters,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Column(
+      children: [
+        if (_activeFilterCount > 0)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  if (_selectedProgram != null)
+                    FilterChipWidget(
+                      label: 'Program: $_selectedProgram',
+                      onRemove: () {
+                        setState(() => _selectedProgram = null);
+                        _loadStudents(reset: true);
+                      },
+                      isDark: isDark,
                     ),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(8),
+                  if (_selectedBatchYear != null)
+                    FilterChipWidget(
+                      label: 'Batch: $_selectedBatchYear',
+                      onRemove: () {
+                        setState(() => _selectedBatchYear = null);
+                        _loadStudents(reset: true);
+                      },
+                      isDark: isDark,
                     ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.clear_all,
-                          color: Colors.grey.shade600,
-                          size: 14,
-                        ),
-                        const SizedBox(width: 4),
-                        const Text(
-                          'Clear All',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
+                  if (_selectedSemester != null)
+                    FilterChipWidget(
+                      label: 'Semester: $_selectedSemester',
+                      onRemove: () {
+                        setState(() => _selectedSemester = null);
+                        _loadStudents(reset: true);
+                      },
+                      isDark: isDark,
                     ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          // Filter Dropdowns
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                _buildFilterDropdown(
-                  value: _selectedProgram,
-                  hint: "Select Program",
-                  label: "Program",
-                  items: _programs,
-                  icon: Icons.school_outlined,
-                  onChanged: (v) {
-                    setState(() => _selectedProgram = v);
-                    _applyFilters();
-                  },
-                ),
-                const SizedBox(width: 12),
-                _buildFilterDropdown(
-                  value: _selectedBatchYear?.toString(),
-                  hint: "Select Batch",
-                  label: "Batch Year",
-                  items: _batchYears.map((e) => e.toString()).toList(),
-                  icon: Icons.calendar_today_outlined,
-                  onChanged: (v) {
-                    setState(
-                      () =>
-                          _selectedBatchYear = v != null ? int.parse(v) : null,
-                    );
-                    _applyFilters();
-                  },
-                ),
-                const SizedBox(width: 12),
-                _buildFilterDropdown(
-                  value: _selectedSemester?.toString(),
-                  hint: "Select Semester",
-                  label: "Semester",
-                  items: _semesters.map((e) => e.toString()).toList(),
-                  icon: Icons.library_books_outlined,
-                  onChanged: (v) {
-                    setState(
-                      () => _selectedSemester = v != null ? int.parse(v) : null,
-                    );
-                    _applyFilters();
-                  },
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ],
-      ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          child: Row(
+            children: [
+              Text(
+                '${_displayedStudents.length} students found',
+                style: TextStyle(
+                  color: isDark ? Colors.white70 : Colors.grey,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -470,6 +421,8 @@ class _StudentSelectionPageState extends ConsumerState<StudentSelectionPage> {
   }
 
   Widget _buildStudentsList() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return RefreshIndicator(
       onRefresh: () => _loadStudents(reset: true),
       child: ListView.builder(
@@ -486,6 +439,8 @@ class _StudentSelectionPageState extends ConsumerState<StudentSelectionPage> {
 
           final student = _displayedStudents[index];
           final isSelected = _selectedStudentIds.contains(student['id']);
+          final fullName = student['name'];
+          final avatarColor = _getAvatarColor(fullName);
 
           return GestureDetector(
             onTap: () {
@@ -503,53 +458,70 @@ class _StudentSelectionPageState extends ConsumerState<StudentSelectionPage> {
               margin: const EdgeInsets.only(bottom: 12),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: isSelected ? Colors.blue.shade50 : Colors.white,
-                borderRadius: BorderRadius.circular(12),
+                color: isSelected
+                    ? (isDark ? Colors.blue.withValues(alpha: 0.1) : Colors.blue.shade50)
+                    : (isDark ? const Color(0xFF252542) : Colors.white),
+                borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: isSelected
                       ? Colors.blue.shade600
-                      : Colors.grey.shade200,
+                      : (isDark ? Colors.white10 : const Color(0xFFF1F3F4)),
                   width: isSelected ? 2 : 1,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: isSelected
-                        ? Colors.blue.withValues(alpha: 0.1)
-                        : Colors.black.withValues(alpha: 0.05),
-                    blurRadius: isSelected ? 8 : 4,
+                    color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
+                    blurRadius: isSelected ? 12 : 8,
                     offset: const Offset(0, 2),
                   ),
                 ],
               ),
               child: Row(
                 children: [
-                  CircleAvatar(
-                    radius: 25,
-                    backgroundColor: Colors.grey.shade100,
-                    backgroundImage: student['profile_picture'] != null
-                        ? NetworkImage(student['profile_picture'])
-                        : null,
-                    child: student['profile_picture'] == null
-                        ? Icon(
-                            Icons.person,
-                            size: 24,
-                            color: Colors.grey.shade600,
-                          )
-                        : null,
-                  ),
+                  // Avatar
+                  if (student['profile_picture'] != null &&
+                      student['profile_picture'].toString().isNotEmpty)
+                    Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        image: DecorationImage(
+                          image: NetworkImage(student['profile_picture']),
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    )
+                  else
+                    Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        color: avatarColor.withValues(alpha: isDark ? 0.3 : 0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Text(
+                          _getInitials(fullName),
+                          style: TextStyle(
+                            color: avatarColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          student['name'],
+                          fullName,
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
-                            color: isSelected
-                                ? Colors.blue.shade600
-                                : Colors.black87,
+                            color: isDark ? Colors.white : Colors.black87,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -557,25 +529,27 @@ class _StudentSelectionPageState extends ConsumerState<StudentSelectionPage> {
                           'Roll: ${student['roll_number']}',
                           style: const TextStyle(
                             fontSize: 14,
-                            color: Colors.grey,
+                            color: Color(0xFF3B5BDB),
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '${student['degree']} • Semester ${student['semester']}',
-                          style: const TextStyle(
+                          '${student['degree']} • Sem ${student['semester']}',
+                          style: TextStyle(
                             fontSize: 12,
-                            color: Colors.grey,
+                            color: isDark ? Colors.white38 : Colors.grey,
                           ),
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(width: 12),
+                  // Selection Indicator
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
-                    width: 24,
-                    height: 24,
+                    width: 26,
+                    height: 26,
                     decoration: BoxDecoration(
                       color: isSelected
                           ? Colors.blue.shade600
@@ -583,13 +557,13 @@ class _StudentSelectionPageState extends ConsumerState<StudentSelectionPage> {
                       border: Border.all(
                         color: isSelected
                             ? Colors.blue.shade600
-                            : Colors.grey.shade400,
+                            : (isDark ? Colors.white24 : Colors.grey.shade300),
                         width: 2,
                       ),
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     child: isSelected
-                        ? const Icon(Icons.check, color: Colors.white, size: 16)
+                        ? const Icon(Icons.check, color: Colors.white, size: 18)
                         : null,
                   ),
                 ],
@@ -599,6 +573,29 @@ class _StudentSelectionPageState extends ConsumerState<StudentSelectionPage> {
         },
       ),
     );
+  }
+
+  String _getInitials(String name) {
+    final parts = name.split(' ');
+    if (parts.length >= 2) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    } else if (name.isNotEmpty) {
+      return name[0].toUpperCase();
+    }
+    return '?';
+  }
+
+  Color _getAvatarColor(String name) {
+    final colors = [
+      const Color(0xFF3B5BDB),
+      const Color(0xFFF59F00),
+      const Color(0xFF37B24D),
+      const Color(0xFFF03E3E),
+      const Color(0xFF7048E8),
+      const Color(0xFF0CA678),
+    ];
+    final hash = name.codeUnits.fold(0, (a, b) => a + b);
+    return colors[hash % colors.length];
   }
 
   Widget _buildSkeletonLoading() {
@@ -758,5 +755,142 @@ class _StudentSelectionPageState extends ConsumerState<StudentSelectionPage> {
       'student_ids': _selectedStudentIds.toList(),
       'students': selectedStudents,
     });
+  }
+}
+
+// Filter Bottom Sheet for Student Selection
+class FilterBottomSheet extends StatefulWidget {
+  final String? currentBatchYear;
+  final String? currentProgram;
+  final String? currentSemester;
+  final Function(String?, String?, String?) onApply;
+  final VoidCallback onReset;
+
+  const FilterBottomSheet({
+    super.key,
+    required this.currentBatchYear,
+    required this.currentProgram,
+    required this.currentSemester,
+    required this.onApply,
+    required this.onReset,
+  });
+
+  @override
+  State<FilterBottomSheet> createState() => _FilterBottomSheetState();
+}
+
+class _FilterBottomSheetState extends State<FilterBottomSheet> {
+  late String? _batchYear;
+  late String? _program;
+  late String? _semester;
+
+  final List<String> _programs = ['MCA', 'AI'];
+  final List<String> _batchYears = ['2025', '2024'];
+  final List<String> _semesters = ['1', '2', '3', '4', '5', '6', '7', '8'];
+
+  @override
+  void initState() {
+    super.initState();
+    _batchYear = widget.currentBatchYear;
+    _program = widget.currentProgram;
+    _semester = widget.currentSemester;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return CustomBottomSheetLayout(
+      title: 'Filter Students',
+      onReset: () {
+        setState(() {
+          _batchYear = null;
+          _program = null;
+          _semester = null;
+        });
+        widget.onReset();
+        Navigator.pop(context);
+      },
+      onApply: () {
+        widget.onApply(_batchYear, _program, _semester);
+        Navigator.pop(context);
+      },
+      content: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildFilterSection(
+            title: 'Program',
+            options: _programs,
+            selectedValue: _program,
+            onSelected: (val) => setState(() => _program = val),
+          ),
+          const SizedBox(height: 24),
+          _buildFilterSection(
+            title: 'Batch Year',
+            options: _batchYears,
+            selectedValue: _batchYear,
+            onSelected: (val) => setState(() => _batchYear = val),
+          ),
+          const SizedBox(height: 24),
+          _buildFilterSection(
+            title: 'Semester',
+            options: _semesters,
+            selectedValue: _semester,
+            onSelected: (val) => setState(() => _semester = val),
+          ),
+          const SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterSection({
+    required String title,
+    required List<String> options,
+    required String? selectedValue,
+    required Function(String?) onSelected,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: isDark ? Colors.white : Colors.black87,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: options.map((option) {
+            final isSelected = selectedValue == option;
+            return ChoiceChip(
+              label: Text(option),
+              selected: isSelected,
+              onSelected: (selected) {
+                onSelected(selected ? option : null);
+              },
+              selectedColor: const Color(0xFF3B5BDB),
+              labelStyle: TextStyle(
+                color: isSelected ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+              backgroundColor: isDark ? const Color(0xFF252542) : Colors.grey[100],
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+                side: BorderSide(
+                  color: isSelected ? const Color(0xFF3B5BDB) : Colors.transparent,
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
   }
 }

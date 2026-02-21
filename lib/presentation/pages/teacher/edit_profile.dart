@@ -284,12 +284,11 @@ class _TeacherEditProfilePageState
       padding: const EdgeInsets.only(left: 8, bottom: 12, top: 8),
       child: Text(
         title,
-        style: const TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-          color: Color(0xFF4B5563),
-          letterSpacing: 0.2,
-        ),
+        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF1E293B),
+              letterSpacing: 0.2,
+            ),
       ),
     );
   }
@@ -322,13 +321,12 @@ class _TeacherEditProfilePageState
           titleWidget: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
+              Text(
                 'Edit Profile',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
               ),
               if (_isFormDirty) ...[
                 const SizedBox(width: 8),
@@ -341,11 +339,10 @@ class _TeacherEditProfilePageState
                     color: const Color(0xFFEF4444),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Text(
+                  child: Text(
                     'Unsaved',
-                    style: TextStyle(
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: Colors.white,
-                      fontSize: 10,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -385,22 +382,21 @@ class _TeacherEditProfilePageState
             ),
             Container(
               color: Colors.black.withValues(alpha: 0.3),
-              child: const Center(
+              child: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    CircularProgressIndicator(
+                    const CircularProgressIndicator(
                       valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                       strokeWidth: 3,
                     ),
-                    SizedBox(height: 16),
+                    const SizedBox(height: 16),
                     Text(
                       'Updating Profile...',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
                     ),
                   ],
                 ),
@@ -583,8 +579,7 @@ class _TeacherEditProfilePageState
                           Text(
                             subjects[i]['subject_name']?.toString() ??
                                 'Unknown Subject',
-                            style: GoogleFonts.inter(
-                              fontSize: 15,
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               fontWeight: FontWeight.w500,
                               color: const Color(0xFF111827),
                             ),
@@ -594,8 +589,7 @@ class _TeacherEditProfilePageState
                             children: [
                               Text(
                                 subjects[i]['subject_code']?.toString() ?? '-',
-                                style: GoogleFonts.inter(
-                                  fontSize: 13,
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                   color: const Color(0xFF6B7280),
                                 ),
                               ),
@@ -621,8 +615,7 @@ class _TeacherEditProfilePageState
                                 child: Text(
                                   subjects[i]['component']?.toString() ??
                                       'Theory',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 11,
+                                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
                                     fontWeight: FontWeight.w500,
                                     color: const Color(0xFF4B5563),
                                   ),

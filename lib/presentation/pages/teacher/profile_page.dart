@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:markmeapp/core/theme/app_theme.dart';
 import 'package:markmeapp/state/auth_state.dart';
@@ -83,12 +82,11 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       padding: const EdgeInsets.only(left: 8, bottom: 12, top: 8),
       child: Text(
         title,
-        style: GoogleFonts.inter(
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-          color: const Color(0xFF4B5563),
-          letterSpacing: 0.2,
-        ),
+        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF1E293B),
+              letterSpacing: 0.2,
+            ),
       ),
     );
   }
@@ -145,22 +143,20 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     children: [
                       Text(
                         label,
-                        style: GoogleFonts.inter(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                          color: labelColor,
-                          height: 1.4,
-                        ),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w500,
+                              color: labelColor,
+                              height: 1.4,
+                            ),
                       ),
                       if (subtitle != null) ...[
                         const SizedBox(height: 4),
                         Text(
                           subtitle,
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w400,
-                            color: subtitleColor,
-                          ),
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                fontWeight: FontWeight.w400,
+                                color: subtitleColor,
+                              ),
                         ),
                       ],
                     ],
@@ -267,22 +263,20 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                         children: [
                           Text(
                             name,
-                            style: GoogleFonts.inter(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFF111827),
-                              height: 1.3,
-                            ),
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF1E293B),
+                                  height: 1.3,
+                                ),
                           ),
                           if (email.isNotEmpty) ...[
                             const SizedBox(height: 4),
                             Text(
                               email,
-                              style: GoogleFonts.inter(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w400,
-                                color: const Color(0xFF6B7280),
-                              ),
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    fontWeight: FontWeight.w400,
+                                    color: const Color(0xFF6B7280),
+                                  ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -300,8 +294,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                               ),
                               child: Text(
                                 department,
-                                style: GoogleFonts.inter(
-                                  fontSize: 11,
+                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
                                   fontWeight: FontWeight.w500,
                                   color: const Color(0xFF4F46E5),
                                 ),
@@ -465,10 +458,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   children: [
                     Text(
                       'Account Information',
-                      style: GoogleFonts.inter(
-                        fontSize: 16,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
-                        color: const Color(0xFF111827),
+                        color: const Color(0xFF1E293B),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -480,8 +472,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                             children: [
                               Text(
                                 'Member Since',
-                                style: GoogleFonts.inter(
-                                  fontSize: 13,
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                   color: const Color(0xFF6B7280),
                                 ),
                               ),
@@ -497,11 +488,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                     return '2023';
                                   }
                                 }(),
-                                style: GoogleFonts.inter(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w500,
-                                  color: const Color(0xFF111827),
-                                ),
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      fontWeight: FontWeight.w500,
+                                      color: const Color(0xFF111827),
+                                    ),
                               ),
                             ],
                           ),
@@ -512,8 +502,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                             children: [
                               Text(
                                 'Status',
-                                style: GoogleFonts.inter(
-                                  fontSize: 13,
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                   color: const Color(0xFF6B7280),
                                 ),
                               ),
@@ -529,11 +518,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                 ),
                                 child: Text(
                                   'Active',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
-                                    color: const Color(0xFF166534),
-                                  ),
+                                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                        fontWeight: FontWeight.w500,
+                                        color: const Color(0xFF166534),
+                                      ),
                                 ),
                               ),
                             ],

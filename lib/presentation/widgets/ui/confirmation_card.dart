@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class ConfirmationCard extends StatefulWidget {
   final String title;
@@ -111,21 +110,19 @@ class _ConfirmationCardState extends State<ConfirmationCard>
               const SizedBox(height: 12),
               Text(
                 widget.title,
-                style: GoogleFonts.inter(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: titleColor,
-                ),
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: titleColor,
+                    ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 6),
               Text(
                 widget.message,
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  color: bodyColor,
-                  height: 1.4,
-                ),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: bodyColor,
+                      height: 1.4,
+                    ),
                 textAlign: TextAlign.center,
               ),
             ],

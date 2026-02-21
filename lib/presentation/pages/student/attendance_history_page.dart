@@ -14,6 +14,7 @@ import 'package:intl/intl.dart';
 import 'package:markmeapp/presentation/widgets/ui/custom_bottom_sheet_layout.dart';
 import 'package:markmeapp/presentation/widgets/ui/multi_select_dropdown.dart';
 import 'package:markmeapp/state/refresh_state.dart';
+import 'package:markmeapp/presentation/widgets/ui/error.dart';
 
 class AttendanceHistoryPage extends ConsumerStatefulWidget {
   const AttendanceHistoryPage({super.key});
@@ -410,22 +411,10 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
   List<Widget> _buildContent() {
     if (_errorMessage != null) {
       return [
-        Center(
-          child: Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Text(
-              _errorMessage!,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.red),
-            ),
-          ),
-        ),
-        const SizedBox(height: 20),
-        Center(
-          child: ElevatedButton(
-            onPressed: _fetchAttendanceData,
-            child: const Text('Retry'),
-          ),
+        CustomErrorWidget(
+          errorMessage: _errorMessage!,
+          onRetry: _fetchAttendanceData,
+          isDesktop: false,
         ),
       ];
     }
@@ -957,16 +946,77 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
                                   : const Color(0xFF1E293B),
                             ),
                           ),
-                          if (record.componentType != null)
+                          if (record.componentType != null || record.teacher != null)
                             Padding(
                               padding: const EdgeInsets.only(top: 4),
-                              child: Text(
-                                record.componentType!,
-                                style: TextStyle(
-                                  fontSize: 12,
+                              child: Row(
+                                children: [
+                                  if (record.componentType != null)
+                                    Text(
+                                      record.componentType!,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                        color: isDark
+                                            ? Colors.grey[400]
+                                            : Colors.grey[600],
+                                      ),
+                                    ),
+                                  if (record.componentType != null &&
+                                      record.teacher != null)
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 4,
+                                      ),
+                                      child: Text(
+                                        "•",
+                                        style: TextStyle(
+                                          color: isDark
+                                              ? Colors.grey[400]
+                                              : Colors.grey[600],
+                                        ),
+                                      ),
+                                    ),
+                                  if (record.teacher != null)
+                                    Expanded(
+                                      child: Text(
+                                        record.teacher!,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: isDark
+                                              ? Colors.blue[300]
+                                              : Colors.blue[700],
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          if (record.semester != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
                                   color: isDark
-                                      ? Colors.grey[400]
-                                      : Colors.grey[600],
+                                      ? Colors.grey[800]
+                                      : Colors.grey[200],
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  "Semester ${record.semester}",
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark
+                                        ? Colors.grey[300]
+                                        : Colors.grey[700],
+                                  ),
                                 ),
                               ),
                             ),

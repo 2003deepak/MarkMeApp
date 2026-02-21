@@ -3,6 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:markmeapp/core/utils/app_logger.dart';
 import 'package:markmeapp/data/repositories/clerk_repository.dart';
 import 'package:markmeapp/state/auth_state.dart';
+import 'package:markmeapp/presentation/widgets/ui/app_bar.dart';
+import 'package:markmeapp/presentation/widgets/ui/search_bar.dart';
+import 'package:flutter/services.dart';
+import 'package:markmeapp/core/theme/app_theme.dart';
+import 'package:markmeapp/core/utils/date_formatters.dart';
+import 'package:intl/intl.dart';
 
 class AttendanceDetailPage extends ConsumerStatefulWidget {
   final String attendanceId;
@@ -24,11 +30,21 @@ class _AttendanceDetailPageState extends ConsumerState<AttendanceDetailPage> {
   bool _isSaving = false;
   final Map<String, bool> _attendanceMap = {};
   List<Map<String, dynamic>> _allStudents = [];
+  List<Map<String, dynamic>> _filteredStudents = [];
+
+  final TextEditingController _searchController = TextEditingController();
+  String _selectedFilter = 'all';
 
   @override
   void initState() {
     super.initState();
     _fetchData();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchData() async {
@@ -87,6 +103,30 @@ class _AttendanceDetailPageState extends ConsumerState<AttendanceDetailPage> {
     for (var s in absentList) {
       _attendanceMap[s['id'].toString()] = false;
     }
+
+    _filterStudents();
+  }
+
+  void _filterStudents() {
+    final query = _searchController.text.toLowerCase();
+
+    setState(() {
+      _filteredStudents = _allStudents.where((student) {
+        final name = (student['name']?.toString() ?? '').toLowerCase();
+        final rollNo = (student['roll_no']?.toString() ?? '').toLowerCase();
+        final matchesQuery = name.contains(query) || rollNo.contains(query);
+
+        final id = student['id'].toString();
+        final isPresent = _attendanceMap[id] ?? false;
+
+        if (_selectedFilter == 'present') {
+          return matchesQuery && isPresent;
+        } else if (_selectedFilter == 'absent') {
+          return matchesQuery && !isPresent;
+        }
+        return matchesQuery;
+      }).toList();
+    });
   }
 
   void _toggleEditMode() async {
@@ -111,8 +151,7 @@ class _AttendanceDetailPageState extends ConsumerState<AttendanceDetailPage> {
     try {
       // 1. Generate BitString
       final bitString = StringBuffer();
-      // Ensure specific order if required by backend, usually sorted by roll number or ID
-      // Assuming _allStudents is already sorted from _processAttendanceData
+      
       for (final student in _allStudents) {
         final id = student['id'].toString();
         final isPresent = _attendanceMap[id] ?? false;
@@ -171,37 +210,19 @@ class _AttendanceDetailPageState extends ConsumerState<AttendanceDetailPage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF1F5F9),
-      appBar: AppBar(
-        title: const Text(
-          "Attendance Detail",
-          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 18),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        foregroundColor: const Color(0xFF1E293B),
+      appBar: MarkMeAppBar(
+        title: "Attendance Detail",
         actions: [
           if (canEdit)
-            if (_isEditing) ...[
+            if (_isEditing)
               IconButton(
-                icon: const Icon(Icons.close, color: Colors.grey),
+                icon: const Icon(Icons.close, color: Colors.white),
                 tooltip: "Cancel",
                 onPressed: _isSaving ? null : _toggleEditMode,
-              ),
+              )
+            else
               IconButton(
-                icon: _isSaving
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.check, color: Color(0xFF2563EB)),
-                tooltip: "Save",
-                onPressed: _isSaving ? null : _saveAttendance,
-              ),
-            ] else
-              IconButton(
-                icon: const Icon(Icons.edit_outlined, color: Color(0xFF2563EB)),
+                icon: const Icon(Icons.edit_outlined, color: Colors.white),
                 tooltip: "Edit Attendance",
                 onPressed: _toggleEditMode,
               ),
@@ -209,6 +230,16 @@ class _AttendanceDetailPageState extends ConsumerState<AttendanceDetailPage> {
         ],
       ),
       body: _buildBody(),
+      bottomNavigationBar: _isEditing ? _buildBottomSubmitBar() : null,
+    );
+  }
+
+  Widget _buildBottomSubmitBar() {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: _buildSubmitButton(),
+      ),
     );
   }
 
@@ -242,51 +273,146 @@ class _AttendanceDetailPageState extends ConsumerState<AttendanceDetailPage> {
     final attendance = _attendanceData!['attendance'] ?? {};
     final teacher = _attendanceData!['teacher'] ?? {};
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildSessionInfoCard(session, attendance, teacher),
-          const SizedBox(height: 16),
-          _buildStatsCard(),
-          const SizedBox(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                "Student List",
+    final presentCount = _attendanceMap.values.where((v) => v).length;
+    final totalCount = _allStudents.length;
+    final absentCount = totalCount - presentCount;
+
+    return Column(
+      children: [
+        // 1. Search Bar (Sticky)
+        _buildSearchBar(),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 2. Session Info Card
+                _buildSessionInfoCard(session, attendance, teacher),
+                const SizedBox(height: 20),
+                // 3. Filter Chips
+                _buildFilterChips(presentCount, absentCount),
+                const SizedBox(height: 16),
+                
+                // 5. Student List
+                _buildStudentList(),
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSubmitButton() {
+    return Container(
+      width: double.infinity,
+      height: 54,
+      decoration: BoxDecoration(
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF2563EB).withOpacity(0.25),
+            blurRadius: 15,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: ElevatedButton(
+        onPressed: _isSaving ? null : _saveAttendance,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF2563EB),
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          elevation: 0,
+        ),
+        child: _isSaving
+            ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
+              )
+            : const Text(
+                'Submit Attendance',
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF1E293B),
+                  letterSpacing: 0.5,
                 ),
               ),
-              if (_isEditing)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.orange.shade200),
-                  ),
-                  child: const Text(
-                    "Tap to toggle",
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.orange,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          _buildStudentList(),
+      ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      color: Colors.white,
+      child: AppSearchBar(
+        controller: _searchController,
+        hintText: 'Search students...',
+        onChanged: (value) => _filterStudents(),
+        padding: EdgeInsets.zero,
+      ),
+    );
+  }
+
+  Widget _buildFilterChips(int presentCount, int absentCount) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _buildFilterChip('all', 'All (${_allStudents.length})'),
+          const SizedBox(width: 10),
+          _buildFilterChip('present', 'Present ($presentCount)'),
+          const SizedBox(width: 10),
+          _buildFilterChip('absent', 'Absent ($absentCount)'),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSearchAndFilterBar(int presentCount, int absentCount) {
+    return const SizedBox.shrink(); // Legacy placeholder
+  }
+
+  Widget _buildFilterChip(String filter, String label) {
+    final isSelected = _selectedFilter == filter;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedFilter = filter;
+        });
+        _filterStudents();
+        HapticFeedback.lightImpact();
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF2563EB) : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected
+                ? const Color(0xFF2563EB)
+                : const Color(0xFFE2E8F0),
+            width: 1.5,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: isSelected ? Colors.white : const Color(0xFF64748B),
+          ),
+        ),
       ),
     );
   }
@@ -309,8 +435,8 @@ class _AttendanceDetailPageState extends ConsumerState<AttendanceDetailPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
             offset: const Offset(0, 4),
           ),
         ],
@@ -318,81 +444,68 @@ class _AttendanceDetailPageState extends ConsumerState<AttendanceDetailPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header Row
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      subject,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1E293B),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      "$program • Sem $semester • $component",
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFF64748B),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (isException)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFEF2F2),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFFFCA5A5)),
-                  ),
-                  child: Row(
-                    children: const [
-                      Icon(
-                        Icons.warning_amber_rounded,
-                        size: 16,
-                        color: Color(0xFFEF4444),
-                      ),
-                      SizedBox(width: 4),
-                      Text(
-                        "Exception",
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFFEF4444),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
+          Text(
+            subject,
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1E293B),
+            ),
           ),
-          const Divider(height: 32, color: Color(0xFFE2E8F0)),
+          const SizedBox(height: 6),
+          Text(
+            "$program • Sem $semester • $component",
+            style: const TextStyle(
+              fontSize: 14,
+              color: Color(0xFF64748B),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          if (isException) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF2F2),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFFCA5A5)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  Icon(
+                    Icons.warning_amber_rounded,
+                    size: 14,
+                    color: Color(0xFFEF4444),
+                  ),
+                  SizedBox(width: 6),
+                  Text(
+                    "Exception Session",
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFFEF4444),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const Divider(height: 32, color: Color(0xFFF1F5F9), thickness: 1.5),
           Row(
             children: [
               Expanded(
                 child: _buildInfoItem(
                   icon: Icons.calendar_today_rounded,
-                  label: "Date",
-                  value: date,
+                  label: "Marked Day",
+                  value: AppDateFormatters.formatDay(date),
                 ),
               ),
               Expanded(
                 child: _buildInfoItem(
-                  icon: Icons.access_time_rounded,
-                  label: "Marked At",
-                  value: time,
+                  icon: Icons.calendar_month_rounded,
+                  label: "Marked Date",
+                  value: AppDateFormatters.formatDate(date),
                 ),
               ),
             ],
@@ -400,6 +513,13 @@ class _AttendanceDetailPageState extends ConsumerState<AttendanceDetailPage> {
           const SizedBox(height: 16),
           Row(
             children: [
+              Expanded(
+                child: _buildInfoItem(
+                  icon: Icons.access_time_rounded,
+                  label: "Marked Time",
+                  value: AppDateFormatters.formatTime(time),
+                ),
+              ),
               Expanded(
                 child: _buildInfoItem(
                   icon: Icons.person_outline_rounded,
@@ -459,42 +579,6 @@ class _AttendanceDetailPageState extends ConsumerState<AttendanceDetailPage> {
     );
   }
 
-  Widget _buildStatsCard() {
-    final total = _allStudents.length;
-    final present = _attendanceMap.values.where((v) => v).length;
-    final absent = total - present;
-
-    return Row(
-      children: [
-        Expanded(
-          child: _buildStatItem(
-            label: "Total Students",
-            count: total.toString(),
-            color: const Color(0xFF3B82F6),
-            bgColor: const Color(0xFFEFF6FF),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildStatItem(
-            label: "Present",
-            count: present.toString(),
-            color: const Color(0xFF10B981),
-            bgColor: const Color(0xFFECFDF5),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildStatItem(
-            label: "Absent",
-            count: absent.toString(),
-            color: const Color(0xFFEF4444),
-            bgColor: const Color(0xFFFEF2F2),
-          ),
-        ),
-      ],
-    );
-  }
 
   Widget _buildStatItem({
     required String label,
@@ -535,11 +619,20 @@ class _AttendanceDetailPageState extends ConsumerState<AttendanceDetailPage> {
   }
 
   Widget _buildStudentList() {
-    if (_allStudents.isEmpty) {
-      return const Center(
+    if (_filteredStudents.isEmpty) {
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(24.0),
-          child: Text("No students recorded."),
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            children: [
+              Icon(Icons.search_off, size: 48, color: Colors.grey.shade400),
+              const SizedBox(height: 8),
+              Text(
+                "No students found matching your criteria.",
+                style: TextStyle(color: Colors.grey.shade600),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -547,9 +640,9 @@ class _AttendanceDetailPageState extends ConsumerState<AttendanceDetailPage> {
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: _allStudents.length,
+      itemCount: _filteredStudents.length,
       itemBuilder: (context, index) {
-        final student = _allStudents[index];
+        final student = _filteredStudents[index];
         final id = student['id'].toString();
         final isPresent = _attendanceMap[id] ?? false;
 
@@ -564,111 +657,101 @@ class _AttendanceDetailPageState extends ConsumerState<AttendanceDetailPage> {
     final profilePic = student['profile_picture'];
     final id = student['id'].toString();
 
-    // Visual styles for present/absent
-    final Color statusColor = isPresent
-        ? const Color(0xFF10B981)
-        : const Color(0xFFEF4444);
-    final Color bgColor = isPresent
-        ? const Color(0xFFECFDF5)
-        : const Color(0xFFFEF2F2);
-    final Color borderColor = isPresent
-        ? const Color(0xFFA7F3D0)
-        : const Color(0xFFFECACA);
-
-    return GestureDetector(
-      onTap: _isEditing
-          ? () {
-              setState(() {
-                _attendanceMap[id] = !isPresent;
-              });
-            }
-          : null,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        margin: const EdgeInsets.only(bottom: 8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: _isEditing
-                ? (isPresent ? const Color(0xFF2563EB) : Colors.grey.shade300)
-                : Colors.grey.shade200,
-            width: _isEditing && isPresent ? 2 : 1,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
-          boxShadow: [
-            if (_isEditing && isPresent)
-              BoxShadow(
-                color: const Color(0xFF2563EB).withOpacity(0.1),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
+        ],
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: Stack(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFFF1F5F9),
+                border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
+              ),
+              child: ClipOval(
+                child: profilePic != null && profilePic.toString().isNotEmpty
+                    ? Image.network(
+                        profilePic,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Icon(Icons.person, size: 20, color: Color(0xFF64748B)),
+                      )
+                    : const Icon(Icons.person, size: 20, color: Color(0xFF64748B)),
+              ),
+            ),
+            if (_isEditing)
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    isPresent ? Icons.check_circle : Icons.circle_outlined,
+                    size: 14,
+                    color: isPresent ? Colors.green : Colors.grey,
+                  ),
+                ),
               ),
           ],
         ),
-        child: ListTile(
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 8,
+        title: Text(
+          name,
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 16,
+            color: Color(0xFF1E293B),
           ),
-          leading: Stack(
-            children: [
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: Colors.grey.shade200,
-                backgroundImage: profilePic != null
-                    ? NetworkImage(profilePic)
-                    : null,
-                child: profilePic == null
-                    ? const Icon(Icons.person, color: Colors.grey)
-                    : null,
-              ),
-              if (_isEditing)
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      isPresent ? Icons.check_circle : Icons.circle_outlined,
-                      size: 14,
-                      color: isPresent ? Colors.green : Colors.grey,
-                    ),
-                  ),
-                ),
-            ],
+        ),
+        subtitle: Text(
+          "ID: $rollNo",
+          style: const TextStyle(
+            color: Color(0xFF64748B),
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
           ),
-          title: Text(
-            name,
+        ),
+        trailing: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: isPresent ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Text(
+            isPresent ? "Present" : "Absent",
             style: const TextStyle(
+              fontSize: 12,
               fontWeight: FontWeight.w600,
-              fontSize: 16,
-              color: Color(0xFF1E293B),
-            ),
-          ),
-          subtitle: Text(
-            "Roll No: $rollNo",
-            style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
-          ),
-          trailing: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: bgColor,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: borderColor),
-            ),
-            child: Text(
-              isPresent ? "Present" : "Absent",
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: statusColor,
-              ),
+              color: Colors.white,
             ),
           ),
         ),
+        onTap: _isEditing
+            ? () {
+                setState(() {
+                  _attendanceMap[id] = !isPresent;
+                  _filterStudents(); // Update filtered list if needed, though toggle doesn't change query/filter status
+                });
+                HapticFeedback.lightImpact();
+              }
+            : null,
       ),
     );
   }

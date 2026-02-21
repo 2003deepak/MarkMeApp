@@ -15,7 +15,7 @@ import 'package:markmeapp/presentation/widgets/ui/confirmation_card.dart';
 import 'package:markmeapp/presentation/widgets/ui/app_bar.dart';
 import 'package:markmeapp/core/utils/app_logger.dart';
 
-import 'package:markmeapp/core/utils/snackbar_utils.dart'; // Add import
+import 'package:markmeapp/core/utils/snackbar_utils.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({
@@ -163,19 +163,20 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             SvgPicture.asset('assets/logo.svg', height: 80),
 
             const SizedBox(height: 24),
-            const Text(
+            Text(
               'Welcome Back',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.w700,
-                color: Colors.black87,
-              ),
+              style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF1E293B),
+                  ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
               'Sign in to your account to continue',
-              style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: const Color(0xFF64748B),
+                  ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),
@@ -240,13 +241,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             Text(
                               'Student',
                               textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: _selectedRole == 'student'
-                                    ? Colors.white
-                                    : Colors.blue.shade600,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
-                              ),
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: _selectedRole == 'student'
+                                        ? Colors.white
+                                        : Colors.blue.shade600,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                             ),
                           ],
                         ),
@@ -293,13 +293,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             Text(
                               'College Staff',
                               textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: _selectedRole != 'student'
-                                    ? Colors.white
-                                    : Colors.blue.shade600,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
-                              ),
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: _selectedRole != 'student'
+                                        ? Colors.white
+                                        : Colors.blue.shade600,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                             ),
                           ],
                         ),
@@ -339,11 +338,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             children: [
                               Text(
                                 'Select Your Role',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.blue.shade800,
-                                ),
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.blue.shade800,
+                                    ),
                               ),
                               const SizedBox(height: 12),
                               Row(
@@ -412,11 +410,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         children: [
                           Text(
                             '6-Digit Password',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.grey.shade800,
-                            ),
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF1E293B),
+                                ),
                           ),
                           const Text(
                             ' *',
@@ -459,10 +456,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           ),
                           Text(
                             'Remember me',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.grey.shade700,
-                            ),
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: const Color(0xFF64748B),
+                                ),
                           ),
                         ],
                       ),
@@ -538,20 +534,19 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                 ),
                               ),
                             )
-                          : const Row(
+                          : Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
                                   'Sign In',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white,
-                                    letterSpacing: 0.5,
-                                  ),
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                        letterSpacing: 0.5,
+                                      ),
                                 ),
-                                SizedBox(width: 8),
-                                Icon(
+                                const SizedBox(width: 8),
+                                const Icon(
                                   Icons.arrow_forward_rounded,
                                   size: 20,
                                   color: Colors.white,
@@ -576,11 +571,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Text(
                           "Don't have an account?",
-                          style: TextStyle(
-                            color: Colors.grey.shade600,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: const Color(0xFF64748B),
+                                fontWeight: FontWeight.w500,
+                              ),
                         ),
                       ),
                       Expanded(
@@ -611,12 +605,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         ),
                         backgroundColor: Colors.transparent,
                       ),
-                      child: const Text(
+                      child: Text(
                         'Create Account',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
                       ),
                     ),
                   ),
@@ -657,11 +650,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               const SizedBox(height: 4),
               Text(
                 label,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: isSelected ? Colors.white : Colors.grey.shade700,
-                ),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w500,
+                      color: isSelected ? Colors.white : const Color(0xFF64748B),
+                    ),
                 textAlign: TextAlign.center,
               ),
             ],

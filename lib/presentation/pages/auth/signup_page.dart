@@ -143,19 +143,20 @@ class _SignupPageState extends ConsumerState<SignupPage> {
             SvgPicture.asset('assets/logo.svg', height: 80),
 
             const SizedBox(height: 32),
-            const Text(
+            Text(
               'Create Account',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.w700,
-                color: Colors.black87,
-              ),
+              style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF1E293B),
+                  ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
               'Join us today and get started with your learning journey',
-              style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: const Color(0xFF64748B),
+                  ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 40),
@@ -233,11 +234,10 @@ class _SignupPageState extends ConsumerState<SignupPage> {
                         children: [
                           Text(
                             '6-Digit Password',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.grey.shade800,
-                            ),
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF1E293B),
+                                ),
                           ),
                           const Text(
                             ' *',
@@ -270,11 +270,10 @@ class _SignupPageState extends ConsumerState<SignupPage> {
                               const SizedBox(width: 6),
                               Text(
                                 'Password set successfully',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.green.shade600,
-                                  fontWeight: FontWeight.w500,
-                                ),
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: Colors.green.shade600,
+                                      fontWeight: FontWeight.w500,
+                                    ),
                               ),
                             ],
                           ),
@@ -334,20 +333,19 @@ class _SignupPageState extends ConsumerState<SignupPage> {
                                 ),
                               ),
                             )
-                          : const Row(
+                          : Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
                                   'Create Account',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white,
-                                    letterSpacing: 0.5,
-                                  ),
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                        letterSpacing: 0.5,
+                                      ),
                                 ),
-                                SizedBox(width: 8),
-                                Icon(
+                                const SizedBox(width: 8),
+                                const Icon(
                                   Icons.arrow_forward_rounded,
                                   size: 20,
                                   color: Colors.white,
@@ -372,11 +370,10 @@ class _SignupPageState extends ConsumerState<SignupPage> {
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Text(
                           "Already have an account?",
-                          style: TextStyle(
-                            color: Colors.grey.shade600,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: const Color(0xFF64748B),
+                                fontWeight: FontWeight.w500,
+                              ),
                         ),
                       ),
                       Expanded(
@@ -405,12 +402,11 @@ class _SignupPageState extends ConsumerState<SignupPage> {
                         ),
                         backgroundColor: Colors.transparent,
                       ),
-                      child: const Text(
+                      child: Text(
                         'Sign In to Existing Account',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
                       ),
                     ),
                   ),

@@ -37,6 +37,8 @@ class AttendanceHistoryRecord {
   final int? absentCount;
   final double? attendancePercentage;
   final String? componentType;
+  final String? teacher;
+  final int? semester;
 
   AttendanceHistoryRecord({
     required this.attendanceId,
@@ -51,6 +53,8 @@ class AttendanceHistoryRecord {
     this.absentCount,
     this.attendancePercentage,
     this.componentType,
+    this.teacher,
+    this.semester,
   });
 
   factory AttendanceHistoryRecord.fromJson(Map<String, dynamic> json) {
@@ -67,6 +71,8 @@ class AttendanceHistoryRecord {
       absentCount: json['absent_count'],
       attendancePercentage: (json['attendance_percentage'] as num?)?.toDouble(),
       componentType: json['component_type'] ?? json['component'],
+      teacher: json['teacher'],
+      semester: json['semester'],
     );
   }
 

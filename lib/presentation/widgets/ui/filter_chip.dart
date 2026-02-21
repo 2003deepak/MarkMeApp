@@ -14,23 +14,24 @@ class FilterChipWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color primaryColor = const Color(0xFF3B5BDB);
+    final Color primaryColor = const Color(0xFF2563EB);
+    final Color bgColor = isDark
+        ? primaryColor.withOpacity(0.20)
+        : const Color(0xFFDBEAFE);
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onRemove,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(10),
         splashColor: primaryColor.withOpacity(0.15),
         highlightColor: primaryColor.withOpacity(0.08),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: isDark
-                ? primaryColor.withOpacity(0.20)
-                : primaryColor.withOpacity(0.10),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: primaryColor.withOpacity(0.30), width: 1),
+            color: bgColor,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: primaryColor.withOpacity(0.10), width: 1),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,

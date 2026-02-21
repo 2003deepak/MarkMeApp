@@ -14,6 +14,7 @@ import 'package:markmeapp/core/utils/app_logger.dart';
 import 'package:markmeapp/core/utils/get_device_info.dart';
 import 'package:markmeapp/data/models/notification_model.dart';
 import 'package:markmeapp/data/repositories/notification_repository.dart';
+import 'package:markmeapp/core/theme/app_theme.dart';
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
@@ -267,6 +268,7 @@ class _MyAppState extends ConsumerState<MyApp> {
       scaffoldMessengerKey: rootScaffoldMessengerKey,
       title: 'Mark Me',
       debugShowCheckedModeBanner: false,
+      theme: AppTheme.theme,
       themeMode: ThemeMode.light,
       routerConfig: router,
     );

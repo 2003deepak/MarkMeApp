@@ -80,11 +80,10 @@ class _InputFieldState extends State<InputField> {
           children: [
             Text(
               widget.label,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF374151),
-              ),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF374151),
+                  ),
             ),
             if (widget.isRequired)
               const Text(
@@ -110,10 +109,9 @@ class _InputFieldState extends State<InputField> {
           onFieldSubmitted: widget.onFieldSubmitted,
           decoration: InputDecoration(
             hintText: widget.hintText,
-            hintStyle: const TextStyle(
-              color: Color(0xFF9CA3AF), // soft gray (you can tweak this)
-              fontSize: 14,
-            ),
+            hintStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: const Color(0xFF9CA3AF),
+                ),
             counterText: widget.showCounter ? null : '',
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),

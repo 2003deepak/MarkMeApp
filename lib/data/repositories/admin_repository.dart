@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:markmeapp/core/network/api_client.dart';
 import 'package:markmeapp/core/utils/app_logger.dart';
+import 'package:markmeapp/data/models/live_session_model.dart';
 
 class AdminRepository {
   final Dio _dio;
@@ -86,12 +87,6 @@ class AdminRepository {
 
       AppLogger.info('🔍 [AdminRepository] Fetching defaulter teachers: $params');
 
-      // Using the generic teacher endpoint for now, but in reality 
-      // this should probably be a specific endpoint like /admin/defaulter-teachers
-      // or /admin/teachers with filters. I'll assume /admin/defaulter-teachers exists
-      // or use the clerk endpoint if admin has access. 
-      // User requested "copy design of Teacher Listing", so getting teachers is key.
-      // I'll use a new endpoint convention.
       final response = await _dio.get(
         '/admin/defaulter-teachers', 
         queryParameters: params,
@@ -124,6 +119,40 @@ class AdminRepository {
         'error': e.response?.data?['message'] ?? e.message ?? 'Network error',
       };
     } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> fetchLiveClasses() async {
+    try {
+      AppLogger.info('🚀 [AdminRepository] Fetching live classes...');
+      final response = await _dio.get('/admin/live-classes');
+
+      final body = response.data;
+
+      if (response.statusCode == 200) {
+        AppLogger.info('✅ [AdminRepository] Live classes fetched successfully');
+        return {
+          'success': true,
+          'data': (body['data'] as List)
+              .map((json) => LiveSession.fromJson(json))
+              .toList(),
+          'message': body['message'] ?? 'Fetched successfully',
+        };
+      } else {
+        return {
+          'success': false,
+          'error': body['message'] ?? 'Failed to fetch live classes',
+        };
+      }
+    } on DioException catch (e) {
+      AppLogger.error('🔴 [AdminRepository] DioException: ${e.message}');
+      return {
+        'success': false,
+        'error': e.response?.data?['message'] ?? e.message ?? 'Network error',
+      };
+    } catch (e) {
+      AppLogger.error('🔴 [AdminRepository] Exception: $e');
       return {'success': false, 'error': e.toString()};
     }
   }

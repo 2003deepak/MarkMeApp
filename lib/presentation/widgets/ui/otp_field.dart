@@ -171,7 +171,7 @@ class OTPFieldState extends State<OTPField> {
               ],
           style:
               widget.textStyle ??
-              const TextStyle(fontSize: 18, color: Colors.black),
+              Theme.of(context).textTheme.bodyLarge?.copyWith(fontSize: 18),
           enabled: widget.enabled,
           autofocus: widget.autoFocus && index == 0,
           cursorColor: widget.cursorColor,

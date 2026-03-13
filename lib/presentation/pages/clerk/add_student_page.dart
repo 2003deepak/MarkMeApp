@@ -7,6 +7,9 @@ import 'package:markmeapp/presentation/widgets/ui/input_field.dart';
 import 'package:markmeapp/presentation/widgets/ui/otp_field.dart';
 import 'package:markmeapp/presentation/widgets/ui/snackbar.dart';
 import 'package:markmeapp/presentation/widgets/ui/app_bar.dart';
+import 'package:markmeapp/state/admin_state.dart';
+import 'package:markmeapp/state/clerk_state.dart';
+import 'package:markmeapp/presentation/widgets/ui/dropdown.dart';
 
 class AddStudentPage extends ConsumerStatefulWidget {
   const AddStudentPage({super.key});
@@ -22,6 +25,10 @@ class _AddStudentPageState extends ConsumerState<AddStudentPage> {
   final _emailController = TextEditingController();
   bool _isLoading = false;
 
+  String? _selectedProgram;
+  String? _selectedDepartment;
+  String? _selectedSemester;
+
   @override
   void initState() {
     super.initState();
@@ -29,6 +36,8 @@ class _AddStudentPageState extends ConsumerState<AddStudentPage> {
     _firstNameController.addListener(_updateFormState);
     _lastNameController.addListener(_updateFormState);
     _emailController.addListener(_updateFormState);
+
+    // Clerk profile should already be loaded
   }
 
   @override
@@ -53,7 +62,10 @@ class _AddStudentPageState extends ConsumerState<AddStudentPage> {
     return _firstNameController.text.trim().isNotEmpty &&
         _lastNameController.text.trim().isNotEmpty &&
         _emailController.text.trim().isNotEmpty &&
-        isEmailValid ;
+        isEmailValid &&
+        _selectedProgram != null &&
+        _selectedDepartment != null &&
+        _selectedSemester != null;
   }
 
   void _resetForm() {
@@ -61,6 +73,11 @@ class _AddStudentPageState extends ConsumerState<AddStudentPage> {
     _firstNameController.clear();
     _lastNameController.clear();
     _emailController.clear();
+    setState(() {
+      _selectedProgram = null;
+      _selectedDepartment = null;
+      _selectedSemester = null;
+    });
   }
 
   Future<void> _registerStudent() async {
@@ -78,7 +95,12 @@ class _AddStudentPageState extends ConsumerState<AddStudentPage> {
           email: _emailController.text.trim()
         );
 
-        final result = await authRepo.registerUser(user);
+        final result = await authRepo.registerUser(
+          user,
+          program: _selectedProgram,
+          department: _selectedDepartment,
+          semester: int.tryParse(_selectedSemester ?? ''),
+        );
 
         if (!mounted) return;
 
@@ -109,6 +131,20 @@ class _AddStudentPageState extends ConsumerState<AddStudentPage> {
 
   @override
   Widget build(BuildContext context) {
+    final clerkState = ref.watch(clerkStoreProvider);
+    final academicScopes = clerkState.profile?.academicScopes ?? [];
+
+    final programItems = academicScopes.map((e) => e.programId).toSet().toList();
+    
+    List<String> departmentItems = [];
+    if (_selectedProgram != null) {
+      departmentItems = academicScopes
+          .where((e) => e.programId == _selectedProgram)
+          .map((e) => e.departmentId)
+          .toSet()
+          .toList();
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: MarkMeAppBar(
@@ -300,7 +336,73 @@ class _AddStudentPageState extends ConsumerState<AddStudentPage> {
 
                             const SizedBox(height: 20),
 
-                            
+                            // Academic Information Header
+                            const Text(
+                              'Academic Information',
+                              style: TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF0F172A),
+                                letterSpacing: -0.3,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            const Text(
+                              'Program, Department and Semester details',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Color(0xFF64748B),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+
+                            // Program Dropdown
+                            Dropdown(
+                                label: "Program",
+                                items: programItems,
+                                value: _selectedProgram,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedProgram = value;
+                                    _selectedDepartment = null;
+                                    _selectedSemester = null;
+                                  });
+                                },
+                                hint: "Select Program",
+                              ),
+
+                              const SizedBox(height: 20),
+
+                              // Department Dropdown
+                              Dropdown(
+                                label: "Department",
+                                items: departmentItems,
+                                value: _selectedDepartment,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedDepartment = value;
+                                    _selectedSemester = null;
+                                  });
+                                },
+                                hint: "Select Department",
+                              ),
+
+                              const SizedBox(height: 20),
+
+                              // Semester Dropdown
+                              Dropdown(
+                                label: "Semester",
+                                items: const ['1', '2', '3', '4', '5', '6', '7', '8'],
+                                value: _selectedSemester,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedSemester = value;
+                                  });
+                                },
+                                hint: "Select Semester",
+                              ),
+
+                            const SizedBox(height: 32),
                             // Save Button
                             SizedBox(
                               width: double.infinity,
@@ -370,8 +472,19 @@ class _AddStudentPageState extends ConsumerState<AddStudentPage> {
                 ),
               ),
             ),
-          ],
+          ]
         ),
+      ),
+    );
+  }
+
+  Widget _buildLabel(String label) {
+    return Text(
+      label,
+      style: const TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        color: Color(0xFF475569),
       ),
     );
   }

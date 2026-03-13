@@ -10,11 +10,18 @@ import 'package:markmeapp/presentation/widgets/ui/search_bar.dart';
 import 'package:markmeapp/presentation/widgets/admin/admin_filter_sheet.dart';
 import 'package:markmeapp/presentation/widgets/ui/filter_chip.dart';
 import 'package:markmeapp/presentation/widgets/admin/faculty_leaderboard.dart';
+import 'package:markmeapp/presentation/widgets/admin/attendance_extremes_section.dart';
+import 'package:markmeapp/presentation/skeleton/widgets/live_session_skeleton_card.dart';
+import 'package:markmeapp/presentation/skeleton/widgets/summary_stat_skeleton_card.dart';
+import 'package:markmeapp/presentation/skeleton/widgets/trends_chart_skeleton.dart';
 import 'package:markmeapp/data/models/live_session_model.dart';
 import 'package:markmeapp/core/utils/app_logger.dart';
 import 'package:markmeapp/data/repositories/admin_repository.dart';
 import 'package:markmeapp/state/refresh_state.dart';
 import 'package:markmeapp/state/admin_state.dart';
+import 'package:markmeapp/data/models/teacher_leaderboard_model.dart';
+import 'package:markmeapp/data/models/attendance_extremes_model.dart';
+
 
 class AdminDashboardPage extends ConsumerStatefulWidget {
   const AdminDashboardPage({super.key});
@@ -34,6 +41,18 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
   bool _isLoadingLiveSessions = false;
   String? _liveSessionsError;
 
+  // Leaderboard state
+  List<LeaderboardEntry>? _leaderboardEntries;
+  bool _isLoadingLeaderboard = false;
+  String? _leaderboardError;
+  String _selectedLeaderboardPeriod = 'weekly';
+
+  // Extremes state
+  AttendanceExtremesResponse? _extremesData;
+  bool _isLoadingExtremes = false;
+  String? _extremesError;
+  String _selectedExtremesPeriod = 'weekly';
+
   @override
   void initState() {
     super.initState();
@@ -45,7 +64,10 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
       ),
     );
     _fetchLiveSessions();
+    _fetchLeaderboard();
+    _fetchExtremes();
   }
+
 
   Future<void> _fetchLiveSessions() async {
     try {
@@ -101,12 +123,80 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
     );
   }
 
+  Future<void> _fetchLeaderboard() async {
+    try {
+      setState(() {
+        _isLoadingLeaderboard = true;
+        _leaderboardError = null;
+      });
+
+      final result = await ref.read(adminRepositoryProvider).fetchTeacherLeaderboard(_selectedLeaderboardPeriod);
+
+      if (mounted) {
+        if (result['success'] == true) {
+          final response = result['data'] as TeacherLeaderboardResponse;
+          setState(() {
+            _leaderboardEntries = response.data;
+            _isLoadingLeaderboard = false;
+          });
+        } else {
+          setState(() {
+            _leaderboardError = result['error'];
+            _isLoadingLeaderboard = false;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _leaderboardError = e.toString();
+          _isLoadingLeaderboard = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _fetchExtremes() async {
+    try {
+      setState(() {
+        _isLoadingExtremes = true;
+        _extremesError = null;
+      });
+
+      final result = await ref.read(adminRepositoryProvider).fetchAttendanceExtremes(_selectedExtremesPeriod);
+
+      if (mounted) {
+        if (result['success'] == true) {
+          setState(() {
+            _extremesData = result['data'] as AttendanceExtremesResponse;
+            _isLoadingExtremes = false;
+          });
+        } else {
+          setState(() {
+            _extremesError = result['error'];
+            _isLoadingExtremes = false;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _extremesError = e.toString();
+          _isLoadingExtremes = false;
+        });
+      }
+    }
+  }
+
   Future<void> _refreshAllData() async {
     await Future.wait([
       _fetchLiveSessions(),
+      _fetchLeaderboard(),
+      _fetchExtremes(),
       ref.read(adminStoreProvider.notifier).loadProfile(),
     ]);
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -151,7 +241,7 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
                 runSpacing: 8,
                 children: _activeFilters.entries
                     .where((e) => e.value != null)
-                    .map((e) => FilterChipWidget(
+                    .map<Widget>((e) => FilterChipWidget(
                           label: "${e.key}: ${e.value!}",
                           onRemove: () {
                             setState(() {
@@ -176,29 +266,37 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
           // 3. Summary Stats
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              children: const [
-                Expanded(
-                  child: SummaryStatCard(
-                    icon: "class",
-                    label: "Classes in Session",
-                    value: "42",
-                    badgeText: "Active",
-                    badgeColor: Color(0xFF10B981),
+            child: _isLoadingLiveSessions // Using this as a proxy for now or add a new global loading
+                ? Row(
+                    children: const [
+                      Expanded(child: SummaryStatSkeletonCard()),
+                      SizedBox(width: 16),
+                      Expanded(child: SummaryStatSkeletonCard()),
+                    ],
+                  )
+                : Row(
+                    children: const [
+                      Expanded(
+                        child: SummaryStatCard(
+                          icon: "class",
+                          label: "Classes in Session",
+                          value: "42",
+                          badgeText: "Active",
+                          badgeColor: Color(0xFF10B981),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: SummaryStatCard(
+                          icon: "turnout",
+                          label: "Real-time Turnout",
+                          value: "92%",
+                          badgeText: "Avg",
+                          badgeColor: Color(0xFF2563EB),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: SummaryStatCard(
-                    icon: "turnout",
-                    label: "Real-time Turnout",
-                    value: "92%",
-                    badgeText: "Avg",
-                    badgeColor: Color(0xFF2563EB),
-                  ),
-                ),
-              ],
-            ),
           ),
 
           const SizedBox(height: 24),
@@ -213,34 +311,23 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
             title: "Past Attendance Trends",
             actionText: "View Report",
           ),
-          const TrendsChartCard(),
+          _isLoadingLiveSessions // Proxying
+              ? const TrendsChartSkeleton()
+              : const TrendsChartCard(),
 
           const SizedBox(height: 24),
 
-          // 6. Weekly Extremes
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Text(
-              "WEEKLY EXTREMES",
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.2,
-                    color: const Color(0xFF64748B),
-                  ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          const ExtremeStatCard(
-            subject: "Adv. Mathematics",
-            dateTime: "Mon 10 AM",
-            percentage: "98",
-            isHighest: true,
-          ),
-          const ExtremeStatCard(
-            subject: "History 101",
-            dateTime: "Fri 4 PM",
-            percentage: "52",
-            isHighest: false,
+          // 6. Attendance Extremes
+          AttendanceExtremesSection(
+            extremes: _extremesData,
+            isLoading: _isLoadingExtremes,
+            selectedPeriod: _selectedExtremesPeriod,
+            onPeriodChanged: (period) {
+              setState(() {
+                _selectedExtremesPeriod = period;
+              });
+              _fetchExtremes();
+            },
           ),
           const SizedBox(height: 40),
         ],
@@ -252,65 +339,30 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
 
 
   Widget _buildLeaderboard() {
-    const performers = [
-      FacultyPerformer(
-        name: 'Dr. Sarah Wilson',
-        department: 'Computer Science',
-        score: '99.4%',
-        trend: '+1.2%',
-        rank: '1',
-      ),
-      FacultyPerformer(
-        name: 'Prof. James Chen',
-        department: 'Mathematics',
-        score: '98.8%',
-        trend: '+0.5%',
-        rank: '2',
-      ),
-      FacultyPerformer(
-        name: 'Dr. Elena Rossi',
-        department: 'Physics',
-        score: '97.5%',
-        trend: '-0.2%',
-        rank: '3',
-      ),
-      FacultyPerformer(
-        name: 'Prof. Michael Brown',
-        department: 'Electronics',
-        score: '96.9%',
-        trend: '+2.1%',
-        rank: '4',
-      ),
-      FacultyPerformer(
-        name: 'Dr. Thomas Edison',
-        department: 'Physics',
-        score: '95.2%',
-        trend: '+0.8%',
-        rank: '5',
-      ),
-      FacultyPerformer(
-        name: 'Prof. Marie Curie',
-        department: 'Chemistry',
-        score: '94.8%',
-        trend: '-0.5%',
-        rank: '6',
-      ),
-    ];
-
     return FacultyLeaderboardCard(
-      performers: performers,
+      performers: _leaderboardEntries ?? [],
+      isLoading: _isLoadingLeaderboard,
+      selectedPeriod: _selectedLeaderboardPeriod,
+      onPeriodChanged: (period) {
+        setState(() {
+          _selectedLeaderboardPeriod = period;
+        });
+        _fetchLeaderboard();
+      },
       onViewFullLeaderboard: () {
         // Handle navigation
       },
     );
   }
 
+
   Widget _buildLiveSessionsList() {
     if (_isLoadingLiveSessions) {
-      return const Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF2563EB)),
-        ),
+      return ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.only(right: 20),
+        itemCount: 3,
+        itemBuilder: (context, index) => const LiveSessionSkeletonCard(),
       );
     }
 

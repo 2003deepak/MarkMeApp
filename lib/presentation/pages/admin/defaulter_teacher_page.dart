@@ -5,6 +5,11 @@ import 'package:go_router/go_router.dart';
 import 'package:markmeapp/data/models/teacher_model.dart';
 import 'package:markmeapp/presentation/widgets/ui/app_bar.dart';
 import 'package:markmeapp/data/repositories/admin_repository.dart';
+import 'package:markmeapp/presentation/widgets/ui/search_bar.dart';
+import 'package:markmeapp/presentation/widgets/ui/custom_bottom_sheet_layout.dart';
+import 'package:markmeapp/presentation/widgets/ui/filter_chip.dart';
+import 'package:markmeapp/state/admin_state.dart';
+import 'package:markmeapp/state/refresh_state.dart';
 
 class AdminDefaulterTeacherPage extends ConsumerStatefulWidget {
   const AdminDefaulterTeacherPage({super.key});
@@ -15,6 +20,9 @@ class AdminDefaulterTeacherPage extends ConsumerStatefulWidget {
 
 class _AdminDefaulterTeacherPageState extends ConsumerState<AdminDefaulterTeacherPage> {
   late final AdminRepository _adminRepo;
+  final TextEditingController _searchController = TextEditingController();
+  Timer? _debounceTimer;
+  final _searchDebounceDuration = const Duration(milliseconds: 800);
 
   List<Teacher> _teachers = [];
   bool _isLoading = false;
@@ -28,6 +36,8 @@ class _AdminDefaulterTeacherPageState extends ConsumerState<AdminDefaulterTeache
   int _totalTeachers = 0;
 
   // Filters
+  String? _selectedProgram;
+  String? _selectedDepartment;
   double _rescheduleThreshold = 0.10; // 10%
   double _cancellationThreshold = 0.20; // 20%
   bool _isFiltersVisible = true;
@@ -36,6 +46,26 @@ class _AdminDefaulterTeacherPageState extends ConsumerState<AdminDefaulterTeache
   void initState() {
     super.initState();
     _adminRepo = ref.read(adminRepositoryProvider);
+    _searchController.addListener(_debounceSearchListener);
+    
+    // Initial fetch
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(adminStoreProvider.notifier).fetchHierarchicalMetadata();
+    });
+  }
+
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _debounceSearchListener() {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(_searchDebounceDuration, () {
+      _fetchTeachers();
+    });
   }
 
   @override
@@ -66,10 +96,11 @@ class _AdminDefaulterTeacherPageState extends ConsumerState<AdminDefaulterTeache
       }
 
       final result = await _adminRepo.fetchDefaulterTeachers(
-        rescheduleThreshold: _rescheduleThreshold,
-        cancellationThreshold: _cancellationThreshold,
         page: loadMore ? _currentPage : 1,
         limit: _limit,
+        // search: _searchController.text.trim().isEmpty ? null : _searchController.text.trim(),
+        program: _selectedProgram,
+        department: _selectedDepartment,
       );
 
       if (result['success'] == true) {
@@ -117,129 +148,118 @@ class _AdminDefaulterTeacherPageState extends ConsumerState<AdminDefaulterTeache
     }
   }
 
-  // MAIN BUILD
+  int get _activeFilterCount {
+    int count = 0;
+    if (_selectedProgram != null) count++;
+    if (_selectedDepartment != null) count++;
+    return count;
+  }
+
+  void _showFilterSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        final adminState = ref.watch(adminStoreProvider);
+        final metadata = adminState.hierarchyMetadata ?? {};
+
+        return _FilterBottomSheet(
+          currentProgram: _selectedProgram,
+          currentDepartment: _selectedDepartment,
+          metadata: metadata,
+          onApply: (program, department) {
+            setState(() {
+              _selectedProgram = program;
+              _selectedDepartment = department;
+            });
+            _fetchTeachers();
+            Navigator.pop(context);
+          },
+          onReset: () {
+            setState(() {
+              _selectedProgram = null;
+              _selectedDepartment = null;
+            });
+            _fetchTeachers();
+            Navigator.pop(context);
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
+    ref.listen(dashboardRefreshProvider, (previous, next) {
+      if (next > 0) {
+        _fetchTeachers();
+      }
+    });
 
+    return Scaffold(
+      backgroundColor: isDark ? const Color(0xFF1A1A2E) : Colors.white,
       appBar: MarkMeAppBar(
         title: 'Defaulters List',
         onBackPressed: () => context.pop(),
       ),
-
-      backgroundColor: isDark ? const Color(0xFF1A1A2E) : Colors.white,
       body: Column(
         children: [
-          if (_isFiltersVisible) _buildFilters(isDark),
-          const SizedBox(height: 10),
+          AppSearchBar(
+            controller: _searchController,
+            hintText: 'Search by name...',
+            onFilterTap: _showFilterSheet,
+            activeFilterCount: _activeFilterCount,
+          ),
           _buildErrorMessage(),
+          if (_activeFilterCount > 0) _buildFilterChips(isDark),
           _buildCountRow(isDark),
           Expanded(
-            child: _isLoading && !_isLoadingMore
-                ? const Center(child: CircularProgressIndicator())
-                : _teachers.isEmpty
-                ? _buildEmpty(isDark)
-                : _buildTeacherList(isDark),
+            child: RefreshIndicator(
+              onRefresh: () => _fetchTeachers(),
+              child: _isLoading && !_isLoadingMore
+                  ? const Center(child: CircularProgressIndicator())
+                  : _teachers.isEmpty
+                      ? _buildEmpty(isDark)
+                      : _buildTeacherList(isDark),
+            ),
           ),
         ],
       ),
     );
   }
 
-  // ------------------------------
-  // FILTERS
-  // ------------------------------
-  Widget _buildFilters(bool isDark) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF252542) : const Color(0xFFF8F9FA),
-        border: Border(
-           bottom: BorderSide(color: isDark ? Colors.white12 : const Color(0xFFE9ECEF)),
+  Widget _buildFilterChips(bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            if (_selectedProgram != null)
+              FilterChipWidget(
+                label: 'Program: $_selectedProgram',
+                onRemove: () {
+                  setState(() => _selectedProgram = null);
+                  _fetchTeachers();
+                },
+                isDark: isDark,
+              ),
+            if (_selectedDepartment != null)
+              FilterChipWidget(
+                label: 'Dept: $_selectedDepartment',
+                onRemove: () {
+                  setState(() => _selectedDepartment = null);
+                  _fetchTeachers();
+                },
+                isDark: isDark,
+              ),
+          ],
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "Filters",
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 16),
-          // Reschedule Slider
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Reschedule Rate > ${(_rescheduleThreshold * 100).toInt()}%",
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isDark ? Colors.white70 : Colors.black54,
-                      ),
-                    ),
-                    Slider(
-                      value: _rescheduleThreshold,
-                      min: 0.0,
-                      max: 1.0,
-                      divisions: 20,
-                      label: "${(_rescheduleThreshold * 100).toInt()}%",
-                      onChanged: (value) {
-                         setState(() {
-                           _rescheduleThreshold = value;
-                         });
-                      },
-                      onChangeEnd: (value) {
-                        _fetchTeachers();
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-           // Cancellation Slider
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Cancellation Rate > ${(_cancellationThreshold * 100).toInt()}%",
-                      style: TextStyle(
-                         fontSize: 12,
-                        color: isDark ? Colors.white70 : Colors.black54,
-                      ),
-                    ),
-                    Slider(
-                      value: _cancellationThreshold,
-                      min: 0.0,
-                      max: 1.0,
-                      divisions: 20,
-                      label: "${(_cancellationThreshold * 100).toInt()}%",
-                      onChanged: (value) {
-                         setState(() {
-                           _cancellationThreshold = value;
-                         });
-                      },
-                       onChangeEnd: (value) {
-                        _fetchTeachers();
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
       ),
     );
   }
@@ -346,45 +366,180 @@ class _AdminDefaulterTeacherPageState extends ConsumerState<AdminDefaulterTeache
   // TEACHER LIST + INFINITE SCROLL
   // ------------------------------
   Widget _buildTeacherList(bool isDark) {
-    return RefreshIndicator(
-      onRefresh: () => _fetchTeachers(),
-      child: NotificationListener<ScrollNotification>(
-        onNotification: (scroll) {
-          if (!_isLoadingMore &&
-              _hasMoreData &&
-              scroll.metrics.pixels >= scroll.metrics.maxScrollExtent - 40) {
-            _loadMore();
-          }
-          return false;
-        },
-        child: ListView.builder(
-          padding: const EdgeInsets.fromLTRB(
-            16,
-            0,
-            16,
-            80,
-          ), 
-          itemCount: _teachers.length + (_isLoadingMore ? 1 : 0),
-          itemBuilder: (context, index) {
-            if (index == _teachers.length) {
-              return const Padding(
-                padding: EdgeInsets.all(16),
-                child: Center(
-                  child: SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
+    return NotificationListener<ScrollNotification>(
+      onNotification: (scroll) {
+        if (!_isLoadingMore &&
+            _hasMoreData &&
+            scroll.metrics.pixels >= scroll.metrics.maxScrollExtent - 40) {
+          _loadMore();
+        }
+        return false;
+      },
+      child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
+        itemCount: _teachers.length + (_isLoadingMore ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index == _teachers.length) {
+            return const Padding(
+              padding: EdgeInsets.all(16),
+              child: Center(
+                child: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2),
                 ),
-              );
-            }
-
-            return TeacherCard(
-              teacher: _teachers[index],
-              isDark: isDark,
-             
+              ),
             );
-          },
+          }
+
+          return TeacherCard(
+            teacher: _teachers[index],
+            isDark: isDark,
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _FilterBottomSheet extends StatefulWidget {
+  final String? currentProgram;
+  final String? currentDepartment;
+  final Map<String, dynamic> metadata;
+  final Function(String?, String?) onApply;
+  final VoidCallback onReset;
+
+  const _FilterBottomSheet({
+    required this.currentProgram,
+    required this.currentDepartment,
+    required this.metadata,
+    required this.onApply,
+    required this.onReset,
+  });
+
+  @override
+  State<_FilterBottomSheet> createState() => _FilterBottomSheetState();
+}
+
+class _FilterBottomSheetState extends State<_FilterBottomSheet> {
+  String? _selectedProgram;
+  String? _selectedDepartment;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedProgram = widget.currentProgram;
+    _selectedDepartment = widget.currentDepartment;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = const Color(0xFF3B5BDB);
+
+    // Filter available departments based on selected program
+    List<String> programs = widget.metadata.keys.toList();
+    List<String> departments = [];
+    if (_selectedProgram != null && widget.metadata[_selectedProgram] != null) {
+      if (widget.metadata[_selectedProgram] is Map) {
+        departments = (widget.metadata[_selectedProgram] as Map<String, dynamic>)
+            .keys
+            .toList();
+      }
+    }
+
+    return CustomBottomSheetLayout(
+      title: "Filter Teachers",
+      onReset: widget.onReset,
+      onApply: () => widget.onApply(_selectedProgram, _selectedDepartment),
+      content: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildDropdownLabel("Select Program", isDark),
+          _buildDropdown(
+            value: _selectedProgram,
+            items: programs,
+            onChanged: (val) {
+              setState(() {
+                _selectedProgram = val;
+                _selectedDepartment = null;
+              });
+            },
+            isDark: isDark,
+          ),
+          const SizedBox(height: 20),
+          _buildDropdownLabel("Select Department", isDark),
+          _buildDropdown(
+            value: _selectedDepartment,
+            items: departments,
+            onChanged: (val) {
+              setState(() {
+                _selectedDepartment = val;
+              });
+            },
+            isDark: isDark,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDropdownLabel(String label, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          color: isDark ? Colors.white70 : Colors.grey.shade700,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDropdown({
+    required String? value,
+    required List<String> items,
+    required ValueChanged<String?> onChanged,
+    required bool isDark,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark ? Colors.white12 : Colors.grey.shade200,
+        ),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: value,
+          hint: Text(
+            "Select Option",
+            style: TextStyle(
+              color: isDark ? Colors.white38 : Colors.grey.shade500,
+              fontSize: 15,
+            ),
+          ),
+          isExpanded: true,
+          dropdownColor: isDark ? const Color(0xFF1F1F35) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          items: items.map((String item) {
+            return DropdownMenuItem<String>(
+              value: item,
+              child: Text(
+                item,
+                style: TextStyle(
+                  color: isDark ? Colors.white : Colors.black87,
+                  fontSize: 15,
+                ),
+              ),
+            );
+          }).toList(),
+          onChanged: onChanged,
         ),
       ),
     );
@@ -408,139 +563,210 @@ class TeacherCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final avatarColor = _getAvatarColor(teacher.firstName);
     final fullName = '${teacher.firstName} ${teacher.lastName}'.trim();
+    final primaryColor = const Color(0xFF3B5BDB);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF252542) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isDark ? Colors.white10 : const Color(0xFFF1F3F4),
+          color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.shade100,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.2 : 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: () {
-             // context.push(
-            //   '/admin/teacher/${teacher.id}',
-            //   extra: '${teacher.firstName} ${teacher.lastName}',
-            // );
-             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Teacher Details - Coming Soon')),
-            );
-          },
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    _buildAvatar(fullName, avatarColor),
-                    const SizedBox(width: 16),
-                    _buildTeacherInfo(fullName),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Teacher Details coming soon...')),
+              );
+            },
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildAvatar(fullName, avatarColor),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    fullName,
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark ? Colors.white : Colors.black87,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                _buildStatusBadge(),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              teacher.teacherId,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: primaryColor,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            const SizedBox(height: 8)
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (teacher.score != null) ...[
+                    const SizedBox(height: 20),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.white.withOpacity(0.03) : const Color(0xFFF8F9FA),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _buildMetric('Score', teacher.score!.toStringAsFixed(1), Colors.orange),
+                          _buildDivider(),
+                          _buildMetric('Cancel %', '${teacher.cancellationRate}%', Colors.red),
+                          _buildDivider(),
+                          _buildMetric('Excep %', '${teacher.exceptionRate}%', Colors.blue),
+                          _buildDivider(),
+                          _buildMetric('Total', '${teacher.totalSessions}', Colors.green),
+                        ],
+                      ),
+                    ),
                   ],
-                ),
-                // Add Metrics if available in Teacher model or generic
-                // For now, simpler card as per clone instruction
-              ],
+                ],
+              ),
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildStatusBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFDCFCE7),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        'Active',
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+          color: const Color(0xFF166534),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDivider() {
+    return Container(
+      height: 24,
+      width: 1,
+      color: isDark ? Colors.white10 : Colors.grey.withOpacity(0.2),
     );
   }
 
   Widget _buildAvatar(String fullName, Color avatarColor) {
-    if (teacher.profilePicture != null && teacher.profilePicture!.isNotEmpty) {
-      return Container(
-        width: 60,
-        height: 60,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          image: DecorationImage(
-            image: NetworkImage(teacher.profilePicture!),
-            fit: BoxFit.cover,
-          ),
-        ),
-      );
-    }
-
     return Container(
-      width: 60,
-      height: 60,
+      width: 64,
+      height: 64,
       decoration: BoxDecoration(
-        color: avatarColor.withOpacity(isDark ? 0.3 : 0.2),
+        color: avatarColor.withValues(alpha: 0.1),
         shape: BoxShape.circle,
-      ),
-      child: Center(
-        child: Text(
-          _getInitials(fullName),
-          style: TextStyle(
-            color: avatarColor,
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
+        border: Border.all(
+          color: avatarColor.withValues(alpha: 0.2),
+          width: 2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: avatarColor.withValues(alpha: 0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
           ),
+        ],
+      ),
+      child: teacher.profilePicture != null && teacher.profilePicture!.isNotEmpty
+          ? ClipRRect(
+              borderRadius: BorderRadius.circular(32),
+              child: Image.network(
+                teacher.profilePicture!,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => _buildInitialsAvatar(fullName, avatarColor),
+              ),
+            )
+          : _buildInitialsAvatar(fullName, avatarColor),
+    );
+  }
+
+  Widget _buildInitialsAvatar(String fullName, Color avatarColor) {
+    return Center(
+      child: Text(
+        _getInitials(fullName),
+        style: TextStyle(
+          color: avatarColor,
+          fontWeight: FontWeight.bold,
+          fontSize: 20,
         ),
       ),
     );
   }
 
-  Widget _buildTeacherInfo(String fullName) {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            fullName,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: isDark ? Colors.white : Colors.black87,
-            ),
+  Widget _buildMetric(String label, String value, Color color) {
+    return Column(
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            color: isDark ? Colors.white38 : Colors.grey[600],
+            fontWeight: FontWeight.w600,
           ),
-          const SizedBox(height: 4),
-          Text(
-            teacher.teacherId,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Color(0xFF3B5BDB),
-              fontWeight: FontWeight.w500,
-            ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: color,
           ),
-          const SizedBox(height: 4),
-          Text(
-             teacher.email,
-            style: TextStyle(
-              fontSize: 13,
-              color: isDark ? Colors.white70 : Colors.grey[600],
-            ),
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 2),
-           Text(
-            teacher.mobileNumber.toString(),
-            style: TextStyle(
-              fontSize: 13,
-              color: isDark ? Colors.white70 : Colors.grey[600],
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
   String _getInitials(String name) {
-    final parts = name.split(" ");
+    final parts = name.trim().split(RegExp(r'\s+'));
     if (parts.length >= 2) {
       return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
     }

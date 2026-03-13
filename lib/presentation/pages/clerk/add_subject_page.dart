@@ -6,6 +6,7 @@ import 'package:markmeapp/presentation/widgets/ui/dropdown.dart';
 import 'package:markmeapp/presentation/widgets/ui/input_field.dart';
 import 'package:markmeapp/presentation/widgets/ui/snackbar.dart';
 import 'package:markmeapp/presentation/widgets/ui/app_bar.dart';
+import 'package:markmeapp/state/clerk_state.dart';
 
 class AddSubjectPage extends ConsumerStatefulWidget {
   const AddSubjectPage({super.key});
@@ -26,32 +27,57 @@ class _AddSubjectPageState extends ConsumerState<AddSubjectPage> {
   String? _selectedProgram;
   bool _isLoading = false;
 
-  final List<String> _semesters = List.generate(10, (i) => '${i + 1}');
+  List<String> _semesters = [];
   final List<String> _components = ['Lecture', 'Lab'];
   final List<int> _credits = [1, 2, 3, 4, 5, 6];
-  final List<String> _departments = ['BTECH', 'MTECH', 'BSC', 'MBA'];
-  final List<String> _programs = ['MCA', "AI"];
+  List<String> _departments = [];
+  List<String> _programs = [];
+
+  //form change listener
+  void _onFormChanged() {
+    setState(() {});
+  }
 
   bool get _isFormValid {
-    return _subjectNameController.text.isNotEmpty &&
+    print("Form changed!");
+
+    print("Subject Name: ${_subjectNameController.text}");
+    print("Subject Code: ${_subjectCodeController.text}");
+    print("Selected Semester: $_selectedSemester");
+    print("Selected Component: $_selectedComponent");
+    print("Selected Credits: $_selectedCredits");
+    print("Selected Department: $_selectedDepartment");
+    print("Selected Program: $_selectedProgram");
+
+    bool a =  _subjectNameController.text.isNotEmpty &&
         _subjectCodeController.text.isNotEmpty &&
         _selectedSemester != null &&
         _selectedComponent != null &&
         _selectedCredits != null &&
         _selectedDepartment != null &&
         _selectedProgram != null;
+
+    print("Form is valid: $a");
+    return a;
   }
 
   @override
   void initState() {
     super.initState();
-    // Set default values
-    _selectedDepartment = _departments.first;
-    _selectedProgram = _programs.first;
+
+    // Clerk profile should already be loaded
+
+    //listen to text changes
+    _subjectNameController.addListener(_onFormChanged);
+    _subjectCodeController.addListener(_onFormChanged);
   }
 
   @override
   void dispose() {
+    //remove listeners
+    _subjectNameController.removeListener(_onFormChanged);
+    _subjectCodeController.removeListener(_onFormChanged);
+
     _subjectNameController.dispose();
     _subjectCodeController.dispose();
     super.dispose();
@@ -65,8 +91,8 @@ class _AddSubjectPageState extends ConsumerState<AddSubjectPage> {
       _selectedSemester = null;
       _selectedComponent = null;
       _selectedCredits = null;
-      _selectedDepartment = _departments.first;
-      _selectedProgram = _programs.first;
+      _selectedDepartment = null;
+      _selectedProgram = null;
     });
   }
 
@@ -129,6 +155,29 @@ class _AddSubjectPageState extends ConsumerState<AddSubjectPage> {
 
   @override
   Widget build(BuildContext context) {
+    final clerkState = ref.watch(clerkStoreProvider);
+    final academicScopes = clerkState.profile?.academicScopes ?? [];
+    
+    _programs = academicScopes.map((e) => e.programId).toSet().toList();
+    
+    if (_selectedProgram != null) {
+      _departments = academicScopes
+          .where((e) => e.programId == _selectedProgram)
+          .map((e) => e.departmentId)
+          .toSet()
+          .toList();
+      
+      if (_selectedDepartment != null) {
+        // Default to 8 semesters since exact duration is not in profile
+        _semesters = List.generate(8, (i) => (i + 1).toString());
+      } else {
+        _semesters = [];
+      }
+    } else {
+      _departments = [];
+      _semesters = [];
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: MarkMeAppBar(
@@ -240,69 +289,53 @@ class _AddSubjectPageState extends ConsumerState<AddSubjectPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Section Title
-                            Text(
-                              'Subject Information',
+                            // Section: Academic Details
+                            const Text(
+                              'Academic Details',
                               style: TextStyle(
                                 fontSize: 17,
                                 fontWeight: FontWeight.w700,
-                                color: const Color(0xFF0F172A),
+                                color: Color(0xFF0F172A),
                                 letterSpacing: -0.3,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Enter basic subject details',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: const Color(0xFF64748B),
                               ),
                             ),
                             const SizedBox(height: 24),
 
-                            // Subject Name
-                            InputField(
-                              label: "Subject Name",
-                              hintText: "Enter full subject name",
-                              controller: _subjectNameController,
-                              keyboardType: TextInputType.text,
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Subject name is required';
-                                }
-                                if (value.length < 3) {
-                                  return 'Must be at least 3 characters';
-                                }
-                                return null;
+                            Dropdown<String>(
+                              label: "Program",
+                              hint: "Select Program",
+                              items: _programs,
+                              value: _selectedProgram,
+                              onChanged: (val) {
+                                setState(() {
+                                  _selectedProgram = val;
+                                  _selectedDepartment = null;
+                                  _selectedSemester = null;
+                                });
                               },
+                              validator: (val) => val == null ? "Required" : null,
                               isRequired: true,
-                              textInputAction: TextInputAction.next,
                             ),
 
                             const SizedBox(height: 20),
 
-                            // Subject Code
-                            InputField(
-                              label: "Subject Code",
-                              hintText: "e.g., CS101, MAT201",
-                              controller: _subjectCodeController,
-                              keyboardType: TextInputType.text,
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Subject code is required';
-                                }
-                                if (value.length < 2) {
-                                  return 'Must be at least 2 characters';
-                                }
-                                return null;
+                            Dropdown<String>(
+                              label: "Department",
+                              hint: "Select Department",
+                              items: _departments,
+                              value: _selectedDepartment,
+                              onChanged: (val) {
+                                setState(() {
+                                  _selectedDepartment = val;
+                                  _selectedSemester = null;
+                                });
                               },
+                              validator: (val) => val == null ? "Required" : null,
                               isRequired: true,
-                              textInputAction: TextInputAction.next,
                             ),
 
                             const SizedBox(height: 20),
 
-                            // Semester & Credits Row
                             Row(
                               children: [
                                 Expanded(
@@ -313,13 +346,10 @@ class _AddSubjectPageState extends ConsumerState<AddSubjectPage> {
                                     value: _selectedSemester?.toString(),
                                     onChanged: (val) {
                                       setState(
-                                        () => _selectedSemester = int.tryParse(
-                                          val ?? '',
-                                        ),
+                                        () => _selectedSemester = int.tryParse(val ?? ''),
                                       );
                                     },
-                                    validator: (val) =>
-                                        val == null ? "Required" : null,
+                                    validator: (val) => val == null ? "Required" : null,
                                     isRequired: true,
                                   ),
                                 ),
@@ -333,8 +363,7 @@ class _AddSubjectPageState extends ConsumerState<AddSubjectPage> {
                                     onChanged: (val) {
                                       setState(() => _selectedCredits = val);
                                     },
-                                    validator: (val) =>
-                                        val == null ? "Required" : null,
+                                    validator: (val) => val == null ? "Required" : null,
                                     isRequired: true,
                                     displayText: (val) => val.toString(),
                                   ),
@@ -342,46 +371,49 @@ class _AddSubjectPageState extends ConsumerState<AddSubjectPage> {
                               ],
                             ),
 
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 32),
+                            const Divider(),
+                            const SizedBox(height: 32),
 
-                            // Department & Program Row
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Dropdown<String>(
-                                    label: "Department",
-                                    hint: "Select Dept",
-                                    items: _departments,
-                                    value: _selectedDepartment,
-                                    onChanged: (val) {
-                                      setState(() => _selectedDepartment = val);
-                                    },
-                                    validator: (val) =>
-                                        val == null ? "Required" : null,
-                                    isRequired: true,
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Dropdown<String>(
-                                    label: "Program",
-                                    hint: "Select Program",
-                                    items: _programs,
-                                    value: _selectedProgram,
-                                    onChanged: (val) {
-                                      setState(() => _selectedProgram = val);
-                                    },
-                                    validator: (val) =>
-                                        val == null ? "Required" : null,
-                                    isRequired: true,
-                                  ),
-                                ),
-                              ],
+                            // Section: Subject Details
+                            const Text(
+                              'Subject Information',
+                              style: TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF0F172A),
+                                letterSpacing: -0.3,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+
+                            InputField(
+                              label: "Subject Name",
+                              hintText: "Enter full subject name",
+                              controller: _subjectNameController,
+                              isRequired: true,
+                              validator: (value) {
+                                if (value == null || value.isEmpty) return 'Required';
+                                if (value.length < 3) return 'Too short';
+                                return null;
+                              },
                             ),
 
                             const SizedBox(height: 20),
 
-                            // Component Type
+                            InputField(
+                              label: "Subject Code",
+                              hintText: "e.g., CS101",
+                              controller: _subjectCodeController,
+                              isRequired: true,
+                              validator: (value) {
+                                if (value == null || value.isEmpty) return 'Required';
+                                return null;
+                              },
+                            ),
+
+                            const SizedBox(height: 20),
+
                             Dropdown<String>(
                               label: "Component Type",
                               hint: "Select Component",
@@ -390,8 +422,7 @@ class _AddSubjectPageState extends ConsumerState<AddSubjectPage> {
                               onChanged: (val) {
                                 setState(() => _selectedComponent = val);
                               },
-                              validator: (val) =>
-                                  val == null ? "Required" : null,
+                              validator: (val) => val == null ? "Required" : null,
                               isRequired: true,
                             ),
 

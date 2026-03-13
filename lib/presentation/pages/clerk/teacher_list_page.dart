@@ -4,8 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:markmeapp/data/models/teacher_model.dart';
 import 'package:markmeapp/data/repositories/clerk_repository.dart';
-import 'package:markmeapp/state/refresh_state.dart';
 import 'package:markmeapp/presentation/widgets/ui/search_bar.dart';
+import 'package:markmeapp/state/clerk_state.dart';
+import 'package:markmeapp/state/refresh_state.dart';
 
 class TeacherListPage extends ConsumerStatefulWidget {
   const TeacherListPage({super.key});
@@ -29,6 +30,8 @@ class _TeacherListPageState extends ConsumerState<TeacherListPage> {
   final int _limit = 10;
 
   int _totalTeachers = 0;
+  String? _selectedProgram;
+  String? _selectedDepartment;
 
   Timer? _debounceTimer;
   final _searchDebounceDuration = const Duration(milliseconds: 800);
@@ -82,6 +85,8 @@ class _TeacherListPageState extends ConsumerState<TeacherListPage> {
         search: _searchController.text.trim().isEmpty
             ? null
             : _searchController.text.trim(),
+        program: _selectedProgram,
+        department: _selectedDepartment,
         page: loadMore ? _currentPage : 1,
         limit: _limit,
       );
@@ -124,6 +129,10 @@ class _TeacherListPageState extends ConsumerState<TeacherListPage> {
     }
   }
 
+  Future<void> _refreshTeachers() async {
+    await _fetchTeachers();
+  }
+
   // LOAD MORE (INFINITE SCROLL)
   void _loadMore() {
     if (_hasMoreData && !_isLoadingMore) {
@@ -143,45 +152,29 @@ class _TeacherListPageState extends ConsumerState<TeacherListPage> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    ref.listen(dashboardRefreshProvider, (previous, next) {
-      if (next > 0) {
-        _fetchTeachers();
+    // Listen to dashboard refresh provider
+    ref.listen<int>(dashboardRefreshProvider, (previous, next) {
+      if (previous != next) {
+        _refreshTeachers();
       }
     });
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF1A1A2E) : Colors.white,
-      body: Column(
-        children: [
-          const SizedBox(height: 24),
-          AppSearchBar(
-            controller: _searchController,
-            hintText: 'Search by name, email, or ID...',
-            onChanged: (txt) {
-              if (txt.isEmpty) _fetchTeachers();
-            },
-            onClear: () {
-              _searchController.clear();
-              _fetchTeachers();
-            },
-          ),
-          _buildErrorMessage(),
-          _buildCountRow(isDark),
-          Expanded(
-            child: _isLoading && !_isLoadingMore
-                ? const Center(child: CircularProgressIndicator())
-                : _teachers.isEmpty
-                ? _buildEmpty(isDark)
-                : _buildTeacherList(isDark),
-          ),
-        ],
+      body: RefreshIndicator(
+        onRefresh: _refreshTeachers,
+        color: const Color(0xFF3B5BDB),
+        child: _buildBody(isDark),
       ),
       // FLOATING ACTION BUTTON
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(bottom: 20, right: 20),
         child: FloatingActionButton(
           onPressed: () {
-            context.push('/clerk/add-teacher');
+            context.push('/clerk/add-teacher').then((_) {
+              // Refresh when returning from add teacher page
+              _refreshTeachers();
+            });
           },
           backgroundColor: const Color(0xFF3B5BDB),
           foregroundColor: Colors.white,
@@ -196,7 +189,133 @@ class _TeacherListPageState extends ConsumerState<TeacherListPage> {
     );
   }
 
+  // EXTRACTED BODY WIDGET - Same pattern as AdminDashboardPage
+  Widget _buildBody(bool isDark) {
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 24),
 
+          // Search and Filter Row
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: AppSearchBar(
+                    controller: _searchController,
+                    hintText: 'Search by name, email, or ID...',
+                    onChanged: (txt) {
+                      if (txt.isEmpty) _fetchTeachers();
+                    },
+                    onClear: () {
+                      _searchController.clear();
+                      _fetchTeachers();
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                _buildFilterButton(isDark),
+              ],
+            ),
+          ),
+
+          // Error Message
+          _buildErrorMessage(),
+
+          // Count Row
+          _buildCountRow(isDark),
+
+          // Teacher List or Empty State
+          _isLoading && !_isLoadingMore
+              ? SizedBox(
+                  height: MediaQuery.of(context).size.height * 0.6,
+                  child: const Center(child: CircularProgressIndicator()),
+                )
+              : _teachers.isEmpty
+                  ? SizedBox(
+                      height: MediaQuery.of(context).size.height * 0.6,
+                      child: _buildEmpty(isDark),
+                    )
+                  : _buildTeacherList(isDark),
+
+          // Add bottom padding for FAB
+          const SizedBox(height: 80),
+        ],
+      ),
+    );
+  }
+
+  // ------------------------------
+  // FILTER BUTTON
+  // ------------------------------
+  Widget _buildFilterButton(bool isDark) {
+    int activeFilterCount = 0;
+    if (_selectedProgram != null) activeFilterCount++;
+    if (_selectedDepartment != null) activeFilterCount++;
+
+    return Stack(
+      children: [
+        IconButton(
+          onPressed: _showFilterSheet,
+          icon: Icon(
+            Icons.filter_list_rounded,
+            color: isDark ? Colors.white70 : Colors.black87,
+            size: 28,
+          ),
+          tooltip: 'Filter Teachers',
+        ),
+        if (activeFilterCount > 0)
+          Positioned(
+            right: 8,
+            top: 8,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: const BoxDecoration(
+                color: Color(0xFF3B5BDB),
+                shape: BoxShape.circle,
+              ),
+              child: Text(
+                '$activeFilterCount',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  void _showFilterSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => FilterBottomSheet(
+        currentProgram: _selectedProgram,
+        currentDepartment: _selectedDepartment,
+        onApply: (program, department) {
+          setState(() {
+            _selectedProgram = program;
+            _selectedDepartment = department;
+          });
+          _fetchTeachers();
+        },
+        onReset: () {
+          setState(() {
+            _selectedProgram = null;
+            _selectedDepartment = null;
+          });
+          _fetchTeachers();
+        },
+      ),
+    );
+  }
 
   // ------------------------------
   // ERROR MESSAGE BOX
@@ -205,7 +324,7 @@ class _TeacherListPageState extends ConsumerState<TeacherListPage> {
     if (_errorMessage.isEmpty) return const SizedBox();
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
@@ -238,7 +357,7 @@ class _TeacherListPageState extends ConsumerState<TeacherListPage> {
   // ------------------------------
   Widget _buildCountRow(bool isDark) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
           Text(
@@ -246,6 +365,7 @@ class _TeacherListPageState extends ConsumerState<TeacherListPage> {
             style: TextStyle(
               color: isDark ? Colors.white70 : Colors.grey,
               fontSize: 14,
+              fontWeight: FontWeight.w500,
             ),
           ),
           const Spacer(),
@@ -270,16 +390,24 @@ class _TeacherListPageState extends ConsumerState<TeacherListPage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.school_outlined,
-            size: 64,
-            color: isDark ? Colors.white30 : Colors.grey,
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.school_outlined,
+              size: 48,
+              color: isDark ? Colors.white30 : Colors.grey,
+            ),
           ),
           const SizedBox(height: 16),
           Text(
             'No teachers found',
             style: TextStyle(
               fontSize: 18,
+              fontWeight: FontWeight.w600,
               color: isDark ? Colors.white70 : Colors.grey,
             ),
           ),
@@ -287,12 +415,30 @@ class _TeacherListPageState extends ConsumerState<TeacherListPage> {
           Text(
             _searchController.text.isEmpty
                 ? 'No teachers in the system'
-                : 'Try adjusting your search',
+                : 'Try adjusting your search or filters',
             style: TextStyle(
               color: isDark ? Colors.white38 : Colors.grey,
-              fontSize: 13,
+              fontSize: 14,
             ),
+            textAlign: TextAlign.center,
           ),
+          const SizedBox(height: 16),
+          if (_searchController.text.isNotEmpty || _selectedProgram != null || _selectedDepartment != null)
+            TextButton.icon(
+              onPressed: () {
+                _searchController.clear();
+                setState(() {
+                  _selectedProgram = null;
+                  _selectedDepartment = null;
+                });
+                _fetchTeachers();
+              },
+              icon: const Icon(Icons.refresh_rounded, size: 16),
+              label: const Text('Clear filters'),
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF3B5BDB),
+              ),
+            ),
         ],
       ),
     );
@@ -303,44 +449,40 @@ class _TeacherListPageState extends ConsumerState<TeacherListPage> {
   // ------------------------------
   Widget _buildTeacherList(bool isDark) {
     return NotificationListener<ScrollNotification>(
-        onNotification: (scroll) {
-          if (!_isLoadingMore &&
-              _hasMoreData &&
-              scroll.metrics.pixels >= scroll.metrics.maxScrollExtent - 40) {
-            _loadMore();
-          }
-          return false;
-        },
-        child: ListView.builder(
-          padding: const EdgeInsets.fromLTRB(
-            16,
-            0,
-            16,
-            80,
-          ), // Bottom padding for FAB
-          itemCount: _teachers.length + (_isLoadingMore ? 1 : 0),
-          itemBuilder: (context, index) {
-            if (index == _teachers.length) {
-              return const Padding(
-                padding: EdgeInsets.all(16),
-                child: Center(
-                  child: SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
+      onNotification: (scroll) {
+        if (!_isLoadingMore &&
+            _hasMoreData &&
+            scroll.metrics.pixels >= scroll.metrics.maxScrollExtent - 100) {
+          _loadMore();
+        }
+        return false;
+      },
+      child: ListView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(), // Disable scrolling inside since parent scrolls
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: _teachers.length + (_isLoadingMore ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index == _teachers.length) {
+            return const Padding(
+              padding: EdgeInsets.all(16),
+              child: Center(
+                child: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2),
                 ),
-              );
-            }
-
-            return TeacherCard(
-              teacher: _teachers[index],
-              isDark: isDark,
-              onRefresh: () => _fetchTeachers(),
+              ),
             );
-          },
-        ),
-      );
+          }
+
+          return TeacherCard(
+            teacher: _teachers[index],
+            isDark: isDark,
+          );
+        },
+      ),
+    );
   }
 }
 
@@ -350,13 +492,11 @@ class _TeacherListPageState extends ConsumerState<TeacherListPage> {
 class TeacherCard extends StatelessWidget {
   final Teacher teacher;
   final bool isDark;
-  final VoidCallback onRefresh;
 
   const TeacherCard({
     super.key,
     required this.teacher,
     required this.isDark,
-    required this.onRefresh,
   });
 
   @override
@@ -403,11 +543,42 @@ class TeacherCard extends StatelessWidget {
                     _buildTeacherInfo(fullName),
                   ],
                 ),
+                if (teacher.score != null) ...[
+                  const SizedBox(height: 16),
+                  const Divider(height: 1),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildMetric('Score', teacher.score!.toStringAsFixed(2), Colors.orange),
+                      _buildMetric('Cancel %', '${teacher.cancellationRate}%', Colors.red),
+                      _buildMetric('Excep %', '${teacher.exceptionRate}%', Colors.blue),
+                      _buildMetric('Sessions', '${teacher.totalSessions}', Colors.green),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildMetric(String label, String value, Color color) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.w500),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: color),
+        ),
+      ],
     );
   }
 
@@ -510,5 +681,179 @@ class TeacherCard extends StatelessWidget {
 
     final hash = name.codeUnits.fold(0, (a, b) => a + b);
     return colors[hash % colors.length];
+  }
+}
+
+// -----------------------------------------------------------------------------
+// FILTER BOTTOM SHEET
+// -----------------------------------------------------------------------------
+class FilterBottomSheet extends ConsumerStatefulWidget {
+  final String? currentProgram;
+  final String? currentDepartment;
+  final Function(String?, String?) onApply;
+  final VoidCallback onReset;
+
+  const FilterBottomSheet({
+    super.key,
+    required this.currentProgram,
+    required this.currentDepartment,
+    required this.onApply,
+    required this.onReset,
+  });
+
+  @override
+  ConsumerState<FilterBottomSheet> createState() => _FilterBottomSheetState();
+}
+
+class _FilterBottomSheetState extends ConsumerState<FilterBottomSheet> {
+  late String? _program;
+  late String? _department;
+
+  @override
+  void initState() {
+    super.initState();
+    _program = widget.currentProgram;
+    _department = widget.currentDepartment;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final clerkState = ref.watch(clerkStoreProvider);
+    final academicScopes = clerkState.profile?.academicScopes ?? [];
+
+    final programs = academicScopes.map((e) => e.programId).toSet().toList();
+    
+    List<String> departments = [];
+    if (_program != null) {
+      departments = academicScopes
+          .where((e) => e.programId == _program)
+          .map((e) => e.departmentId)
+          .toSet()
+          .toList();
+    }
+
+    return Container(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1A1A2E) : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Handle
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white10 : Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Filter Teachers',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    ),
+                    TextButton(
+                      onPressed: widget.onReset,
+                      child: const Text('Reset'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+
+                // Program First
+                const Text('Program', style: TextStyle(fontWeight: FontWeight.w500)),
+                const SizedBox(height: 8),
+                _buildDropdown(_program, programs, (v) => setState(() {
+                  _program = v;
+                  _department = null;
+                }), isDark, 'Select Program'),
+
+                const SizedBox(height: 20),
+
+                // Department Second
+                const Text('Department', style: TextStyle(fontWeight: FontWeight.w500)),
+                const SizedBox(height: 8),
+                _buildDropdown(_department, departments, (v) => setState(() => _department = v), isDark, 'Select Department'),
+
+                const SizedBox(height: 32),
+
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      widget.onApply(_program, _department);
+                      Navigator.pop(context);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF3B5BDB),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text('Apply Filters', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDropdown(String? value, List<String> items, Function(String?) onChanged, bool isDark, String hint) {
+    return Container(
+      height: 50,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF252542) : const Color(0xFFF8F9FA),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: isDark ? Colors.white10 : const Color(0xFFE9ECEF)),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: value,
+          isExpanded: true,
+          hint: Text(
+            hint,
+            style: TextStyle(
+              color: isDark ? Colors.white38 : Colors.grey,
+              fontSize: 14,
+            ),
+          ),
+          icon: Icon(
+            Icons.keyboard_arrow_down,
+            color: isDark ? Colors.white38 : Colors.grey,
+            size: 20,
+          ),
+          dropdownColor: isDark ? const Color(0xFF252542) : Colors.white,
+          style: TextStyle(
+            color: isDark ? Colors.white : Colors.black87,
+            fontSize: 15,
+          ),
+          items: items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+          onChanged: onChanged,
+        ),
+      ),
+    );
   }
 }

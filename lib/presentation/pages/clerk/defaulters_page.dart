@@ -11,6 +11,9 @@ import 'package:markmeapp/presentation/widgets/ui/custom_bottom_sheet_layout.dar
 import 'package:markmeapp/presentation/widgets/ui/filter_chip.dart';
 import 'package:markmeapp/presentation/widgets/ui/app_bar.dart';
 import 'package:markmeapp/presentation/widgets/ui/search_bar.dart';
+import 'package:markmeapp/state/admin_state.dart';
+import 'package:markmeapp/state/clerk_state.dart';
+import 'package:markmeapp/state/refresh_state.dart';
 
 class DefaultersPage extends ConsumerStatefulWidget {
   const DefaultersPage({super.key});
@@ -50,6 +53,7 @@ class _DefaultersPageState extends ConsumerState<DefaultersPage> {
     _searchController.addListener(_debounceSearchListener);
     // Initial fetch
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(adminStoreProvider.notifier).fetchHierarchicalMetadata();
       _fetchDefaulters();
     });
   }
@@ -139,29 +143,35 @@ class _DefaultersPageState extends ConsumerState<DefaultersPage> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => _FilterBottomSheet(
-        currentProgram: _selectedProgram,
-        currentSemester: _selectedSemester,
-        currentThreshold: _threshold,
-        onApply: (program, semester, threshold) {
-          setState(() {
-            _selectedProgram = program;
-            _selectedSemester = semester;
-            _threshold = threshold;
-          });
-          _fetchDefaulters();
-          Navigator.pop(context);
-        },
-        onReset: () {
-          setState(() {
-            _selectedProgram = null;
-            _selectedSemester = null;
-            _threshold = 75;
-          });
-          _fetchDefaulters();
-          Navigator.pop(context);
-        },
-      ),
+      builder: (context) {
+        final clerkState = ref.watch(clerkStoreProvider);
+        final academicScopes = clerkState.profile?.academicScopes ?? [];
+
+        return _FilterBottomSheet(
+          currentProgram: _selectedProgram,
+          currentSemester: _selectedSemester,
+          currentThreshold: _threshold,
+          academicScopes: academicScopes,
+          onApply: (program, semester, threshold) {
+            setState(() {
+              _selectedProgram = program;
+              _selectedSemester = semester;
+              _threshold = threshold;
+            });
+            _fetchDefaulters();
+            Navigator.pop(context);
+          },
+          onReset: () {
+            setState(() {
+              _selectedProgram = null;
+              _selectedSemester = null;
+              _threshold = 75;
+            });
+            _fetchDefaulters();
+            Navigator.pop(context);
+          },
+        );
+      },
     );
   }
 
@@ -177,6 +187,12 @@ class _DefaultersPageState extends ConsumerState<DefaultersPage> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = const Color(0xFF3B5BDB);
+
+    ref.listen(dashboardRefreshProvider, (previous, next) {
+      if (next > 0) {
+        _fetchDefaulters();
+      }
+    });
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF1A1A2E) : Colors.white,
@@ -198,11 +214,14 @@ class _DefaultersPageState extends ConsumerState<DefaultersPage> {
           _buildSelectionHeader(isDark),
           _buildCountRow(isDark),
           Expanded(
-            child: _isLoading && !_isLoadingMore
-                ? const Center(child: CircularProgressIndicator())
-                : _students.isEmpty
-                    ? _buildEmpty(isDark)
-                    : _buildList(isDark),
+            child: RefreshIndicator(
+              onRefresh: () => _fetchDefaulters(),
+              child: _isLoading && !_isLoadingMore
+                  ? const Center(child: CircularProgressIndicator())
+                  : _students.isEmpty
+                      ? _buildEmpty(isDark)
+                      : _buildList(isDark),
+            ),
           ),
         ],
       ),
@@ -434,50 +453,57 @@ class _DefaultersPageState extends ConsumerState<DefaultersPage> {
   }
 
   Widget _buildEmpty(bool isDark) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.warning_amber_rounded,
-            size: 64,
-            color: isDark ? Colors.white30 : Colors.grey,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No defaulters found',
-            style: TextStyle(
-              fontSize: 18,
-              color: isDark ? Colors.white70 : Colors.grey,
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      children: [
+        SizedBox(
+          height: MediaQuery.of(context).size.height * 0.6,
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.warning_amber_rounded,
+                  size: 64,
+                  color: isDark ? Colors.white30 : Colors.grey,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No defaulters found',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: isDark ? Colors.white70 : Colors.grey,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Great! Everyone is attending classes.',
+                  style: TextStyle(
+                    color: isDark ? Colors.white38 : Colors.grey,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Great! Everyone is attending classes.',
-            style: TextStyle(
-              color: isDark ? Colors.white38 : Colors.grey,
-              fontSize: 13,
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
   Widget _buildList(bool isDark) {
-    return RefreshIndicator(
-      onRefresh: () => _fetchDefaulters(),
-      child: NotificationListener<ScrollNotification>(
-        onNotification: (scroll) {
-          if (!_isLoadingMore &&
-              _hasMoreData &&
-              scroll.metrics.pixels >= scroll.metrics.maxScrollExtent - 40) {
-            _loadMore();
-          }
-          return false;
-        },
-        child: ListView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+    return NotificationListener<ScrollNotification>(
+      onNotification: (scroll) {
+        if (!_isLoadingMore &&
+            _hasMoreData &&
+            scroll.metrics.pixels >= scroll.metrics.maxScrollExtent - 40) {
+          _loadMore();
+        }
+        return false;
+      },
+      child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
           itemCount: _students.length + (_isLoadingMore ? 1 : 0),
           itemBuilder: (context, index) {
             if (index == _students.length) {
@@ -509,8 +535,7 @@ class _DefaultersPageState extends ConsumerState<DefaultersPage> {
             );
           },
         ),
-      ),
-    );
+      );
   }
 
   void _showSendNotificationBottomSheet() {
@@ -1290,6 +1315,7 @@ class _FilterBottomSheet extends StatefulWidget {
   final String? currentProgram;
   final int? currentSemester;
   final int currentThreshold;
+  final List<dynamic> academicScopes; // From AcademicScope model
   final Function(String?, int?, int) onApply;
   final VoidCallback onReset;
 
@@ -1297,6 +1323,7 @@ class _FilterBottomSheet extends StatefulWidget {
     required this.currentProgram,
     required this.currentSemester,
     required this.currentThreshold,
+    required this.academicScopes,
     required this.onApply,
     required this.onReset,
   });
@@ -1320,6 +1347,11 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final programs = widget.academicScopes
+        .map((e) => e.programId.toString())
+        .toSet()
+        .toList();
+
     return CustomBottomSheetLayout(
       title: 'Filter Defaulters',
       onReset: widget.onReset,
@@ -1327,17 +1359,20 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
       content: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildDropdown(
+          _buildDropdown<String>(
             label: 'Program',
             value: _program,
-            items: ['MCA', 'MBA', 'BTECH'],
-            onChanged: (val) => setState(() => _program = val),
+            items: programs,
+            onChanged: (val) => setState(() {
+              _program = val;
+              _semester = null;
+            }),
           ),
           const SizedBox(height: 16),
-          _buildDropdown(
+          _buildDropdown<int>(
             label: 'Semester',
             value: _semester,
-            items: [1, 2, 3, 4, 5, 6],
+            items: const [1, 2, 3, 4, 5, 6, 7, 8],
             onChanged: (val) => setState(() => _semester = val),
           ),
           const SizedBox(height: 24),

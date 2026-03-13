@@ -9,18 +9,26 @@ class AdminState {
   final Admin? profile;
   final bool isLoading;
   final String? errorMessage;
+  final Map<String, dynamic>? hierarchyMetadata;
 
-  const AdminState({this.profile, this.isLoading = false, this.errorMessage});
+  const AdminState({
+    this.profile,
+    this.isLoading = false,
+    this.errorMessage,
+    this.hierarchyMetadata,
+  });
 
   AdminState copyWith({
     Admin? profile,
     bool? isLoading,
     String? errorMessage,
+    Map<String, dynamic>? hierarchyMetadata,
   }) {
     return AdminState(
       profile: profile ?? this.profile,
       isLoading: isLoading ?? this.isLoading,
       errorMessage: errorMessage,
+      hierarchyMetadata: hierarchyMetadata ?? this.hierarchyMetadata,
     );
   }
 
@@ -79,6 +87,105 @@ class AdminStore extends StateNotifier<AdminState> {
       return {"success": false, "message": "Error: $e"};
     }
   }
+
+  Future<Map<String, dynamic>> createDepartment({
+    required String fullName,
+    required String departmentCode,
+    required String programCode,
+  }) async {
+    try {
+      state = state.copyWith(isLoading: true, errorMessage: null);
+      final result = await _adminRepo.createDepartment(
+        fullName: fullName,
+        departmentCode: departmentCode,
+        programCode: programCode,
+      );
+      state = state.copyWith(isLoading: false);
+      return result;
+    } catch (e) {
+      state = state.copyWith(isLoading: false, errorMessage: e.toString());
+      return {"success": false, "message": "Error: $e"};
+    }
+  }
+
+  Future<Map<String, dynamic>> createProgram({
+    required String fullName,
+    required String programCode,
+    required int durationYears,
+  }) async {
+    try {
+      state = state.copyWith(isLoading: true, errorMessage: null);
+      final result = await _adminRepo.createProgram(
+        fullName: fullName,
+        programCode: programCode,
+        durationYears: durationYears,
+      );
+      state = state.copyWith(isLoading: false);
+      return result;
+    } catch (e) {
+      state = state.copyWith(isLoading: false, errorMessage: e.toString());
+      return {"success": false, "message": "Error: $e"};
+    }
+  }
+
+  Future<Map<String, dynamic>> fetchDepartments() async {
+    return await _adminRepo.fetchDepartments();
+  }
+
+  Future<Map<String, dynamic>> fetchPrograms() async {
+    return await _adminRepo.fetchPrograms();
+  }
+
+  Future<Map<String, dynamic>> fetchHierarchicalMetadata() async {
+    try {
+      if (state.hierarchyMetadata != null) {
+        return {"success": true, "data": state.hierarchyMetadata};
+      }
+
+      state = state.copyWith(isLoading: true, errorMessage: null);
+      final result = await _adminRepo.fetchHierarchicalMetadata();
+      
+      if (result['success'] == true) {
+        state = state.copyWith(
+          hierarchyMetadata: result['data'],
+          isLoading: false,
+        );
+      } else {
+        state = state.copyWith(isLoading: false, errorMessage: result['error']);
+      }
+      return result;
+    } catch (e) {
+      state = state.copyWith(isLoading: false, errorMessage: e.toString());
+      return {"success": false, "message": "Error: $e"};
+    }
+  }
+
+  Future<Map<String, dynamic>> createClerk({
+    required String firstName,
+    required String middleName,
+    required String lastName,
+    required String email,
+    required int mobileNumber,
+    required List<Map<String, String>> academicScopes,
+  }) async {
+    try {
+      state = state.copyWith(isLoading: true, errorMessage: null);
+      final result = await _adminRepo.createClerk(
+        firstName: firstName,
+        middleName: middleName,
+        lastName: lastName,
+        email: email,
+        mobileNumber: mobileNumber,
+        academicScopes: academicScopes,
+      );
+      state = state.copyWith(isLoading: false);
+      return result;
+    } catch (e) {
+      state = state.copyWith(isLoading: false, errorMessage: e.toString());
+      return {"success": false, "message": "Error: $e"};
+    }
+  }
+
   void reset() {
     state = const AdminState();
   }

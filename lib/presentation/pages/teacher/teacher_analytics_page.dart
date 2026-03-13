@@ -1,14 +1,15 @@
-import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:markmeapp/state/teacher_state.dart';
 
-class TeacherAnalyticsPage extends StatefulWidget {
+class TeacherAnalyticsPage extends ConsumerStatefulWidget {
   const TeacherAnalyticsPage({super.key});
 
   @override
-  State<TeacherAnalyticsPage> createState() => _TeacherAnalyticsPageState();
+  ConsumerState<TeacherAnalyticsPage> createState() => _TeacherAnalyticsPageState();
 }
 
-class _TeacherAnalyticsPageState extends State<TeacherAnalyticsPage>
+class _TeacherAnalyticsPageState extends ConsumerState<TeacherAnalyticsPage>
     with TickerProviderStateMixin {
   late AnimationController _animationController;
   late AnimationController _chartController;
@@ -67,9 +68,12 @@ class _TeacherAnalyticsPageState extends State<TeacherAnalyticsPage>
     },
   };
 
-  @override
-  void initState() {
-    super.initState();
+    // Fetch teacher profile if not loaded
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (ref.read(teacherStoreProvider).profile == null) {
+        ref.read(teacherStoreProvider.notifier).loadProfile();
+      }
+    });
 
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 1200),
@@ -172,7 +176,18 @@ class _TeacherAnalyticsPageState extends State<TeacherAnalyticsPage>
     );
   }
 
-  Widget _buildFilterSection(bool isDesktop) {
+    final teacherState = ref.watch(teacherStoreProvider);
+    final teacherProfile = teacherState.profile;
+
+    final subjectItems = ['All Subjects'];
+    if (teacherProfile != null) {
+      final List<String> teacherSubjects = teacherProfile.subjects
+          .map((s) => s.subjectName)
+          .toSet()
+          .toList();
+      subjectItems.addAll(teacherSubjects);
+    }
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -214,12 +229,7 @@ class _TeacherAnalyticsPageState extends State<TeacherAnalyticsPage>
                 child: _buildDropdown(
                   'Subject',
                   selectedSubject,
-                  [
-                    'All Subjects',
-                    'Data Structures',
-                    'Algorithms',
-                    'Database Systems',
-                  ],
+                  subjectItems,
                   (value) => setState(() => selectedSubject = value!),
                   isDesktop,
                 ),

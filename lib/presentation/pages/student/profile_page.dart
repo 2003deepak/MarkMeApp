@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:markmeapp/core/theme/app_theme.dart';
 import 'package:markmeapp/state/auth_state.dart';
+import 'package:markmeapp/presentation/widgets/profile_tab.dart';
 import 'package:markmeapp/state/student_state.dart';
 import 'package:markmeapp/state/refresh_state.dart';
 
@@ -119,90 +120,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     );
   }
 
-  Widget _infoTile({
-    required IconData icon,
-    required String label,
-    String? subtitle,
-    VoidCallback? onTap,
-    bool isLogout = false,
-  }) {
-    final tileColor = isLogout ? const Color(0xFFFEF2F2) : Colors.white;
-    final iconColor = isLogout
-        ? const Color(0xFFDC2626)
-        : const Color(0xFF4B5563);
-    final labelColor = isLogout
-        ? const Color(0xFFDC2626)
-        : const Color(0xFF111827);
-    final subtitleColor = isLogout
-        ? const Color(0xFFDC2626)
-        : const Color(0xFF6B7280);
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      decoration: BoxDecoration(
-        color: tileColor,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: isLogout
-                        ? const Color(0xFFFEE2E2)
-                        : const Color(0xFFF3F4F6),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(icon, color: iconColor, size: 20),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        label,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w500,
-                              color: labelColor,
-                              height: 1.4,
-                            ),
-                      ),
-                      if (subtitle != null) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          subtitle,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                fontWeight: FontWeight.w400,
-                                color: subtitleColor,
-                              ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                Icon(
-                  Icons.chevron_right,
-                  color: isLogout
-                      ? const Color(0xFFDC2626)
-                      : const Color(0xFF9CA3AF),
-                  size: 20,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 
   // Helper method to get full name
   String _getFullName(Map<String, dynamic> profile) {
@@ -487,7 +404,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 decoration: _cardDecoration,
                 child: Column(
                   children: [
-                    _infoTile(
+                    ProfileTab(
                       icon: Icons.person_outline_rounded,
                       label: 'Edit Profile',
                       subtitle: 'Update your personal information',
@@ -498,7 +415,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       margin: const EdgeInsets.symmetric(horizontal: 16),
                       color: const Color(0xFFF1F5F9),
                     ),
-                    _infoTile(
+                    ProfileTab(
                       icon: Icons.description_outlined,
                       label: 'Documents',
                       subtitle: 'Access your documents',
@@ -513,7 +430,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       margin: const EdgeInsets.symmetric(horizontal: 16),
                       color: const Color(0xFFF1F5F9),
                     ),
-                    _infoTile(
+                    ProfileTab(
                       icon: Icons.lock_outline_rounded,
                       label: 'Update Password',
                       subtitle: 'Change your account password',
@@ -524,7 +441,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       margin: const EdgeInsets.symmetric(horizontal: 16),
                       color: const Color(0xFFF1F5F9),
                     ),
-                    _infoTile(
+                    ProfileTab(
                       icon: Icons.help_outline_rounded,
                       label: 'Help & Support',
                       subtitle: 'Get assistance',
@@ -539,7 +456,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       margin: const EdgeInsets.symmetric(horizontal: 16),
                       color: const Color(0xFFF1F5F9),
                     ),
-                    _infoTile(
+                    ProfileTab(
                       icon: Icons.logout_rounded,
                       label: 'Logout',
                       subtitle: 'Sign out of your account',

@@ -10,6 +10,7 @@ class Dropdown<T> extends StatefulWidget {
   final bool isRequired;
   final String Function(T)? displayText;
   final bool enabled;
+  final IconData? icon;
 
   const Dropdown({
     super.key,
@@ -22,6 +23,7 @@ class Dropdown<T> extends StatefulWidget {
     this.isRequired = false,
     this.displayText,
     this.enabled = true,
+    this.icon,
   });
 
   @override
@@ -29,129 +31,162 @@ class Dropdown<T> extends StatefulWidget {
 }
 
 class _DropdownState<T> extends State<Dropdown<T>> {
+
+  final TextEditingController _controller = TextEditingController();
+
+  @override
+  void didUpdateWidget(covariant Dropdown<T> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (widget.value != oldWidget.value) {
+      if (widget.value == null) {
+        _controller.clear();
+      } else {
+        _controller.text =
+            widget.displayText?.call(widget.value as T) ??
+            widget.value.toString();
+      }
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    if (widget.value != null) {
+      _controller.text =
+          widget.displayText?.call(widget.value as T) ??
+          widget.value.toString();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Label with required indicator
-        Padding(
-          padding: const EdgeInsets.only(left: 4.0),
-          child: Row(
-            children: [
-              Text(
-                widget.label,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF374151),
-                  letterSpacing: 0.2,
+
+        if (widget.label.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.only(left: 4),
+            child: Row(
+              children: [
+                Text(
+                  widget.label,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF374151),
+                  ),
                 ),
-              ),
-              if (widget.isRequired)
-                const Padding(
-                  padding: EdgeInsets.only(left: 4),
-                  child: Text(
-                    '*',
-                    style: TextStyle(
-                      color: Color(0xFFEF4444),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
+                if (widget.isRequired)
+                  const Padding(
+                    padding: EdgeInsets.only(left: 4),
+                    child: Text(
+                      '*',
+                      style: TextStyle(
+                        color: Color(0xFFEF4444),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 8),
+          const SizedBox(height: 8),
+        ],
 
-        // Dropdown Container
-        Container(
-          decoration: BoxDecoration(
-            color: widget.enabled ? Colors.white : const Color(0xFFF9FAFB),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFD1D5DB), width: 1.5),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: DropdownButtonFormField<T>(
-            initialValue: widget.value,
-            hint: Text(
-              widget.hint,
-              style: TextStyle(
-                color: const Color(0xFF6B7280),
-                fontSize: 14,
-                fontWeight: FontWeight.w400,
-              ),
-            ),
-            decoration: InputDecoration(
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 16,
-              ),
-              border: InputBorder.none,
-              enabledBorder: InputBorder.none,
-              focusedBorder: InputBorder.none,
-              errorBorder: InputBorder.none,
-              disabledBorder: InputBorder.none,
-              filled: !widget.enabled,
-              fillColor: const Color(0xFFF9FAFB),
-            ),
-            items: widget.items.map((T item) {
-              return DropdownMenuItem<T>(
-                value: item,
-                child: Text(
-                  widget.displayText?.call(item) ?? item.toString(),
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF111827),
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              );
-            }).toList(),
-            onChanged: widget.enabled ? widget.onChanged : null,
-            validator: widget.validator,
-            style: const TextStyle(
-              color: Color(0xFF111827),
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
-            icon: Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: Icon(
-                Icons.keyboard_arrow_down_rounded,
+        LayoutBuilder(
+          builder: (context, constraints) {
+            return Container(
+              decoration: BoxDecoration(
                 color: widget.enabled
-                    ? const Color(0xFF6B7280)
-                    : const Color(0xFF9CA3AF),
-                size: 20,
-              ),
-            ),
-            isExpanded: true,
-            dropdownColor: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            elevation: 4,
-            menuMaxHeight: 300,
-            selectedItemBuilder: (BuildContext context) {
-              return widget.items.map<Widget>((T item) {
-                return Text(
-                  widget.displayText?.call(item) ?? item.toString(),
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF111827),
+                    ? Colors.white
+                    : const Color(0xFFF9FAFB),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: const Color(0xFFE2E8F0),
+                  width: 1.2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.02),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
                   ),
-                  overflow: TextOverflow.ellipsis,
-                );
-              }).toList();
-            },
-          ),
+                ],
+              ),
+              child: DropdownMenu<T>(
+                width: constraints.maxWidth,
+                controller: _controller,
+                enabled: widget.enabled,
+                hintText: widget.hint,
+
+                leadingIcon: widget.icon != null
+                    ? Padding(
+                        padding: const EdgeInsets.only(left: 14, right: 10),
+                        child: Icon(
+                          widget.icon,
+                          size: 22,
+                          color: const Color(0xFF2563EB),
+                        ),
+                      )
+                    : null,
+
+                inputDecorationTheme: const InputDecorationTheme(
+                  border: InputBorder.none,
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 12),
+                  hintStyle: TextStyle(
+                    color: Color(0xFF94A3B8),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+
+                textStyle: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF1E293B),
+                ),
+
+                menuHeight: 300,
+
+                trailingIcon: const Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  color: Color(0xFF94A3B8),
+                  size: 20,
+                ),
+
+                dropdownMenuEntries: widget.items.map((item) {
+                  return DropdownMenuEntry<T>(
+                    value: item,
+                    label: widget.displayText?.call(item) ??
+                        item.toString(),
+                    style: MenuItemButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
+                      textStyle: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF1E293B),
+                      ),
+                    ),
+                  );
+                }).toList(),
+
+                onSelected: widget.onChanged,
+              ),
+            );
+          },
         ),
       ],
     );

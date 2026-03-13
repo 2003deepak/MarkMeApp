@@ -12,6 +12,7 @@ import 'package:markmeapp/presentation/widgets/student_personal_info_section.dar
 import 'package:markmeapp/presentation/widgets/ui/profile_picture.dart';
 import 'package:markmeapp/state/student_state.dart';
 import 'package:markmeapp/presentation/widgets/ui/app_bar.dart';
+import 'package:markmeapp/state/admin_state.dart';
 import 'package:markmeapp/state/refresh_state.dart';
 import 'package:flutter/foundation.dart';
 import 'package:markmeapp/core/utils/snackbar_utils.dart';
@@ -30,8 +31,8 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
 
   // Form data
   DateTime? _dob;
-  String _program = 'MCA';
-  String _department = 'BTECH';
+  String _program = '';
+  String _department = '';
   int _semester = 1;
   String? _profilePicture;
   final List<String?> _gallery = List<String?>.filled(4, null);
@@ -67,6 +68,9 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   void initState() {
     super.initState();
     _setupListeners();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(adminStoreProvider.notifier).fetchHierarchicalMetadata();
+    });
   }
 
   void _setupListeners() {

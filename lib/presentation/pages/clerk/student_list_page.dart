@@ -6,8 +6,12 @@ import 'package:markmeapp/data/models/student_model.dart';
 import 'package:markmeapp/data/repositories/clerk_repository.dart';
 import 'package:markmeapp/presentation/widgets/ui/custom_bottom_sheet_layout.dart';
 import 'package:markmeapp/presentation/widgets/ui/filter_chip.dart';
+import 'package:markmeapp/presentation/widgets/ui/snackbar.dart';
+import 'package:markmeapp/state/clerk_state.dart';
 import 'package:markmeapp/state/refresh_state.dart';
 import 'package:markmeapp/presentation/widgets/ui/search_bar.dart';
+import 'package:markmeapp/state/admin_state.dart';
+import 'package:markmeapp/presentation/widgets/ui/dropdown.dart';
 
 class StudentListPage extends ConsumerStatefulWidget {
   const StudentListPage({super.key});
@@ -27,9 +31,10 @@ class _StudentListPageState extends ConsumerState<StudentListPage> {
   bool _isFirstLoad = true;
 
   // Filter variables
-  String? _selectedBatchYear = '2025';
-  String? _selectedProgram = 'MCA';
-  String? _selectedSemester = '2';
+  String? _selectedBatchYear;
+  String? _selectedProgram;
+  String? _selectedDepartment;
+  String? _selectedSemester;
   String? _selectedFaceRegistration;
   bool _hasMoreData = true;
   int _currentPage = 1;
@@ -43,6 +48,11 @@ class _StudentListPageState extends ConsumerState<StudentListPage> {
     super.initState();
     _clerkRepo = ref.read(clerkRepositoryProvider);
     _searchController.addListener(_debounceSearch);
+    
+    // Fetch hierarchical metadata
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(adminStoreProvider.notifier).fetchHierarchicalMetadata();
+    });
   }
 
   @override
@@ -165,7 +175,10 @@ class _StudentListPageState extends ConsumerState<StudentListPage> {
         }
       }
 
-      return matchesSearch && matchesFaceFilter;
+      bool matchesDepartment = _selectedDepartment == null ||
+          student.department == _selectedDepartment;
+ 
+      return matchesSearch && matchesFaceFilter && matchesDepartment;
     }).toList();
 
     setState(() {
@@ -185,15 +198,17 @@ class _StudentListPageState extends ConsumerState<StudentListPage> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => FilterBottomSheet(
+        builder: (context) => FilterBottomSheet(
         currentBatchYear: _selectedBatchYear,
         currentProgram: _selectedProgram,
+        currentDepartment: _selectedDepartment,
         currentSemester: _selectedSemester,
         currentFaceRegistration: _selectedFaceRegistration,
-        onApply: (batchYear, program, semester, faceRegistration) {
+        onApply: (batchYear, program, department, semester, faceRegistration) {
           setState(() {
             _selectedBatchYear = batchYear;
             _selectedProgram = program;
+            _selectedDepartment = department;
             _selectedSemester = semester;
             _selectedFaceRegistration = faceRegistration;
           });
@@ -201,9 +216,10 @@ class _StudentListPageState extends ConsumerState<StudentListPage> {
         },
         onReset: () {
           setState(() {
-            _selectedBatchYear = '2025';
-            _selectedProgram = 'MCA';
-            _selectedSemester = '2';
+            _selectedBatchYear = null;
+            _selectedProgram = null;
+            _selectedDepartment = null;
+            _selectedSemester = null;
             _selectedFaceRegistration = null;
           });
           _fetchStudents();
@@ -214,9 +230,10 @@ class _StudentListPageState extends ConsumerState<StudentListPage> {
 
   int get _activeFilterCount {
     int count = 0;
-    if (_selectedBatchYear != '2025') count++;
-    if (_selectedProgram != 'MCA') count++;
-    if (_selectedSemester != '2') count++;
+    if (_selectedBatchYear != null) count++;
+    if (_selectedProgram != null) count++;
+    if (_selectedDepartment != null) count++;
+    if (_selectedSemester != null) count++;
     if (_selectedFaceRegistration != null) count++;
     return count;
   }
@@ -300,37 +317,36 @@ class _StudentListPageState extends ConsumerState<StudentListPage> {
                   spacing: 8, // <-- chips spacing
                   runSpacing: 8,
                   children: [
-                    if (_selectedBatchYear != null &&
-                        _selectedBatchYear != '2025')
+                    if (_selectedBatchYear != null)
                       FilterChipWidget(
                         label: 'Batch: $_selectedBatchYear',
                         onRemove: () {
                           setState(() {
-                            _selectedBatchYear = '2025';
+                            _selectedBatchYear = null;
                           });
                           _fetchStudents();
                         },
                         isDark: isDark,
                       ),
 
-                    if (_selectedProgram != null && _selectedProgram != 'MCA')
+                    if (_selectedProgram != null)
                       FilterChipWidget(
                         label: 'Program: $_selectedProgram',
                         onRemove: () {
                           setState(() {
-                            _selectedProgram = 'MCA';
+                            _selectedProgram = null;
                           });
                           _fetchStudents();
                         },
                         isDark: isDark,
                       ),
 
-                    if (_selectedSemester != null && _selectedSemester != '2')
+                    if (_selectedSemester != null)
                       FilterChipWidget(
                         label: 'Semester: $_selectedSemester',
                         onRemove: () {
                           setState(() {
-                            _selectedSemester = '2';
+                            _selectedSemester = null;
                           });
                           _fetchStudents();
                         },
@@ -373,80 +389,91 @@ class _StudentListPageState extends ConsumerState<StudentListPage> {
           Expanded(
             child: _isLoading && !_isLoadingMore
                 ? const Center(child: CircularProgressIndicator())
-                : _filteredStudents.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.people_outline,
-                          size: 64,
-                          color: isDark ? Colors.white30 : Colors.grey,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No students found',
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: isDark ? Colors.white70 : Colors.grey,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Try adjusting your filters or search',
-                          style: TextStyle(
-                            color: isDark ? Colors.white38 : Colors.grey,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : NotificationListener<ScrollNotification>(
-                      onNotification: (ScrollNotification scrollInfo) {
-                        if (!_isLoadingMore &&
-                            _hasMoreData &&
-                            scrollInfo.metrics.pixels ==
-                                scrollInfo.metrics.maxScrollExtent) {
-                          _loadMoreData();
-                        }
-                        return false;
-                      },
-                      child: ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount:
-                            _filteredStudents.length +
-                            (_isLoadingMore ? 1 : 0) +
-                            (_hasMoreData ? 0 : 1),
-                        itemBuilder: (context, index) {
-                          if (index == _filteredStudents.length) {
-                            if (_isLoadingMore) {
-                              return const Padding(
-                                padding: EdgeInsets.all(16),
+                : RefreshIndicator(
+                    onRefresh: () async {
+                      await _fetchStudents();
+                    },
+                    child: _filteredStudents.isEmpty
+                        ? ListView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            children: [
+                              SizedBox(
+                                height: MediaQuery.of(context).size.height * 0.6,
                                 child: Center(
-                                  child: SizedBox(
-                                    width: 24,
-                                    height: 24,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.people_outline,
+                                        size: 64,
+                                        color: isDark ? Colors.white30 : Colors.grey,
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        'No students found',
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          color: isDark ? Colors.white70 : Colors.grey,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'Try adjusting your filters or search',
+                                        style: TextStyle(
+                                          color: isDark ? Colors.white38 : Colors.grey,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              );
-                            }
-
-                            return const SizedBox();
-                          }
-
-                          return StudentCard(
-                            student: _filteredStudents[index],
-                            isDark: isDark,
-                            onRefresh: () {
-                              _fetchStudents();
+                              ),
+                            ],
+                          )
+                        : NotificationListener<ScrollNotification>(
+                            onNotification: (ScrollNotification scrollInfo) {
+                              if (!_isLoadingMore &&
+                                  _hasMoreData &&
+                                  scrollInfo.metrics.pixels ==
+                                      scrollInfo.metrics.maxScrollExtent) {
+                                _loadMoreData();
+                              }
+                              return false;
                             },
-                          );
-                        },
-                      ),
-                    ),
+                            child: ListView.builder(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              itemCount: _filteredStudents.length +
+                                  (_isLoadingMore ? 1 : 0) +
+                                  (_hasMoreData ? 0 : 1),
+                              itemBuilder: (context, index) {
+                                if (index == _filteredStudents.length) {
+                                  if (_isLoadingMore) {
+                                    return const Padding(
+                                      padding: EdgeInsets.all(16),
+                                      child: Center(
+                                        child: SizedBox(
+                                          width: 24,
+                                          height: 24,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                  return const SizedBox();
+                                }
+                                return StudentCard(
+                                  student: _filteredStudents[index],
+                                  isDark: isDark,
+                                  onRefresh: () {
+                                    _fetchStudents();
+                                  },
+                                );
+                              },
+                            ),
+                          ),
+                  ),
           ),
         ],
       ),
@@ -665,18 +692,20 @@ class StudentCard extends StatelessWidget {
 }
 
 // Filter Bottom Sheet
-class FilterBottomSheet extends StatefulWidget {
+class FilterBottomSheet extends ConsumerStatefulWidget {
   final String? currentBatchYear;
   final String? currentProgram;
+  final String? currentDepartment;
   final String? currentSemester;
   final String? currentFaceRegistration;
-  final Function(String?, String?, String?, String?) onApply;
+  final void Function(String?, String?, String?, String?, String?) onApply;
   final VoidCallback onReset;
 
   const FilterBottomSheet({
     super.key,
     required this.currentBatchYear,
     required this.currentProgram,
+    required this.currentDepartment,
     required this.currentSemester,
     required this.currentFaceRegistration,
     required this.onApply,
@@ -684,21 +713,23 @@ class FilterBottomSheet extends StatefulWidget {
   });
 
   @override
-  State<FilterBottomSheet> createState() => _FilterBottomSheetState();
+  ConsumerState<FilterBottomSheet> createState() => _FilterBottomSheetState();
 }
 
-class _FilterBottomSheetState extends State<FilterBottomSheet> {
+class _FilterBottomSheetState extends ConsumerState<FilterBottomSheet> {
   late String? _batchYear;
   late String? _program;
+  late String? _department;
   late String? _semester;
   late String? _faceRegistration;
 
   @override
   void initState() {
     super.initState();
-    _batchYear = widget.currentBatchYear ?? '2025';
-    _program = widget.currentProgram ?? 'MCA';
-    _semester = widget.currentSemester ?? '2';
+    _batchYear = widget.currentBatchYear;
+    _program = widget.currentProgram;
+    _department = widget.currentDepartment;
+    _semester = widget.currentSemester;
     _faceRegistration = widget.currentFaceRegistration;
   }
 
@@ -706,41 +737,81 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    final clerkState = ref.watch(clerkStoreProvider);
+    final academicScopes = clerkState.profile?.academicScopes ?? [];
+
+    final programs = academicScopes.map((e) => e.programId).toSet().toList();
+    
+    List<String> departments = [];
+    if (_program != null) {
+      departments = academicScopes
+          .where((e) => e.programId == _program)
+          .map((e) => e.departmentId)
+          .toSet()
+          .toList();
+    }
+
+    final List<String> semesters = (_program != null && _department != null)
+        ? ['1', '2', '3', '4', '5', '6', '7', '8']
+        : [];
+    semesters.sort();
+
     return CustomBottomSheetLayout(
       title: 'Filter Students',
       onReset: () {
         setState(() {
-          _batchYear = '2025';
-          _program = 'MCA';
-          _semester = '2';
+          _batchYear = null;
+          _program = null;
+          _department = null;
+          _semester = null;
           _faceRegistration = null;
         });
         widget.onReset();
         Navigator.pop(context);
       },
       onApply: () {
-        widget.onApply(_batchYear, _program, _semester, _faceRegistration);
+        widget.onApply(_batchYear, _program, _department, _semester, _faceRegistration);
         Navigator.pop(context);
       },
       content: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Program
+          _buildLabel('Program', isDark),
+          _buildDropdown(
+            value: _program,
+            items: programs,
+            hint: 'Select Program',
+            onChanged: (v) => setState(() {
+              _program = v;
+              _department = null;
+              _semester = null;
+            }),
+            isDark: isDark,
+          ),
+          const SizedBox(height: 20),
+
+          // Department
+          _buildLabel('Department', isDark),
+          _buildDropdown(
+            value: _department,
+            items: departments,
+            hint: 'Select Department',
+            onChanged: (v) => setState(() {
+              _department = v;
+              _semester = null;
+            }),
+            isDark: isDark,
+          ),
+          const SizedBox(height: 20),
+
           // Batch Year
           _buildLabel('Batch Year', isDark),
           _buildDropdown(
             value: _batchYear,
             items: const ['2022', '2023', '2024', '2025', '2026'],
+            hint: 'Select Batch Year',
             onChanged: (v) => setState(() => _batchYear = v),
-            isDark: isDark,
-          ),
-          const SizedBox(height: 20),
-
-          // Program
-          _buildLabel('Program', isDark),
-          _buildDropdown(
-            value: _program,
-            items: const ['MCA', 'MBA', 'BBA', 'BCOM', 'BTECH'],
-            onChanged: (v) => setState(() => _program = v),
             isDark: isDark,
           ),
           const SizedBox(height: 20),
@@ -749,7 +820,8 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
           _buildLabel('Semester', isDark),
           _buildDropdown(
             value: _semester,
-            items: const ['1', '2', '3', '4', '5', '6', '7', '8'],
+            items: semesters,
+            hint: 'Select Semester',
             onChanged: (v) => setState(() => _semester = v),
             isDark: isDark,
           ),
@@ -814,9 +886,11 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
     required List<String> items,
     required Function(String?) onChanged,
     required bool isDark,
+    required String hint, // Added hint parameter
   }) {
     return Container(
       margin: const EdgeInsets.only(top: 8),
+      height: 50, // Fixed height for consistency
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF252542) : const Color(0xFFF8F9FA),
@@ -829,14 +903,23 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
         child: DropdownButton<String>(
           value: value,
           isExpanded: true,
+          hint: Text(
+            hint,
+            style: TextStyle(
+              color: isDark ? Colors.white38 : Colors.grey,
+              fontSize: 14,
+            ),
+          ),
+          isDense: true, // Use dense to control spacing via Container height
           icon: Icon(
             Icons.keyboard_arrow_down,
             color: isDark ? Colors.white38 : Colors.grey,
+            size: 20, // Slightly smaller icon
           ),
           dropdownColor: isDark ? const Color(0xFF252542) : Colors.white,
           style: TextStyle(
             color: isDark ? Colors.white : Colors.black87,
-            fontSize: 16,
+            fontSize: 15, // Slightly smaller font
           ),
           items: items
               .map((item) => DropdownMenuItem(value: item, child: Text(item)))

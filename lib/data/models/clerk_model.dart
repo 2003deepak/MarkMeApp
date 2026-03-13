@@ -1,3 +1,24 @@
+class AcademicScope {
+  final String programId;
+  final String departmentId;
+
+  AcademicScope({required this.programId, required this.departmentId});
+
+  factory AcademicScope.fromJson(Map<String, dynamic> json) {
+    return AcademicScope(
+      programId: json['program_id'] ?? '',
+      departmentId: json['department_id'] ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'program_id': programId,
+      'department_id': departmentId,
+    };
+  }
+}
+
 class Clerk {
   final String id;
   final String firstName;
@@ -5,8 +26,9 @@ class Clerk {
   final String lastName;
   final String email;
   final String phone;
-  final String department;
-  final String program;
+  final String? department;
+  final String? program;
+  final List<AcademicScope> academicScopes;
   final String? profilePicture;
   final String? profilePictureId;
   final DateTime? createdAt;
@@ -19,8 +41,9 @@ class Clerk {
     required this.lastName,
     required this.email,
     required this.phone,
-    required this.department,
-    required this.program,
+    this.department,
+    this.program,
+    this.academicScopes = const [],
     this.profilePicture,
     this.profilePictureId,
     this.createdAt,
@@ -35,8 +58,12 @@ class Clerk {
       lastName: json['last_name'] ?? '',
       email: json['email'] ?? '',
       phone: (json['phone'] ?? '').toString(),
-      department: json['department'] ?? '',
-      program: json['program'] ?? '',
+      department: json['department'],
+      program: json['program'],
+      academicScopes: (json['academic_scopes'] as List<dynamic>?)
+              ?.map((e) => AcademicScope.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
       profilePicture: json['profile_picture'],
       profilePictureId: json['profile_picture_id'],
       createdAt: json['created_at'] != null 
@@ -58,6 +85,7 @@ class Clerk {
       'phone': phone,
       'department': department,
       'program': program,
+      'academic_scopes': academicScopes.map((e) => e.toJson()).toList(),
       'profile_picture': profilePicture,
       'profile_picture_id': profilePictureId,
       'created_at': createdAt?.toIso8601String(),

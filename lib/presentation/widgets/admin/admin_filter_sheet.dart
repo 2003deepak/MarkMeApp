@@ -17,6 +17,7 @@ class AdminFilterSheet extends StatefulWidget {
 }
 
 class _AdminFilterSheetState extends State<AdminFilterSheet> {
+  late String? selectedProgram;
   late String? selectedDepartment;
   late String? selectedSubject;
   late String? selectedTeacher;
@@ -24,6 +25,7 @@ class _AdminFilterSheetState extends State<AdminFilterSheet> {
   @override
   void initState() {
     super.initState();
+    selectedProgram = widget.initialFilters['Program'];
     selectedDepartment = widget.initialFilters['Department'];
     selectedSubject = widget.initialFilters['Subject'];
     selectedTeacher = widget.initialFilters['Teacher'];

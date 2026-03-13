@@ -4,6 +4,10 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<String> getDeviceInfo() async {
+  if (kIsWeb) {
+    return "Web Browser";
+  }
+
   // For desktop platforms, return generic info
   if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
     return "${getPlatformType()} Desktop";
@@ -33,9 +37,9 @@ String getPlatformType() {
 }
 
 // Add this helper function
-bool get isMobilePlatform => Platform.isAndroid || Platform.isIOS;
+bool get isMobilePlatform => !kIsWeb && (Platform.isAndroid || Platform.isIOS);
 bool get isDesktopPlatform =>
-    Platform.isWindows || Platform.isMacOS || Platform.isLinux;
+    !kIsWeb && (Platform.isWindows || Platform.isMacOS || Platform.isLinux);
 
 Future<void> clearSession(SharedPreferences prefs) async {
   await prefs.remove('refreshToken');

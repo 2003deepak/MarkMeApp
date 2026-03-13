@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:markmeapp/main.dart'; 
 
 
-void showAppSnackBar(String message, {bool isError = false, BuildContext? context}) {
+void showAppSnackBar(String message, {bool isError = false, BuildContext? context, SnackBarAction? action}) {
   ScaffoldMessengerState? messengerState;
 
   // 1. Try to get messenger from context if provided and mounted
@@ -44,8 +44,9 @@ void showAppSnackBar(String message, {bool isError = false, BuildContext? contex
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       duration: const Duration(seconds: 2),
       dismissDirection: DismissDirection.horizontal,
-      showCloseIcon: true,
+      showCloseIcon: action == null,
       closeIconColor: Colors.white,
+      action: action,
     ),
   );
 }

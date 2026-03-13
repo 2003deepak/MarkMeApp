@@ -21,6 +21,7 @@ dependencies:
   go_router: ^14.0.2
 
   google_fonts: ^6.2.1
+  url_launcher: ^6.3.0
 
   # State management
   flutter_riverpod: ^2.5.1

@@ -34,10 +34,6 @@ class _EditProfilePageState extends ConsumerState<ClerkEditProfilePage> {
   final TextEditingController _lastNameCtrl = TextEditingController();
   final TextEditingController _emailCtrl = TextEditingController();
   final TextEditingController _phoneCtrl = TextEditingController();
-  final TextEditingController _departmentCtrl = TextEditingController();
-  final TextEditingController _programCtrl = TextEditingController();
-
-  // List of controllers that should trigger form dirty check
   List<TextEditingController> get _listenableControllers => [
         _firstNameCtrl,
         _middleNameCtrl,
@@ -202,8 +198,6 @@ class _EditProfilePageState extends ConsumerState<ClerkEditProfilePage> {
         _lastNameCtrl.text = profile.lastName ?? '';
         _emailCtrl.text = profile.email ?? '';
         _phoneCtrl.text = profile.phone;
-        _departmentCtrl.text = profile.department ?? 'ADMIN';
-        _programCtrl.text = profile.program ?? 'N/A';
         _profilePicture = profile.profilePicture;
 
         _initialDataLoaded = true;
@@ -255,8 +249,6 @@ class _EditProfilePageState extends ConsumerState<ClerkEditProfilePage> {
     _lastNameCtrl.dispose();
     _emailCtrl.dispose();
     _phoneCtrl.dispose();
-    _departmentCtrl.dispose();
-    _programCtrl.dispose();
 
     super.dispose();
   }
@@ -513,36 +505,65 @@ class _EditProfilePageState extends ConsumerState<ClerkEditProfilePage> {
         decoration: _cardDecoration,
         padding: const EdgeInsets.all(20),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            InputField(
-              label: 'Department',
-              controller: _departmentCtrl,
-              readOnly: true,
-              hintText: 'Department',
-              suffixIcon: Container(
-                padding: const EdgeInsets.all(12),
-                child: const Icon(
-                  Icons.lock_outline_rounded,
-                  color: Color(0xFF9CA3AF),
-                  size: 20,
+            if (ref.watch(clerkStoreProvider).profile?.academicScopes.isEmpty ?? true)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 20),
+                  child: Text(
+                    'No academic scopes assigned',
+                    style: TextStyle(color: Color(0xFF6B7280)),
+                  ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            InputField(
-              label: 'Program',
-              controller: _programCtrl,
-              readOnly: true,
-              hintText: 'Program',
-              suffixIcon: Container(
-                padding: const EdgeInsets.all(12),
-                child: const Icon(
-                  Icons.lock_outline_rounded,
-                  color: Color(0xFF9CA3AF),
-                  size: 20,
-                ),
-              ),
-            ),
+              )
+            else
+              ...ref.watch(clerkStoreProvider).profile!.academicScopes.asMap().entries.map((entry) {
+                final index = entry.key;
+                final scope = entry.value;
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (index > 0) ...[
+                      const SizedBox(height: 16),
+                      const Divider(color: Color(0xFFF1F5F9), height: 32),
+                    ],
+                    Text(
+                      'Assigned Scope ${index + 1}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF2563EB),
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: InputField(
+                            label: 'Program',
+                            controller: TextEditingController(text: scope.programId),
+                            readOnly: true,
+                            hintText: 'Program',
+                            suffixIcon: _lockIcon(),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: InputField(
+                            label: 'Department',
+                            controller: TextEditingController(text: scope.departmentId),
+                            readOnly: true,
+                            hintText: 'Department',
+                            suffixIcon: _lockIcon(),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+              }),
           ],
         ),
       ),
@@ -554,5 +575,16 @@ class _EditProfilePageState extends ConsumerState<ClerkEditProfilePage> {
       ),
       const SizedBox(height: 16),
     ];
+  }
+
+  Widget _lockIcon() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      child: const Icon(
+        Icons.lock_outline_rounded,
+        color: Color(0xFF9CA3AF),
+        size: 20,
+      ),
+    );
   }
 }

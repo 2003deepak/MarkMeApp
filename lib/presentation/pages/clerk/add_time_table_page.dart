@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:markmeapp/core/utils/snackbar_utils.dart';
+import 'package:markmeapp/core/utils/time_utils.dart';
 import 'package:markmeapp/data/repositories/clerk_repository.dart';
 import 'package:markmeapp/presentation/widgets/ui/dropdown.dart';
 import 'package:markmeapp/presentation/widgets/ui/snackbar.dart';
 import 'package:markmeapp/presentation/widgets/ui/app_bar.dart';
+import 'package:markmeapp/state/clerk_state.dart';
 
 class AddTimeTablePage extends ConsumerStatefulWidget {
   const AddTimeTablePage({super.key});
@@ -35,9 +38,14 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
   };
 
   bool _isLoading = false;
+  bool _isEditMode = false;
+  String? _timetableId;
+  int? _editingSessionIndex;
+  int? _editingDayIndex;
 
   List<Map<String, dynamic>> _subjects = [];
-  bool _isFetchingSubjects = true;
+  bool _isFetchingSubjects = false;
+  bool _isFetchingTimetable = false;
   String? _subjectsError;
 
   // Subject form fields
@@ -64,10 +72,20 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
     'Lab': const Color(0xFF9A3412), // Orange 800
   };
 
+  // Selections
+  String? _selectedAcademicYear = '2025';
+  final List<String> _academicYears = ['2024', '2025', '2026', '2027'];
+  String? _selectedProgram;
+  String? _selectedDepartment;
+  int? _selectedSemester;
+  List<String> _programs = [];
+  List<String> _departments = [];
+  List<int> _semesters = [];
+
   @override
   void initState() {
     super.initState();
-    _fetchSubjects();
+    // Clerk profile should already be loaded
   }
 
   Future<void> _fetchSubjects() async {
@@ -77,11 +95,13 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
     });
 
     try {
+      if (_selectedProgram == null || _selectedSemester == null) return;
+
       final clerkRepo = ref.read(clerkRepositoryProvider);
 
       final result = await clerkRepo.fetchSubjects(
-        program: 'MCA',
-        semester: 2,
+        program: _selectedProgram!,
+        semester: _selectedSemester!,
         mode: "subject_listing",
       );
 
@@ -99,7 +119,7 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
           if (subjectId.isNotEmpty) {
             subjectsList.add({
               'id': subjectId,
-              'name': '$subjectName ($component)',
+              'name': '$subjectName',
               'raw': subject,
             });
           }
@@ -108,12 +128,17 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
         setState(() {
           _subjects = subjectsList;
 
-          // Set default selected subject
+          // Set default selected subject or reset if empty
           if (_subjects.isNotEmpty) {
             selectedSubject = _subjects.first;
             selectedSubjectId = _subjects.first['id'];
             selectedSubjectName = _subjects.first['name'];
             selectedComponent = _subjects.first['raw']['component'];
+          } else {
+            selectedSubject = null;
+            selectedSubjectId = null;
+            selectedSubjectName = '';
+            selectedComponent = 'Lecture';
           }
         });
       } else {
@@ -132,39 +157,131 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
     }
   }
 
-  // Convert 12-hour time to 24-hour format
-  String _convertTo24HourFormat(String time12Hour) {
-    try {
-      final parts = time12Hour.split(' ');
-      final timePart = parts[0];
-      final period = parts[1].toUpperCase();
-
-      final timeComponents = timePart.split(':');
-      int hour = int.parse(timeComponents[0]);
-      final minute = timeComponents[1];
-
-      if (period == 'PM' && hour != 12) {
-        hour += 12;
-      } else if (period == 'AM' && hour == 12) {
-        hour = 0;
-      }
-
-      return '${hour.toString().padLeft(2, '0')}:$minute';
-    } catch (e) {
-      return '00:00';
+  void _checkAndFetchData() {
+    if (_isSelectionComplete) {
+      _fetchSubjects();
+      _fetchExistingTimeTable();
     }
   }
 
-  // Parse time string to minutes since midnight
-  int _timeToMinutes(String time24Hour) {
-    try {
-      final parts = time24Hour.split(':');
-      final hour = int.parse(parts[0]);
-      final minute = int.parse(parts[1]);
-      return hour * 60 + minute;
-    } catch (e) {
-      return 0;
+  bool get _isSelectionComplete =>
+      _selectedAcademicYear != null &&
+      _selectedProgram != null &&
+      _selectedDepartment != null &&
+      _selectedSemester != null;
+
+  Future<void> _fetchExistingTimeTable() async {
+    if (!_isSelectionComplete) {
+      return;
     }
+
+    setState(() {
+      _isFetchingTimetable = true;
+      _isEditMode = false;
+      _timetableId = null;
+      // Clear current schedule while fetching
+      for (var i = 0; i < days.length; i++) {
+        addedSubjectsByDay[i] = [];
+      }
+    });
+
+    try {
+      final clerkRepo = ref.read(clerkRepositoryProvider);
+      final result = await clerkRepo.fetchTimeTable(
+        program: _selectedProgram!,
+        department: _selectedDepartment!,
+        semester: _selectedSemester!,
+        academicYear: _selectedAcademicYear!,
+      );
+
+      if (result['success'] == true && result['data'] != null) {
+        final data = result['data'];
+        _timetableId = data['_id'] ?? data['id'];
+        final schedule = data['schedule'] as List<dynamic>;
+
+        setState(() {
+          _isEditMode = true;
+
+          for (var dayData in schedule) {
+            final String dayName = dayData['day'] ?? '';
+            final int dayIndex = days.indexOf(dayName);
+
+            if (dayIndex != -1) {
+              final sessions = dayData['sessions'] as List<dynamic>;
+              addedSubjectsByDay[dayIndex] = sessions.map((item) {
+                final subjectName = item['subject_name'] ?? 'Unknown';
+                final component = item['component'] ?? 'Lecture';
+                final startTime24 = item['start_time'];
+                final endTime24 = item['end_time'];
+
+                final startTime12 = TimeUtils.formatTime12Hour(startTime24);
+                final endTime12 = TimeUtils.formatTime12Hour(endTime24);
+
+                return {
+                  'subject': '$subjectName',
+                  'subject_id': item['subject_id'] ?? '',
+                  'time': '$startTime12 - $endTime12',
+                  'start_time_12': startTime12,
+                  'end_time_12': endTime12,
+                  'start_time_24': startTime24,
+                  'end_time_24': endTime24,
+                  'type': component,
+                  'session_id': item['session_id'],
+                };
+              }).toList();
+            }
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching timetable: $e');
+    } finally {
+      setState(() {
+        _isFetchingTimetable = false;
+        // Sort all days after fetching
+        for (var i = 0; i < days.length; i++) {
+          _sortSessions(i);
+        }
+      });
+    }
+  }
+
+  void _sortSessions(int dayIndex) {
+    if (addedSubjectsByDay[dayIndex] == null) return;
+    
+    addedSubjectsByDay[dayIndex]!.sort((a, b) {
+      final aTime = a['start_time_24'] as String;
+      final bTime = b['start_time_24'] as String;
+      return aTime.compareTo(bTime);
+    });
+  }
+
+  void _editSubject(int dayIndex, int subjectIndex) {
+    final subjectData = addedSubjectsByDay[dayIndex]![subjectIndex];
+    
+    setState(() {
+      // Find subject in _subjects list
+      final foundSubject = _subjects.firstWhere(
+        (s) => s['id'] == subjectData['subject_id'],
+        orElse: () => {},
+      );
+
+      if (foundSubject.isNotEmpty) {
+        selectedSubject = foundSubject;
+        selectedSubjectId = foundSubject['id'];
+        selectedSubjectName = foundSubject['name'];
+        selectedComponent = foundSubject['raw']['component'];
+      }
+
+      startTime = subjectData['start_time_12'];
+      endTime = subjectData['end_time_12'];
+      
+      _editingSessionIndex = subjectIndex;
+      _editingDayIndex = dayIndex;
+      selectedDayIndex = dayIndex;
+    });
+    
+    showSuccessSnackBar(context, 'Session data loaded into form.');
   }
 
   // Check if new time slot overlaps with existing slots
@@ -173,8 +290,8 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
     String newEndTime,
     List<Map<String, dynamic>> existingSubjects,
   ) {
-    final newStartMinutes = _timeToMinutes(newStartTime);
-    final newEndMinutes = _timeToMinutes(newEndTime);
+    final newStartMinutes = TimeUtils.timeToMinutes(newStartTime);
+    final newEndMinutes = TimeUtils.timeToMinutes(newEndTime);
 
     // Validate that start time is before end time
     if (newStartMinutes >= newEndMinutes) {
@@ -182,15 +299,11 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
     }
 
     for (final subject in existingSubjects) {
-      final existingStartTime = subject['start_time_24'];
-      final existingEndTime = subject['end_time_24'];
+      final existingStart = TimeUtils.timeToMinutes(subject['start_time_24']);
+      final existingEnd = TimeUtils.timeToMinutes(subject['end_time_24']);
 
-      final existingStartMinutes = _timeToMinutes(existingStartTime);
-      final existingEndMinutes = _timeToMinutes(existingEndTime);
-
-      // Check for overlap: new slot starts before existing ends AND new slot ends after existing starts
-      if (newStartMinutes < existingEndMinutes &&
-          newEndMinutes > existingStartMinutes) {
+      // Check for overlap
+      if (newStartMinutes < existingEnd && newEndMinutes > existingStart) {
         return true;
       }
     }
@@ -202,14 +315,20 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
     if (selectedSubjectId == null || selectedSubjectName.isEmpty) return;
 
     // Convert times to 24-hour format for validation
-    final start24 = _convertTo24HourFormat(startTime);
-    final end24 = _convertTo24HourFormat(endTime);
+    final start24 = TimeUtils.convertTo24HourFormat(startTime);
+    final end24 = TimeUtils.convertTo24HourFormat(endTime);
 
-    // Check for time overlap
+    // Check for time overlap (excluding the one being edited if applicable)
+    final List<Map<String, dynamic>> otherSubjects = List.from(addedSubjectsByDay[selectedDayIndex]!);
+    if (_editingSessionIndex != null && _editingDayIndex == selectedDayIndex) {
+      // Temporarily remove for overlap check
+      otherSubjects.removeAt(_editingSessionIndex!);
+    }
+
     if (_hasTimeOverlap(
       start24,
       end24,
-      addedSubjectsByDay[selectedDayIndex]!,
+      otherSubjects,
     )) {
       showErrorSnackBar(
         context,
@@ -219,7 +338,7 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
     }
 
     setState(() {
-      addedSubjectsByDay[selectedDayIndex]!.add({
+      final sessionData = {
         'subject': selectedSubjectName,
         'subject_id': selectedSubjectId!,
         'time': '$startTime - $endTime',
@@ -228,7 +347,22 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
         'start_time_24': start24,
         'end_time_24': end24,
         'type': selectedComponent,
-      });
+      };
+
+      if (_editingSessionIndex != null && _editingDayIndex == selectedDayIndex) {
+        // Update existing
+        addedSubjectsByDay[selectedDayIndex]![_editingSessionIndex!] = sessionData;
+      } else {
+        // Add new
+        addedSubjectsByDay[selectedDayIndex]!.add(sessionData);
+      }
+
+      // Sort after add/update
+      _sortSessions(selectedDayIndex);
+
+      // Reset editing state
+      _editingSessionIndex = null;
+      _editingDayIndex = null;
 
       // Reset form to first subject
       if (_subjects.isNotEmpty) {
@@ -247,6 +381,11 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
   void _removeSubject(int dayIndex, int subjectIndex) {
     setState(() {
       addedSubjectsByDay[dayIndex]!.removeAt(subjectIndex);
+      // Reset editing if the removed item was being edited
+      if (_editingSessionIndex == subjectIndex && _editingDayIndex == dayIndex) {
+        _editingSessionIndex = null;
+        _editingDayIndex = null;
+      }
     });
   }
 
@@ -267,10 +406,31 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
 
   @override
   Widget build(BuildContext context) {
+    final clerkState = ref.watch(clerkStoreProvider);
+    final academicScopes = clerkState.profile?.academicScopes ?? [];
+
+    _programs = academicScopes.map((e) => e.programId).toSet().toList();
+    if (_selectedProgram != null) {
+      _departments = academicScopes
+          .where((e) => e.programId == _selectedProgram)
+          .map((e) => e.departmentId)
+          .toSet()
+          .toList();
+
+      if (_selectedDepartment != null) {
+        _semesters = [1, 2, 3, 4, 5, 6, 7, 8];
+      } else {
+        _semesters = [];
+      }
+    } else {
+      _departments = [];
+      _semesters = [];
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: MarkMeAppBar(
-        title: 'Edit Time Table',
+        title: _isEditMode ? 'Edit Time Table' : 'Create Time Table',
         onBackPressed: _isLoading ? null : () => context.go("/clerk"),
         isLoading: _isLoading,
       ),
@@ -339,7 +499,7 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      'Schedule classes for MCA Semester 2',
+                                      'Schedule classes for ${_selectedProgram ?? "..."} ${_selectedDepartment ?? "..."} Sem ${_selectedSemester ?? "..."}',
                                       style: TextStyle(
                                         fontSize: 14,
                                         color: const Color(0xFF64748B),
@@ -347,6 +507,117 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
                                     ),
                                   ],
                                 ),
+                              ),
+                            ]
+                          ),
+                          const SizedBox(height: 20),
+                          // Dynamic Selections Grid
+                          Column(
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Dropdown<String>(
+                                      label: "Year",
+                                      hint: "Year",
+                                      items: _academicYears,
+                                      value: _selectedAcademicYear,
+                                      onChanged: (val) {
+                                        setState(() {
+                                          _selectedAcademicYear = val;
+                                          _selectedProgram = null;
+                                          _selectedDepartment = null;
+                                          _selectedSemester = null;
+                                          _subjects = [];
+                                          _timetableId = null;
+                                          _isEditMode = false;
+                                          _editingSessionIndex = null;
+                                          _editingDayIndex = null;
+                                          for (var i = 0; i < days.length; i++) {
+                                            addedSubjectsByDay[i] = [];
+                                          }
+                                        });
+                                        _checkAndFetchData();
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Dropdown<String>(
+                                      label: "Program",
+                                      hint: "Program",
+                                      items: _programs,
+                                      value: _selectedProgram,
+                                      onChanged: (val) {
+                                        setState(() {
+                                          _selectedProgram = val;
+                                          _selectedDepartment = null;
+                                          _selectedSemester = null;
+                                          _subjects = [];
+                                          _timetableId = null;
+                                          _isEditMode = false;
+                                          _editingSessionIndex = null;
+                                          _editingDayIndex = null;
+                                          for (var i = 0; i < days.length; i++) {
+                                            addedSubjectsByDay[i] = [];
+                                          }
+                                        });
+                                        _checkAndFetchData();
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Dropdown<String>(
+                                      label: "Dept",
+                                      hint: "Dept",
+                                      items: _departments,
+                                      value: _selectedDepartment,
+                                      onChanged: (val) {
+                                        setState(() {
+                                          _selectedDepartment = val;
+                                          _selectedSemester = null;
+                                          _subjects = [];
+                                          _timetableId = null;
+                                          _isEditMode = false;
+                                          _editingSessionIndex = null;
+                                          _editingDayIndex = null;
+                                          for (var i = 0; i < days.length; i++) {
+                                            addedSubjectsByDay[i] = [];
+                                          }
+                                        });
+                                        _checkAndFetchData();
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Dropdown<int>(
+                                      label: "Sem",
+                                      hint: "Sem",
+                                      items: _semesters,
+                                      value: _selectedSemester,
+                                      onChanged: (val) {
+                                        setState(() {
+                                          _selectedSemester = val;
+                                          _subjects = [];
+                                          _timetableId = null;
+                                          _isEditMode = false;
+                                          _editingSessionIndex = null;
+                                          _editingDayIndex = null;
+                                          for (var i = 0; i < days.length; i++) {
+                                            addedSubjectsByDay[i] = [];
+                                          }
+                                        });
+                                        _checkAndFetchData();
+                                      },
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -372,7 +643,12 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
                               color: Colors.transparent,
                               child: InkWell(
                                 onTap: () =>
-                                    setState(() => selectedDayIndex = index),
+                                    setState(() {
+                                      selectedDayIndex = index;
+                                      // If we switch day while editing, cancel edit if it was on another day?
+                                      // Actually user might want to move it to another day.
+                                      // Let's just update selectedDayIndex.
+                                    }),
                                 borderRadius: BorderRadius.circular(24),
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(
@@ -476,7 +752,7 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
                           const SizedBox(height: 20),
 
                           // Loading/Error state for subjects
-                          if (_isFetchingSubjects) ...[
+                          if (_isFetchingSubjects || _isFetchingTimetable) ...[
                             const Center(
                               child: Padding(
                                 padding: EdgeInsets.symmetric(vertical: 20),
@@ -491,7 +767,7 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
                             // Subject Dropdown
                             Dropdown<Map<String, dynamic>>(
                               label: "Subject",
-                              hint: "Select Subject",
+                              hint: _subjects.isEmpty ? "No Subjects Found" : "Select Subject",
                               items: _subjects,
                               value:
                                   selectedSubject ??
@@ -499,7 +775,7 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
                                       ? _subjects.first
                                       : null),
                               displayText: (item) => item["name"],
-                              onChanged: (value) {
+                              onChanged: _isSelectionComplete ? (value) {
                                 if (value != null) {
                                   setState(() {
                                     selectedSubject = value;
@@ -509,7 +785,7 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
                                         value['raw']['component'];
                                   });
                                 }
-                              },
+                              } : null,
                             ),
 
                             const SizedBox(height: 16),
@@ -521,7 +797,7 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
                                   child: _buildTimeInput(
                                     label: 'Start Time',
                                     value: startTime,
-                                    onTap: () => _showTimePicker(true),
+                                    onTap: _isSelectionComplete ? () => _showTimePicker(true) : null,
                                   ),
                                 ),
                                 const SizedBox(width: 12),
@@ -529,7 +805,7 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
                                   child: _buildTimeInput(
                                     label: 'End Time',
                                     value: endTime,
-                                    onTap: () => _showTimePicker(false),
+                                    onTap: _isSelectionComplete ? () => _showTimePicker(false) : null,
                                   ),
                                 ),
                               ],
@@ -537,15 +813,17 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
 
                             const SizedBox(height: 24),
 
-                            // Add Button
+                             // Add/Update Button
                             SizedBox(
                               width: double.infinity,
                               child: ElevatedButton.icon(
-                                onPressed: _addSubject,
-                                icon: const Icon(Icons.add_rounded, size: 20),
-                                label: const Text('Add to Schedule'),
+                                onPressed: _isSelectionComplete ? _addSubject : null,
+                                icon: Icon(_editingSessionIndex != null ? Icons.update_rounded : Icons.add_rounded, size: 20),
+                                label: Text(_editingSessionIndex != null ? 'Update Session' : 'Add to Schedule'),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF2563EB),
+                                  backgroundColor: _isSelectionComplete
+                                      ? const Color(0xFF2563EB)
+                                      : Colors.grey,
                                   foregroundColor: Colors.white,
                                   padding: const EdgeInsets.symmetric(
                                     vertical: 16,
@@ -640,9 +918,14 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
                         child: SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: _saveSchedule,
+                            onPressed: (_allDaysHaveSubjects && _isSelectionComplete)
+                                ? _saveSchedule
+                                : null,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF0F172A),
+                              backgroundColor:
+                                  (_allDaysHaveSubjects && _isSelectionComplete)
+                                      ? const Color(0xFF0F172A)
+                                      : Colors.grey,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 18),
                               elevation: 4,
@@ -653,9 +936,9 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
                                 borderRadius: BorderRadius.circular(14),
                               ),
                             ),
-                            child: const Text(
-                              'Save Complete Schedule',
-                              style: TextStyle(
+                            child: Text(
+                              _isEditMode ? 'Save Changes' : 'Save Complete Schedule',
+                              style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -676,7 +959,7 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
   Widget _buildTimeInput({
     required String label,
     required String value,
-    required VoidCallback onTap,
+    required VoidCallback? onTap,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -686,7 +969,7 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: const Color(0xFF334155),
+            color: onTap == null ? Colors.grey : const Color(0xFF334155),
           ),
         ),
         const SizedBox(height: 8),
@@ -698,23 +981,23 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
             decoration: BoxDecoration(
               border: Border.all(color: const Color(0xFFE2E8F0)),
               borderRadius: BorderRadius.circular(12),
-              color: const Color(0xFFF8FAFC),
+              color: onTap == null ? Colors.grey[100] : const Color(0xFFF8FAFC),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
                   value,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
-                    color: Color(0xFF0F172A),
+                    color: onTap == null ? Colors.grey : const Color(0xFF0F172A),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                const Icon(
+                Icon(
                   Icons.access_time_rounded,
                   size: 18,
-                  color: Color(0xFF64748B),
+                  color: onTap == null ? Colors.grey : const Color(0xFF64748B),
                 ),
               ],
             ),
@@ -804,11 +1087,13 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
           ),
         ],
       ),
-      child: ClipRRect(
+      child: InkWell(
+        onTap: () => _editSubject(dayIndex, index),
         borderRadius: BorderRadius.circular(12),
         child: IntrinsicHeight(
           child: Row(
             children: [
+
               Container(width: 6, color: borderColor),
               Expanded(
                 child: Padding(
@@ -926,26 +1211,32 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
 
   Future<void> _saveSchedule() async {
     try {
-      // Prepare schedule
-      final Map<String, List<Map<String, dynamic>>> scheduleData = {};
+      // Prepare schedule as a List of Day objects
+      final List<Map<String, dynamic>> scheduleData = [];
 
       for (int i = 0; i < days.length; i++) {
         final dayName = days[i];
         final daySubjects = addedSubjectsByDay[i]!;
 
-        scheduleData[dayName] = daySubjects.map((subject) {
-          return {
-            'start_time': subject['start_time_24'],
-            'end_time': subject['end_time_24'],
-            'subject': subject['subject_id'],
-          };
-        }).toList();
+        if (daySubjects.isNotEmpty) {
+          scheduleData.add({
+            'day': dayName,
+            'sessions': daySubjects.map((subject) {
+              return {
+                'start_time': subject['start_time_24'],
+                'end_time': subject['end_time_24'],
+                'subject': subject['subject_id'],
+              };
+            }).toList(),
+          });
+        }
       }
 
       final requestBody = {
-        'academic_year': '2025',
-        'program': 'MCA',
-        'semester': '2',
+        'academic_year': _selectedAcademicYear,
+        'program': _selectedProgram,
+        'department': _selectedDepartment,
+        'semester': _selectedSemester?.toString(),
         'schedule': scheduleData,
       };
 
@@ -955,14 +1246,23 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
         _isLoading = true;
       });
 
-      final result = await clerkRepo.createTimeTable(requestBody);
+      if (_isEditMode && _timetableId == null) {
+        throw Exception('Timetable ID is missing in edit mode');
+      }
+
+      final result = _isEditMode
+          ? await clerkRepo.updateTimeTable(_timetableId!, requestBody)
+          : await clerkRepo.createTimeTable(requestBody);
 
       if (!mounted) return;
 
       if (result['success'] == true) {
         showSuccessSnackBar(
           context,
-          result["message"] ?? "Time table created successfully!",
+          result["message"] ??
+              (_isEditMode
+                  ? "Time table updated successfully!"
+                  : "Time table created successfully!"),
         );
         context.go('/clerk');
       } else {

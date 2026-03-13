@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -73,9 +74,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       String? fcmToken;
       try {
         // Only get FCM token on mobile platforms
-        if (Platform.isAndroid || Platform.isIOS) {
+        if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
           fcmToken = await FirebaseMessaging.instance.getToken();
           AppLogger.info("📱 FCM Token: $fcmToken");
+        } else if (kIsWeb) {
+          // Web platforms - generate mock token or handle web push
+          fcmToken = "web-token-${DateTime.now().millisecondsSinceEpoch}";
+          AppLogger.info("🌐 Using mock FCM token for web");
         } else {
           // Desktop platforms - generate mock token
           fcmToken = "desktop-token-${DateTime.now().millisecondsSinceEpoch}";
@@ -88,11 +93,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
       // Platform-specific device info
       final platformType = getPlatformType();
-      final deviceType = platformType == 'android'
-          ? "android"
-          : platformType == 'ios'
-          ? "ios"
-          : platformType; // windows, macos, linux
+      String deviceType = platformType;
+      
+      if (!kIsWeb) {
+        if (Platform.isAndroid) deviceType = "android";
+        else if (Platform.isIOS) deviceType = "ios";
+      }
 
       final deviceInfo = await getDeviceInfo();
 

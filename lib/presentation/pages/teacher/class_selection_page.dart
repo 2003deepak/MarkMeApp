@@ -504,8 +504,7 @@ class _ClassSelectionPageState extends ConsumerState<ClassSelectionPage> {
               // Footer with student count
               Row(
                 children: [
-                  _buildStudentCount(classData['students_count']),
-                  const Spacer(),
+                 
                   if (isSelected)
                     Text(
                       'Selected',
@@ -539,23 +538,6 @@ class _ClassSelectionPageState extends ConsumerState<ClassSelectionPage> {
           fontWeight: FontWeight.w600,
         ),
       ),
-    );
-  }
-
-  Widget _buildStudentCount(int count) {
-    return Row(
-      children: [
-        Icon(Icons.people_alt_rounded, size: 16, color: Colors.grey.shade600),
-        const SizedBox(width: 4),
-        Text(
-          '$count ${count == 1 ? 'Student' : 'Students'}',
-          style: TextStyle(
-            fontSize: 13,
-            color: Colors.grey.shade700,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
     );
   }
 

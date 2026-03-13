@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:markmeapp/state/teacher_state.dart';
+import 'package:markmeapp/presentation/widgets/ui/dropdown.dart' as ui;
+import 'package:markmeapp/data/models/teacher_model.dart';
 
-class TeacherReportsPage extends StatefulWidget {
+class TeacherReportsPage extends ConsumerStatefulWidget {
   const TeacherReportsPage({super.key});
 
   @override
-  State<TeacherReportsPage> createState() => _TeacherReportsPageState();
-}
-
-class _TeacherReportsPageState extends State<TeacherReportsPage>
+class _TeacherReportsPageState extends ConsumerState<TeacherReportsPage>
     with TickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -16,6 +17,8 @@ class _TeacherReportsPageState extends State<TeacherReportsPage>
   String selectedReportType = 'Attendance Report';
   String selectedPeriod = 'This Month';
   String selectedSubject = 'All Subjects';
+  String? selectedProgram;
+  String? selectedSemester;
 
   // Mock report data
   final List<Map<String, dynamic>> attendanceReports = [
@@ -91,6 +94,13 @@ class _TeacherReportsPageState extends State<TeacherReportsPage>
   @override
   void initState() {
     super.initState();
+    
+    // Fetch teacher profile if not loaded
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (ref.read(teacherStoreProvider).profile == null) {
+        ref.read(teacherStoreProvider.notifier).loadProfile();
+      }
+    });
 
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 1200),
@@ -187,7 +197,33 @@ class _TeacherReportsPageState extends State<TeacherReportsPage>
     );
   }
 
-  Widget _buildReportFilters(bool isDesktop) {
+    final teacherState = ref.watch(teacherStoreProvider);
+    final teacherProfile = teacherState.profile;
+
+    final programs = teacherProfile?.scope.map((s) => s.program).toSet().toList() ?? [];
+    
+    // Filter semesters based on selected program and teacher subjects/scope
+    final semesters = (selectedProgram != null && teacherProfile != null)
+        ? teacherProfile.subjects
+            .where((s) => s.program == selectedProgram)
+            .map((s) => s.semester)
+            .whereType<int>()
+            .toSet()
+            .toList()
+        : [1, 2, 3, 4, 5, 6, 7, 8];
+    semesters.sort();
+
+    final subjectItems = ['All Subjects'];
+    if (teacherProfile != null) {
+      final List<String> teacherSubjects = teacherProfile.subjects
+          .where((s) => selectedProgram == null || s.program == selectedProgram)
+          .where((s) => selectedSemester == null || s.semester == int.tryParse(selectedSemester!))
+          .map((s) => s.subjectName)
+          .toSet()
+          .toList();
+      subjectItems.addAll(teacherSubjects);
+    }
+
     return Container(
       padding: EdgeInsets.all(isDesktop ? 24 : 20),
       decoration: BoxDecoration(
@@ -227,6 +263,35 @@ class _TeacherReportsPageState extends State<TeacherReportsPage>
             children: [
               Expanded(
                 child: _buildFilterDropdown(
+                  'Program',
+                  selectedProgram ?? '',
+                  programs,
+                  (value) => setState(() {
+                    selectedProgram = value;
+                    selectedSemester = null;
+                  }),
+                  isDesktop,
+                  hint: 'Select Program',
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildFilterDropdown(
+                  'Semester',
+                  selectedSemester ?? '',
+                  semesters.map((e) => e.toString()).toList(),
+                  (value) => setState(() => selectedSemester = value),
+                  isDesktop,
+                  hint: 'Select Semester',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _buildFilterDropdown(
                   'Report Type',
                   selectedReportType,
                   ['Attendance Report', 'Performance Report', 'Subject Report'],
@@ -253,12 +318,7 @@ class _TeacherReportsPageState extends State<TeacherReportsPage>
                 child: _buildFilterDropdown(
                   'Subject',
                   selectedSubject,
-                  [
-                    'All Subjects',
-                    'Data Structures',
-                    'Algorithms',
-                    'Database Systems',
-                  ],
+                  subjectItems,
                   (value) => setState(() => selectedSubject = value!),
                   isDesktop,
                 ),
@@ -299,8 +359,9 @@ class _TeacherReportsPageState extends State<TeacherReportsPage>
     String value,
     List<String> items,
     Function(String?) onChanged,
-    bool isDesktop,
-  ) {
+    bool isDesktop, {
+    String? hint,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -313,32 +374,11 @@ class _TeacherReportsPageState extends State<TeacherReportsPage>
           ),
         ),
         const SizedBox(height: 8),
-        Container(
-          height: isDesktop ? 48 : 44,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey.shade300),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: value,
-              isExpanded: true,
-              items: items.map((item) {
-                return DropdownMenuItem(
-                  value: item,
-                  child: Text(
-                    item,
-                    style: TextStyle(
-                      fontSize: isDesktop ? 14 : 12,
-                      color: Colors.black87,
-                    ),
-                  ),
-                );
-              }).toList(),
-              onChanged: onChanged,
-            ),
-          ),
+        ui.Dropdown(
+          items: items,
+          value: value.isEmpty ? null : value,
+          onChanged: onChanged,
+          hint: hint,
         ),
       ],
     );

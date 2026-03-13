@@ -7,6 +7,7 @@ import 'package:markmeapp/presentation/widgets/ui/input_field.dart';
 import 'package:markmeapp/presentation/widgets/ui/snackbar.dart';
 import 'package:markmeapp/core/utils/app_logger.dart';
 import 'package:markmeapp/presentation/widgets/ui/app_bar.dart';
+import 'package:markmeapp/state/clerk_state.dart';
 
 class AddTeacherPage extends ConsumerStatefulWidget {
   const AddTeacherPage({super.key});

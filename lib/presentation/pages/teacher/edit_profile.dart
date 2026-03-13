@@ -9,6 +9,7 @@ import 'package:markmeapp/presentation/widgets/save_button_section.dart';
 import 'package:markmeapp/presentation/widgets/ui/profile_picture.dart';
 import 'package:markmeapp/presentation/widgets/ui/input_field.dart';
 import 'package:markmeapp/state/teacher_state.dart';
+import 'package:markmeapp/data/models/teacher_model.dart';
 import 'package:markmeapp/presentation/widgets/ui/app_bar.dart';
 import 'package:flutter/services.dart';
 
@@ -205,16 +206,16 @@ class _TeacherEditProfilePageState
     }
   }
 
-  void _populateFormFromState(Map<String, dynamic> profile) {
-    if (!_initialDataLoaded && profile.isNotEmpty) {
+  void _populateFormFromState(Teacher profile) {
+    if (!_initialDataLoaded) {
       setState(() {
-        _firstNameCtrl.text = profile['first_name']?.toString() ?? '';
-        _middleNameCtrl.text = profile['middle_name']?.toString() ?? '';
-        _lastNameCtrl.text = profile['last_name']?.toString() ?? '';
-        _emailCtrl.text = profile['email']?.toString() ?? '';
-        _phoneCtrl.text = profile['mobile_number']?.toString() ?? '';
-        _departmentCtrl.text = profile['department']?.toString() ?? '';
-        _profilePicture = profile['profile_picture']?.toString();
+        _firstNameCtrl.text = profile.firstName;
+        _middleNameCtrl.text = profile.middleName ?? '';
+        _lastNameCtrl.text = profile.lastName;
+        _emailCtrl.text = profile.email;
+        _phoneCtrl.text = profile.mobileNumber.toString();
+        _departmentCtrl.text = profile.department ?? '';
+        _profilePicture = profile.profilePicture;
 
         _initialDataLoaded = true;
         _initialData = _getCurrentFormData();
@@ -364,7 +365,7 @@ class _TeacherEditProfilePageState
     );
   }
 
-  Widget _buildLoadingOverlay(List<dynamic> subjects) {
+  Widget _buildLoadingOverlay(List<Subject> subjects) {
     return Theme(
       data: AppTheme.theme,
       child: Scaffold(
@@ -442,7 +443,7 @@ class _TeacherEditProfilePageState
     );
   }
 
-  List<Widget> _buildFormContent(List<dynamic> subjects) {
+  List<Widget> _buildFormContent(List<Subject> subjects) {
     return [
       ProfilePicture(
         profilePicture: _profilePicture,
@@ -517,30 +518,6 @@ class _TeacherEditProfilePageState
         ),
       ),
       const SizedBox(height: 24),
-      _sectionHeader('ACADEMIC INFORMATION'),
-      Container(
-        decoration: _cardDecoration,
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            InputField(
-              label: 'Department',
-              controller: _departmentCtrl,
-              readOnly: true,
-              hintText: 'Department',
-              suffixIcon: Container(
-                padding: const EdgeInsets.all(12),
-                child: const Icon(
-                  Icons.lock_outline_rounded,
-                  color: Color(0xFF9CA3AF),
-                  size: 20,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-      const SizedBox(height: 24),
       if (subjects.isNotEmpty) ...[
         _sectionHeader('ASSIGNED SUBJECTS'),
         Container(
@@ -577,8 +554,7 @@ class _TeacherEditProfilePageState
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            subjects[i]['subject_name']?.toString() ??
-                                'Unknown Subject',
+                            subjects[i].subjectName,
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               fontWeight: FontWeight.w500,
                               color: const Color(0xFF111827),
@@ -588,7 +564,7 @@ class _TeacherEditProfilePageState
                           Row(
                             children: [
                               Text(
-                                subjects[i]['subject_code']?.toString() ?? '-',
+                                subjects[i].subjectCode,
                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                   color: const Color(0xFF6B7280),
                                 ),
@@ -613,8 +589,7 @@ class _TeacherEditProfilePageState
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
-                                  subjects[i]['component']?.toString() ??
-                                      'Theory',
+                                  subjects[i].component.isEmpty ? 'Theory' : subjects[i].component,
                                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                                     fontWeight: FontWeight.w500,
                                     color: const Color(0xFF4B5563),

@@ -8,6 +8,9 @@ import 'package:markmeapp/presentation/widgets/ui/app_bar.dart';
 import 'package:markmeapp/presentation/widgets/ui/custom_bottom_sheet_layout.dart';
 import 'package:markmeapp/presentation/widgets/ui/filter_chip.dart';
 import 'package:markmeapp/presentation/widgets/ui/search_bar.dart';
+import 'package:markmeapp/state/teacher_state.dart';
+import 'package:markmeapp/data/models/teacher_model.dart';
+import 'package:markmeapp/presentation/widgets/ui/dropdown.dart' as ui;
 
 class StudentSelectionPage extends ConsumerStatefulWidget {
   const StudentSelectionPage({super.key});
@@ -56,6 +59,13 @@ class _StudentSelectionPageState extends ConsumerState<StudentSelectionPage> {
     _setupSearchDebouncer();
     _setupScrollController();
     _loadStudents(reset: true);
+    
+    // Fetch teacher profile if not loaded
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (ref.read(teacherStoreProvider).profile == null) {
+        ref.read(teacherStoreProvider.notifier).loadProfile();
+      }
+    });
   }
 
   void _setupSearchDebouncer() {
@@ -759,7 +769,7 @@ class _StudentSelectionPageState extends ConsumerState<StudentSelectionPage> {
 }
 
 // Filter Bottom Sheet for Student Selection
-class FilterBottomSheet extends StatefulWidget {
+class FilterBottomSheet extends ConsumerStatefulWidget {
   final String? currentBatchYear;
   final String? currentProgram;
   final String? currentSemester;
@@ -776,17 +786,15 @@ class FilterBottomSheet extends StatefulWidget {
   });
 
   @override
-  State<FilterBottomSheet> createState() => _FilterBottomSheetState();
+  ConsumerState<FilterBottomSheet> createState() => _FilterBottomSheetState();
 }
 
-class _FilterBottomSheetState extends State<FilterBottomSheet> {
+class _FilterBottomSheetState extends ConsumerState<FilterBottomSheet> {
   late String? _batchYear;
   late String? _program;
   late String? _semester;
 
-  final List<String> _programs = ['MCA', 'AI'];
-  final List<String> _batchYears = ['2025', '2024'];
-  final List<String> _semesters = ['1', '2', '3', '4', '5', '6', '7', '8'];
+  final List<String> _batchYears = ['2023', '2024', '2025', '2026'];
 
   @override
   void initState() {
@@ -799,6 +807,22 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final teacherState = ref.watch(teacherStoreProvider);
+    final teacherProfile = teacherState.profile;
+
+    final programs = teacherProfile?.scope.map((s) => s.program).toSet().toList() ?? [];
+    
+    // Get semesters for selected program from teacher's subjects
+    final semesters = (_program != null && teacherProfile != null)
+        ? teacherProfile.subjects
+            .where((s) => s.program == _program)
+            .map((s) => s.semester)
+            .whereType<int>()
+            .toSet()
+            .toList()
+        : [1, 2, 3, 4, 5, 6, 7, 8];
+    semesters.sort();
 
     return CustomBottomSheetLayout(
       title: 'Filter Students',
@@ -818,11 +842,26 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
       content: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildFilterSection(
-            title: 'Program',
-            options: _programs,
-            selectedValue: _program,
-            onSelected: (val) => setState(() => _program = val),
+          // Program
+          _buildLabel('Program', isDark),
+          _buildDropdown(
+            value: _program,
+            items: programs,
+            onChanged: (v) => setState(() {
+              _program = v;
+              _semester = null;
+            }),
+            isDark: isDark,
+          ),
+          const SizedBox(height: 16),
+
+          // Semester
+          _buildLabel('Semester', isDark),
+          _buildDropdown(
+            value: _semester,
+            items: semesters.map((e) => e.toString()).toList(),
+            onChanged: (v) => setState(() => _semester = v),
+            isDark: isDark,
           ),
           const SizedBox(height: 24),
           _buildFilterSection(
@@ -830,13 +869,6 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
             options: _batchYears,
             selectedValue: _batchYear,
             onSelected: (val) => setState(() => _batchYear = val),
-          ),
-          const SizedBox(height: 24),
-          _buildFilterSection(
-            title: 'Semester',
-            options: _semesters,
-            selectedValue: _semester,
-            onSelected: (val) => setState(() => _semester = val),
           ),
           const SizedBox(height: 16),
         ],
@@ -891,6 +923,35 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
           }).toList(),
         ),
       ],
+    );
+  }
+
+  Widget _buildLabel(String label, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          color: isDark ? Colors.white70 : Colors.grey.shade700,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDropdown({
+    required String? value,
+    required List<String> items,
+    required ValueChanged<String?> onChanged,
+    required bool isDark,
+  }) {
+    return ui.Dropdown(
+      label: "",
+      hint: "Select Option",
+      items: items,
+      value: value,
+      onChanged: onChanged,
     );
   }
 }

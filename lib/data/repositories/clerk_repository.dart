@@ -173,7 +173,6 @@ class ClerkRepository {
         "email": data['email']?.trim() ?? '',
         "mobile_number":
             int.tryParse(data['mobile_number']?.toString() ?? '') ?? 0,
-        "department": 'BTECH',
         "subjects_assigned": data['subjects_assigned'] ?? [],
       };
 
@@ -298,26 +297,30 @@ class ClerkRepository {
 
   Future<Map<String, dynamic>> fetchTeachers({
     String? search,
+    String? program,
+    String? department,
     int page = 1,
     int limit = 10,
   }) async {
     try {
       AppLogger.info('🔵 [ClerkRepository] Fetching teachers...');
-
+ 
       // -------------------------------
       // Build query params safely
       // -------------------------------
       final Map<String, dynamic> params = {};
-
+ 
       // Optional search
       if (search != null && search.trim().isNotEmpty) {
         params['search'] = search.trim();
       }
-
+      if (program != null) params['program'] = program;
+      if (department != null) params['department'] = department;
+ 
       // Always include pagination defaults
       params['page'] = page;
       params['limit'] = limit;
-
+ 
       AppLogger.info("🔍 Final Query Params → $params");
 
       // -------------------------------
@@ -431,6 +434,83 @@ class ClerkRepository {
       return {'success': false, 'error': e.toString()};
     }
   }
+
+  Future<Map<String, dynamic>> fetchTimeTable({
+    required String program,
+    required String department,
+    required int semester,
+    required String academicYear,
+  }) async {
+    try {
+      final p = program.trim();
+      final d = department.trim();
+      final s = semester.toString();
+      final ay = academicYear.trim();
+
+      AppLogger.info('🔍 [ClerkRepository] Fetching timetable: /$p/$d/$s/$ay');
+
+      final response = await _dio.get(
+        '/timetable/$p/$d/$s/$ay',
+      );
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'data': response.data['data'],
+          'message': response.data['message'],
+        };
+      } else {
+        return {
+          'success': false,
+          'error': response.data['message'] ?? 'Failed to fetch timetable',
+        };
+      }
+    } on DioException catch (e) {
+      AppLogger.error('🔴 DioException → ${e.message}');
+      return {
+        'success': false,
+        'error': e.response?.data?['message'] ?? e.message ?? "Network Error",
+      };
+    } catch (e) {
+      AppLogger.error('🔴 Exception → $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+
+  Future<Map<String, dynamic>> updateTimeTable(
+    String id,
+    Map<String, dynamic> data,
+  ) async {
+    try {
+      AppLogger.info("🔵 [ClerkRepository] Updating timetable $id...");
+      final response = await _dio.put('/timetable/$id/', data: data);
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'message': response.data['message'] ?? 'Timetable updated successfully',
+          'data': response.data['data'],
+        };
+      } else {
+        return {
+          'success': false,
+          'error': response.data['message'] ?? 'Failed to update timetable',
+        };
+      }
+    } on DioException catch (e) {
+      AppLogger.error('🔴 DioException → ${e.message}');
+      return {
+        'success': false,
+        'error': e.response?.data?['message'] ?? e.message ?? "Network Error",
+      };
+    } catch (e) {
+      AppLogger.error('🔴 Exception → $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+
 
   // --- Analytics Methods ---
 

@@ -11,6 +11,9 @@ final Provider<Dio> dioProvider = Provider<Dio>((ref) {
       baseUrl: dotenv.env['BASE_URL'] ?? '',
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 15),
+      headers: {
+        'ngrok-skip-browser-warning': 'true',
+      },
     ),
   );
 

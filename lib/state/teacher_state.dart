@@ -2,13 +2,14 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import 'package:markmeapp/core/utils/app_logger.dart';
+import 'package:markmeapp/data/models/teacher_model.dart';
 import 'package:markmeapp/data/repositories/teacher_repository.dart';
 
 @immutable
 class TeacherState {
-  final Map<String, dynamic>? profile;
+  final Teacher? profile;
   final String? department;
-  final List<dynamic> subjects;
+  final List<Subject> subjects;
   final bool isLoading;
   final String? errorMessage;
 
@@ -21,9 +22,9 @@ class TeacherState {
   });
 
   TeacherState copyWith({
-    Map<String, dynamic>? profile,
+    Teacher? profile,
     String? department,
-    List<dynamic>? subjects,
+    List<Subject>? subjects,
     bool? isLoading,
     String? errorMessage,
   }) {
@@ -38,7 +39,7 @@ class TeacherState {
 
   @override
   String toString() {
-    return 'TeacherState(profile: $profile, department: $department, subjects: ${subjects.length}, isLoading: $isLoading, errorMessage: $errorMessage)';
+    return 'TeacherState(profile: ${profile?.firstName}, department: $department, subjects: ${subjects.length}, isLoading: $isLoading, errorMessage: $errorMessage)';
   }
 }
 
@@ -56,11 +57,12 @@ class TeacherStore extends StateNotifier<TeacherState> {
 
       if (result['success'] == true) {
         final data = result['data'];
+        final teacher = Teacher.fromJson(data);
 
         state = state.copyWith(
-          profile: data,
-          department: data['department'],
-          subjects: data['subjects_assigned'] ?? [],
+          profile: teacher,
+          department: teacher.department,
+          subjects: teacher.subjects,
           isLoading: false,
           errorMessage: null,
         );

@@ -9,7 +9,12 @@ class AuthRepository {
 
   AuthRepository(this._dio);
 
-  Future<Map<String, dynamic>> registerUser(User user) async {
+  Future<Map<String, dynamic>> registerUser(
+    User user, {
+    String? program,
+    String? department,
+    int? semester,
+  }) async {
     AppLogger.info(
       '🔵 [AuthRepository] registerUser called with email: ${user.email}',
     );
@@ -25,6 +30,9 @@ class AuthRepository {
           'last_name': user.lastName,
           'email': user.email,
           'password': user.password,
+          if (program != null) 'program': program,
+          if (department != null) 'department': department,
+          if (semester != null) 'semester': semester,
         },
       );
 

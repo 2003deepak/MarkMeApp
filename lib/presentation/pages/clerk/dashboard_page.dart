@@ -32,11 +32,20 @@ class _ClerkDashboardPageState extends ConsumerState<ClerkDashboardPage> {
         // For now, it's mostly static, but we provide the hook.
       }
     });
-    return Scaffold(body: _buildDashboardContent());
+    return Scaffold(
+      body: RefreshIndicator(
+        onRefresh: () async {
+          // Add extra artificial delay for better UX if needed, or real fetch logic
+          await Future.delayed(const Duration(milliseconds: 500));
+        },
+        child: _buildDashboardContent(),
+      ),
+    );
   }
 
   Widget _buildDashboardContent() {
     return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

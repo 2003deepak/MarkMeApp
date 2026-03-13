@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:markmeapp/presentation/widgets/ui/input_field.dart';
 import 'package:markmeapp/presentation/widgets/ui/dropdown.dart';
 import 'package:markmeapp/presentation/widgets/ui/batch_year_selector.dart';
+import 'package:markmeapp/state/admin_state.dart';
 
-class AcademicInfoSection extends StatelessWidget {
+class AcademicInfoSection extends ConsumerWidget {
   final TextEditingController rollCtrl;
   final TextEditingController batchYearCtrl;
   final String program;
@@ -35,7 +37,22 @@ class AcademicInfoSection extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final adminState = ref.watch(adminStoreProvider);
+    final hierarchyData = adminState.hierarchyMetadata ?? {};
+    
+    final List<String> programs = hierarchyData.keys.toList();
+    final List<String> departments = program.isNotEmpty && hierarchyData.containsKey(program)
+        ? (hierarchyData[program] as Map<String, dynamic>).keys.toList()
+        : [];
+        
+    final List<int> semesters = program.isNotEmpty && 
+                                department.isNotEmpty && 
+                                hierarchyData.containsKey(program) && 
+                                (hierarchyData[program] as Map<String, dynamic>).containsKey(department)
+        ? List<int>.from((hierarchyData[program] as Map<String, dynamic>)[department])
+        : [1, 2, 3, 4, 5, 6, 7, 8]; // Fallback if no specific semesters found
+
     return Container(
       decoration: cardDecoration,
       padding: const EdgeInsets.all(20),
@@ -63,8 +80,8 @@ class AcademicInfoSection extends StatelessWidget {
           Dropdown<String>(
             label: 'Program',
             hint: 'Select program',
-            items: const ['MCA', 'MBA', 'B.TECH', 'M.TECH'],
-            value: program,
+            items: programs.isEmpty ? [program].where((e) => e.isNotEmpty).toList() : programs,
+            value: program.isEmpty ? null : program,
             isRequired: true,
             onChanged: onProgramChanged,
           ),
@@ -72,8 +89,8 @@ class AcademicInfoSection extends StatelessWidget {
           Dropdown<String>(
             label: 'Department',
             hint: 'Select department',
-            items: const ['BTECH', 'MTECH', 'COMPUTER SCIENCE', 'ELECTRICAL'],
-            value: department,
+            items: departments.isEmpty ? [department].where((e) => e.isNotEmpty).toList() : departments,
+            value: department.isEmpty ? null : department,
             isRequired: true,
             onChanged: onDepartmentChanged,
           ),
@@ -81,8 +98,8 @@ class AcademicInfoSection extends StatelessWidget {
           Dropdown<int>(
             label: 'Semester',
             hint: 'Select semester',
-            items: const [1, 2, 3, 4, 5, 6, 7, 8],
-            value: semester,
+            items: semesters,
+            value: semester == 0 ? null : semester,
             isRequired: true,
             onChanged: onSemesterChanged,
           ),

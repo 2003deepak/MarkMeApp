@@ -69,6 +69,11 @@ import 'package:markmeapp/presentation/pages/admin/dashboard_page.dart';
 import 'package:markmeapp/presentation/pages/admin/profile_page.dart'
     as admin_profile;
 import 'package:markmeapp/presentation/pages/admin/defaulter_teacher_page.dart';
+import 'package:markmeapp/presentation/pages/admin/reports_page.dart';
+import 'package:markmeapp/presentation/pages/admin/create_program_page.dart';
+import 'package:markmeapp/presentation/pages/admin/create_department_page.dart';
+import 'package:markmeapp/presentation/pages/admin/hierarchical_flow_page.dart';
+import 'package:markmeapp/presentation/pages/admin/create_clerk_page.dart';
 
 // State
 import 'package:markmeapp/state/auth_state.dart';
@@ -390,15 +395,13 @@ class AppRouter {
                     ),
                   ],
                 ),
-                // 2. Analytics (Placeholder)
+                // 2. Reports
                 StatefulShellBranch(
                   routes: [
                     GoRoute(
-                      path: '/admin/analytics',
-                      name: 'admin_analytics',
-                      builder: (context, state) => const Scaffold(
-                        body: Center(child: Text('Analytics Coming Soon')),
-                      ),
+                      path: '/admin/reports',
+                      name: 'admin_reports',
+                      builder: (context, state) => const AdminReportsPage(),
                     ),
                   ],
                 ),
@@ -626,6 +629,26 @@ class AppRouter {
               path: '/admin/defaulter-teachers',
               name: 'admin_defaulter_teachers',
               builder: (context, state) => const AdminDefaulterTeacherPage(),
+            ),
+            GoRoute(
+              path: '/admin/create-program',
+              name: 'create_program',
+              builder: (context, state) => const CreateProgramPage(),
+            ),
+            GoRoute(
+              path: '/admin/create-department',
+              name: 'create_department',
+              builder: (context, state) => const CreateDepartmentPage(),
+            ),
+            GoRoute(
+              path: '/admin/hierarchical-flow',
+              name: 'hierarchical_flow',
+              builder: (context, state) => const HierarchicalFlowPage(),
+            ),
+            GoRoute(
+              path: '/admin/create-clerk',
+              name: 'create_clerk',
+              builder: (context, state) => const CreateClerkPage(),
             ),
           ],
         ),

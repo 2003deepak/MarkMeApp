@@ -23,19 +23,28 @@ class _AddTeacherPageState extends ConsumerState<AddTeacherPage> {
   final _mobileNumberController = TextEditingController();
   final _emailIdController = TextEditingController();
 
-  // Dynamic subject assignments
-  final List<Map<String, String?>> _subjectAssignments = [];
+  // Dynamic subject assignments (list of full subject data)
+  final List<Map<String, dynamic>> _subjectAssignments = [];
 
-  // Dynamic subjects from API
-  List<Map<String, dynamic>> _subjects = [];
+  // Data from API (parsed to easily display in Bottom Sheet)
+  List<Map<String, dynamic>> _assignableGroups = [];
   bool _isLoading = false;
-  bool _isFetchingSubjects = true;
+  bool _isFetchingSubjects = false;
   String? _subjectsError;
+
+  // Filters for fetching subjects
+  String? _selectedProgram;
+  int? _selectedSemester;
+  int? _selectedBatch;
+  
+  // Available filter options (derived from clerk profile or hardcoded for now)
+  List<String> _programs = [];
+  List<int> _semesters = [];
+  List<int> _batches = [];
 
   @override
   void initState() {
     super.initState();
-    _fetchSubjects();
     // Add listeners to update button state
     _firstNameController.addListener(_updateFormState);
     _lastNameController.addListener(_updateFormState);
@@ -63,14 +72,7 @@ class _AddTeacherPageState extends ConsumerState<AddTeacherPage> {
         _lastNameController.text.isNotEmpty &&
         _mobileNumberController.text.isNotEmpty &&
         _emailIdController.text.isNotEmpty &&
-        _subjectAssignments.isNotEmpty &&
-        _subjectAssignments.every(
-          (assignment) =>
-              assignment['subject'] != null &&
-              assignment['subject']!.isNotEmpty,
-        ) &&
-        !_isFetchingSubjects &&
-        _subjectsError == null;
+        _subjectAssignments.isNotEmpty;
   }
 
   void _resetForm() {
@@ -92,31 +94,13 @@ class _AddTeacherPageState extends ConsumerState<AddTeacherPage> {
 
     try {
       final clerkRepo = ref.read(clerkRepositoryProvider);
-      final result = await clerkRepo.fetchSubjects(mode: 'subject_listing');
+      final result = await clerkRepo.fetchAssignableSubjects();
 
       if (result['success'] == true) {
-        final subjectsData = result['data'] as List<dynamic>;
-
-        // Transform data for UI
-        final List<Map<String, dynamic>> processedSubjects = [];
-
-        for (var subject in subjectsData) {
-          final subjectId = subject['subject_id'];
-          final subjectName = subject['subject_name'];
-          final component = subject['component'];
-
-          if (subjectId != null && subjectName != null) {
-            processedSubjects.add({
-              'id': subjectId,
-              'name': subjectName,
-              'component': component ?? '',
-              'display': '$subjectName ($component)',
-            });
-          }
-        }
+        final groupsData = result['data'] as List<dynamic>;
 
         setState(() {
-          _subjects = processedSubjects;
+          _assignableGroups = groupsData.cast<Map<String, dynamic>>();
         });
       } else {
         setState(() {
@@ -136,11 +120,25 @@ class _AddTeacherPageState extends ConsumerState<AddTeacherPage> {
 
   @override
   Widget build(BuildContext context) {
+    final clerkState = ref.watch(clerkStoreProvider);
+    final academicScopes = clerkState.profile?.academicScopes ?? [];
+
+    if (_programs.isEmpty && academicScopes.isNotEmpty) {
+      _programs = academicScopes.map((e) => e.programId).toSet().toList();
+    }
+    if (_semesters.isEmpty) {
+      _semesters = [1, 2, 3, 4, 5, 6, 7, 8];
+    }
+    if (_batches.isEmpty) {
+      final currentYear = DateTime.now().year;
+      _batches = [currentYear - 2, currentYear - 1, currentYear, currentYear + 1];
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: MarkMeAppBar(
         title: 'Add Teacher',
-        onBackPressed: _isLoading ? null : () => context.go("/clerk"),
+        onBackPressed: _isLoading ? null : () => context.pop(),
         isLoading: _isLoading,
       ),
       body: SafeArea(
@@ -415,21 +413,15 @@ class _AddTeacherPageState extends ConsumerState<AddTeacherPage> {
                 ),
               ],
             ),
-            if (!_isFetchingSubjects && _subjectsError == null)
-              TextButton.icon(
-                onPressed: () {
-                  setState(() {
-                    _subjectAssignments.add({'subject': null});
-                  });
-                  _updateFormState();
-                },
-                icon: const Icon(Icons.add_circle_outline, size: 18),
-                label: const Text('Add Subject'),
-                style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFF2563EB),
-                  textStyle: const TextStyle(fontWeight: FontWeight.w600),
-                ),
+            TextButton.icon(
+              onPressed: _showSubjectSelectionModal,
+              icon: const Icon(Icons.add_circle_outline, size: 18),
+              label: const Text('Select Subject'),
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF2563EB),
+                textStyle: const TextStyle(fontWeight: FontWeight.w600),
               ),
+            ),
           ],
         ),
         const SizedBox(height: 16),
@@ -441,6 +433,357 @@ class _AddTeacherPageState extends ConsumerState<AddTeacherPage> {
         if (!_isFetchingSubjects && _subjectsError == null)
           _buildSubjectAssignmentsList(),
       ],
+    );
+  }
+
+  void _showSubjectSelectionModal() {
+    String searchQuery = '';
+    String filterComponent = 'All'; // All, Lecture, Lab
+    final clerkRepo = ref.read(clerkRepositoryProvider);
+    final fetchFuture = clerkRepo.fetchAssignableSubjects();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return FutureBuilder<Map<String, dynamic>>(
+          future: fetchFuture,
+          builder: (context, snapshot) {
+            return StatefulBuilder(
+              builder: (context, setModalState) {
+
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Container(
+                    height: MediaQuery.of(context).size.height * 0.85,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(24),
+                        topRight: Radius.circular(24),
+                      ),
+                    ),
+                    child: const Center(
+                      child: CircularProgressIndicator(color: Color(0xFF2563EB), strokeWidth: 3),
+                    ),
+                  );
+                }
+
+                if (snapshot.hasError || snapshot.data?['success'] != true) {
+                  return Container(
+                    height: MediaQuery.of(context).size.height * 0.85,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(24),
+                        topRight: Radius.circular(24),
+                      ),
+                    ),
+                    child: Center(
+                      child: Text(
+                        snapshot.data?['error'] ?? snapshot.error?.toString() ?? 'Failed to load subjects',
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                    ),
+                  );
+                }
+
+                final assignableGroupsList = (snapshot.data?['data'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [];
+                
+                // Filter the assignable groups
+                List<Map<String, dynamic>> filteredGroups = [];
+                for (var group in assignableGroupsList) {
+                  final groupName = group['group'] as String;
+                  final subjects = group['subjects'] as List<dynamic>;
+
+                  List<dynamic> filteredSubjects = subjects.where((subj) {
+                    final subjName = (subj['label'] ?? '').toString().toLowerCase();
+                    final component = (subj['component'] ?? '').toString();
+                    
+                    final matchesSearch = subjName.contains(searchQuery.toLowerCase());
+                    final matchesFilter = filterComponent == 'All' || component == filterComponent;
+
+                    return matchesSearch && matchesFilter;
+                  }).toList();
+
+                  if (filteredSubjects.isNotEmpty) {
+                    filteredGroups.add({
+                      'group': groupName,
+                      'subjects': filteredSubjects,
+                    });
+                  }
+                }
+
+                return Container(
+              height: MediaQuery.of(context).size.height * 0.85,
+              decoration: const BoxDecoration(
+                color: Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(24),
+                  topRight: Radius.circular(24),
+                ),
+              ),
+              child: Column(
+                children: [
+                  // Handle
+                  Center(
+                    child: Container(
+                      margin: const EdgeInsets.only(top: 12, bottom: 8),
+                      width: 40,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                  
+                  // Header
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Select Subject',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF0F172A),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.close, color: Color(0xFF64748B)),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Search and Filter
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: TextField(
+                      onChanged: (val) {
+                        setModalState(() {
+                          searchQuery = val;
+                        });
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'Search subjects...',
+                        prefixIcon: const Icon(Icons.search, color: Color(0xFF94A3B8)),
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade200),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade200),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFF2563EB)),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  
+                  // Filter Chips
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      children: ['All', 'Lecture', 'Lab'].map((filter) {
+                        final isSelected = filterComponent == filter;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: FilterChip(
+                            label: Text(filter),
+                            selected: isSelected,
+                            onSelected: (selected) {
+                              setModalState(() {
+                                filterComponent = filter;
+                              });
+                            },
+                            backgroundColor: Colors.white,
+                            selectedColor: const Color(0xFFEFF6FF),
+                            labelStyle: TextStyle(
+                              color: isSelected ? const Color(0xFF2563EB) : const Color(0xFF64748B),
+                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                              side: BorderSide(
+                                color: isSelected ? const Color(0xFFBFDBFE) : Colors.grey.shade200,
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Subject List
+                  Expanded(
+                    child: filteredGroups.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.search_off, size: 48, color: Colors.grey.shade300),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'No subjects found',
+                                  style: TextStyle(color: Colors.grey.shade500),
+                                ),
+                              ],
+                            ),
+                          )
+                        : ListView.builder(
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                            itemCount: filteredGroups.length,
+                            itemBuilder: (context, groupIndex) {
+                              final group = filteredGroups[groupIndex];
+                              final subjects = group['subjects'] as List<dynamic>;
+
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 12, top: 16),
+                                    child: Text(
+                                      group['group'],
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w700,
+                                        color: Color(0xFF475569),
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ),
+                                  ...subjects.map((subj) {
+                                    final bool assigned = subj['assigned'] == true;
+                                    final teacherName = subj['teacher_name'];
+                                    
+                                    // Check if it's already selected in our form
+                                    final isAlreadyAdded = _subjectAssignments.any((a) => a['id'] == subj['id']);
+
+                                    final bool isDisabled = assigned || isAlreadyAdded;
+
+                                    return InkWell(
+                                      onTap: isDisabled ? null : () {
+                                        setState(() {
+                                          _subjectAssignments.add({
+                                            'id': subj['id'],
+                                            'label': subj['label'],
+                                            'code': subj['code'],
+                                            'group': group['group'],
+                                            'component': subj['component'],
+                                          });
+                                        });
+                                        _updateFormState();
+                                        // update modal UI also (VERY IMPORTANT)
+                                        setModalState(() {});   
+                                      },
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Container(
+                                        margin: const EdgeInsets.only(bottom: 8),
+                                        padding: const EdgeInsets.all(16),
+                                        decoration: BoxDecoration(
+                                          color: isDisabled ? Colors.grey.shade50 : Colors.white,
+                                          borderRadius: BorderRadius.circular(12),
+                                          border: Border.all(
+                                            color: isDisabled ? Colors.grey.shade200 : const Color(0xFFE2E8F0),
+                                          ),
+                                          boxShadow: isDisabled ? null : const [
+                                            BoxShadow(
+                                              color: Color(0x05000000),
+                                              blurRadius: 4,
+                                              offset: Offset(0, 2),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    subj['label'] ?? '',
+                                                    style: TextStyle(
+                                                      fontSize: 15,
+                                                      fontWeight: FontWeight.w600,
+                                                      color: isDisabled ? const Color(0xFF94A3B8) : const Color(0xFF0F172A),
+                                                      decoration: isDisabled ? TextDecoration.lineThrough : null,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 4),
+                                                  Row(
+                                                    children: [
+                                                      Text(
+                                                        subj['code'] ?? '',
+                                                        style: TextStyle(
+                                                          fontSize: 13,
+                                                          color: isDisabled ? const Color(0xFFCBD5E1) : const Color(0xFF64748B),
+                                                          fontWeight: FontWeight.w500,
+                                                        ),
+                                                      ),
+                                                      if (assigned && teacherName != null) ...[
+                                                        const SizedBox(width: 8),
+                                                        Text(
+                                                          '• Assigned to $teacherName',
+                                                          style: const TextStyle(
+                                                            fontSize: 12,
+                                                            color: Color(0xFFEF4444),
+                                                            fontWeight: FontWeight.w500,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                      if (isAlreadyAdded) ...[
+                                                        const SizedBox(width: 8),
+                                                        const Text(
+                                                          '• Added to form',
+                                                          style: TextStyle(
+                                                            fontSize: 12,
+                                                            color: Color(0xFF2563EB),
+                                                            fontWeight: FontWeight.w500,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ],
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Icon(
+                                              isDisabled ? Icons.lock_outline : Icons.chevron_right_rounded,
+                                              color: isDisabled ? const Color(0xFFCBD5E1) : const Color(0xFFCBD5E1),
+                                              size: 20,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  }).toList(),
+                                ],
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+          },
+        );
+      },
     );
   }
 
@@ -526,22 +869,6 @@ class _AddTeacherPageState extends ConsumerState<AddTeacherPage> {
                 'No subjects assigned yet',
                 style: TextStyle(color: Colors.grey.shade500),
               ),
-              const SizedBox(height: 12),
-              ElevatedButton(
-                onPressed: () {
-                  setState(() {
-                    _subjectAssignments.add({'subject': null});
-                  });
-                  _updateFormState();
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: const Color(0xFF2563EB),
-                  elevation: 0,
-                  side: const BorderSide(color: Color(0xFFE2E8F0)),
-                ),
-                child: const Text('Assign Subject'),
-              ),
             ],
           ),
         ),
@@ -554,62 +881,73 @@ class _AddTeacherPageState extends ConsumerState<AddTeacherPage> {
       itemCount: _subjectAssignments.length,
       itemBuilder: (context, index) {
         final assignment = _subjectAssignments[index];
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12.0),
+        final type = assignment['component'] ?? 'Lecture';
+        final isLab = type == 'Lab';
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x05000000),
+                blurRadius: 4,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
           child: Row(
             children: [
-              Expanded(
-                child: _buildSubjectDropdown(
-                  value: assignment['subject'],
-                  onChanged: (newValue) {
-                    setState(() {
-                      assignment['subject'] = newValue;
-                    });
-                    _updateFormState();
-                  },
+              Container(
+                width: 4,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: isLab ? const Color(0xFFF59E0B) : const Color(0xFF3B82F6),
+                  borderRadius: BorderRadius.circular(4),
                 ),
               ),
-              const SizedBox(width: 8),
-              Container(
-                margin: const EdgeInsets.only(
-                  top: 28,
-                ), // Align with input field
-                child: IconButton(
-                  onPressed: () {
-                    setState(() {
-                      _subjectAssignments.removeAt(index);
-                    });
-                    _updateFormState();
-                  },
-                  icon: const Icon(Icons.delete_outline),
-                  color: Colors.red.shade400,
-                  style: IconButton.styleFrom(
-                    backgroundColor: const Color(0xFFFEF2F2),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      assignment['label'] ?? '',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF0F172A),
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${assignment['code'] ?? ''} • ${assignment['group'] ?? ''}',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF64748B),
+                      ),
+                    ),
+                  ],
                 ),
+              ),
+              IconButton(
+                onPressed: () {
+                  setState(() {
+                    _subjectAssignments.removeAt(index);
+                  });
+                  _updateFormState();
+                },
+                icon: const Icon(Icons.delete_outline_rounded),
+                color: Colors.red.shade400,
+                tooltip: 'Remove',
               ),
             ],
           ),
         );
       },
-    );
-  }
-
-  Widget _buildSubjectDropdown({
-    String? value,
-    required Function(String?) onChanged,
-  }) {
-    return Dropdown<String>(
-      label: "Subject",
-      hint: "Select Subject",
-      items: _subjects.map((subject) => subject['display'] as String).toList(),
-      value: value,
-      onChanged: onChanged,
-      validator: (val) => val == null ? "Please select subject" : null,
-      isRequired: true,
     );
   }
 
@@ -659,72 +997,89 @@ class _AddTeacherPageState extends ConsumerState<AddTeacherPage> {
   }
 
   Future<void> _saveTeacherDetails() async {
-    if (_formKey.currentState!.validate() && _isFormValid) {
-      // Hide keyboard
-      FocusScope.of(context).unfocus();
+  if (_formKey.currentState!.validate() && _isFormValid) {
+    // Hide keyboard
+    FocusScope.of(context).unfocus();
 
-      setState(() {
-        _isLoading = true;
-      });
+    setState(() {
+      _isLoading = true;
+    });
 
-      try {
-        final clerkRepo = ref.read(clerkRepositoryProvider);
+    try {
+      final clerkRepo = ref.read(clerkRepositoryProvider);
 
-        // Get subject IDs for selected subject assignments
-        final subjectsAssigned = _subjectAssignments.map((assignment) {
-          final displayString = assignment['subject'];
-          final subject = _subjects.firstWhere(
-            (s) => s['display'] == displayString,
-          );
-          return subject['id'] as String;
-        }).toList();
+      // Get subject IDs for selected subject assignments
+      final subjectsAssigned = _subjectAssignments.map((assignment) {
+        return assignment['id'] as String;
+      }).toList();
 
-        final teacherData = {
-          'first_name': _firstNameController.text.trim(),
-          'last_name': _lastNameController.text.trim(),
-          'email': _emailIdController.text.trim(),
-          'mobile_number': _mobileNumberController.text.trim(),
-          'subjects_assigned': subjectsAssigned,
-        };
+      final teacherData = {
+        'first_name': _firstNameController.text.trim(),
+        'last_name': _lastNameController.text.trim(),
+        'email': _emailIdController.text.trim(),
+        'mobile_number': _mobileNumberController.text.trim(),
+        'subjects_assigned': subjectsAssigned,
+      };
 
-        AppLogger.info('Teacher Data: $teacherData');
+      AppLogger.info('Teacher Data: $teacherData');
 
-        final result = await clerkRepo.createTeacher(teacherData);
+      final result = await clerkRepo.createTeacher(teacherData);
 
-        if (!mounted) return;
+      if (!mounted) return;
 
-        if (result['success'] == true) {
-          // Show success snackbar
-          showSuccessSnackBar(context, 'Teacher created successfully!');
+      if (result['success'] == true) {
+        // Show success snackbar
+        showSuccessSnackBar(context, 'Teacher created successfully!');
 
-          // Reset form after a short delay
-          await Future.delayed(const Duration(milliseconds: 500));
-          _resetForm();
+        // Reset form after a short delay
+        await Future.delayed(const Duration(milliseconds: 500));
+        _resetForm();
 
-          // Clear focus
-          FocusScope.of(context).requestFocus(FocusNode());
-        } else {
-          // Show error snackbar
-          showErrorSnackBar(
-            context,
-            '${result['error'] ?? 'Failed to create teacher'}',
-          );
+        // Clear focus
+        FocusScope.of(context).requestFocus(FocusNode());
+      } else {
+        // Build detailed error message
+        String errorMessage = '';
+        
+        // Check if there's a validation details field (for 422 errors)
+        if (result['details'] != null && result['details'] is List) {
+          final details = result['details'] as List;
+          if (details.isNotEmpty) {
+            errorMessage = 'Validation failed:\n';
+            for (var detail in details) {
+              errorMessage += '• ${detail['msg'] ?? detail['message'] ?? 'Invalid data'}\n';
+            }
+          } else {
+            errorMessage = result['message'] ?? 'Failed to create teacher';
+          }
+        } 
+        // Check if there's a technical error field
+        else if (result['error'] != null && result['error'].toString().isNotEmpty) {
+          errorMessage = result['error'].toString();
         }
-      } catch (error) {
-        // Show error snackbar for network/other errors
-        if (mounted) {
-          showErrorSnackBar(
-            context,
-            'Failed to save teacher: ${error.toString()}',
-          );
+        // Fallback to message field
+        else {
+          errorMessage = result['message'] ?? 'Failed to create teacher';
         }
-      } finally {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-        }
+        
+        // Show error snackbar with detailed message
+        showErrorSnackBar(context, errorMessage);
+      }
+    } catch (error) {
+      // Show error snackbar for network/other errors
+      if (mounted) {
+        showErrorSnackBar(
+          context,
+          'Failed to save teacher: ${error.toString()}',
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
   }
+}
 }

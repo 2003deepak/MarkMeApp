@@ -89,20 +89,27 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(dashboardRefreshProvider, (previous, next) {
-      if (next > 0) {
-        _retryFetch();
-      }
-    });
-
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth > 600;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(isDesktop ? 24.0 : 16.0),
-        child: _buildDashboardContent(isDesktop),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          setState(() {
+            isLoading = true;
+            errorMessage = '';
+          });
+          await Future.wait([
+            _fetchSessions(),
+            _fetchProfileData(),
+          ]);
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.all(isDesktop ? 24.0 : 16.0),
+          child: _buildDashboardContent(isDesktop),
+        ),
       ),
     );
   }
@@ -138,7 +145,7 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
           icon: Icons.notifications_active,
           title: 'Push Notification',
           onTap: () {
-            context.go('/teacher/push-notification');
+            context.push('/teacher/push-notification');
           },
           color: Colors.blue.shade600,
           index: 0,

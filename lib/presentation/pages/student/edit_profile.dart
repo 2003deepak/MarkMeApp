@@ -13,6 +13,7 @@ import 'package:markmeapp/presentation/widgets/ui/profile_picture.dart';
 import 'package:markmeapp/state/student_state.dart';
 import 'package:markmeapp/presentation/widgets/ui/app_bar.dart';
 import 'package:markmeapp/state/admin_state.dart';
+import 'package:markmeapp/state/auth_state.dart';
 import 'package:markmeapp/state/refresh_state.dart';
 import 'package:flutter/foundation.dart';
 import 'package:markmeapp/core/utils/snackbar_utils.dart';
@@ -132,10 +133,9 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   bool get _isSaveEnabled {
     if (!_isFormDirty || _isUpdating) return false;
 
-    // Check mandatory fields (all except middle name)
+    // Check mandatory fields (all except middle name and read-only email)
     if (_firstNameCtrl.text.trim().isEmpty ||
         _lastNameCtrl.text.trim().isEmpty ||
-        _emailCtrl.text.trim().isEmpty ||
         _phoneCtrl.text.trim().isEmpty ||
         _rollCtrl.text.trim().isEmpty ||
         _batchYearCtrl.text.trim().isEmpty ||
@@ -152,10 +152,12 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     return true;
   }
 
-  Future<void> _fetchProfileData() async {
-    setState(() {
-      _initialDataLoaded = false;
-    });
+  Future<void> _fetchProfileData({bool resetData = true}) async {
+    if (resetData) {
+      setState(() {
+        _initialDataLoaded = false;
+      });
+    }
     final studentStore = ref.read(studentStoreProvider.notifier);
     await studentStore.loadProfile();
   }
@@ -183,6 +185,9 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
 
       if (result['success'] == true) {
         await _handleUpdateSuccess();
+        ref.read(authStoreProvider.notifier).updateAccessToken(
+          result['data']['access_token'],
+        );
       } else {
         showAppSnackBar(
           result['message'] ?? 'Failed to update profile',
@@ -257,13 +262,13 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   Future<void> _handleUpdateSuccess() async {
     _initialData = _getCurrentFormData();
 
-    // First fetch (might still show false)
-    await _fetchProfileData();
+    // First fetch
+    await _fetchProfileData(resetData: false);
 
     // 🔥 Poll for 1–2 seconds until worker updates DB
     for (int i = 0; i < 4; i++) {
-      await Future.delayed(Duration(seconds: 1));
-      await _fetchProfileData();
+      await Future.delayed(const Duration(seconds: 1));
+      await _fetchProfileData(resetData: false);
 
       final profile = ref.read(studentStoreProvider).profile;
       if (profile?['is_embeddings'] == true) {
@@ -307,8 +312,8 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         _rollCtrl.text = profile['roll_number']?.toString() ?? '';
         _batchYearCtrl.text = profile['batch_year']?.toString() ?? '';
         _semesterCtrl.text = profile['semester']?.toString() ?? '1';
-        _program = profile['program'] ?? 'MCA';
-        _department = profile['department'] ?? 'BTECH';
+        _program = profile['program'] ?? '';
+        _department = profile['department'] ?? '';
         _semester = profile['semester'] ?? 1;
         _profilePicture = profile['profile_picture'];
 
@@ -395,7 +400,12 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   }
 
   void _handleProgramChanged(String? value) {
-    if (value != null) _updateValue(() => _program = value);
+    if (value != null) {
+      _updateValue(() {
+        _program = value;
+        _department = '';
+      });
+    }
   }
 
   void _handleDepartmentChanged(String? value) {
@@ -537,7 +547,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
 
     ref.listen(dashboardRefreshProvider, (previous, next) {
       if (next > 0) {
-        _fetchProfileData();
+        _fetchProfileData(resetData: true);
       }
     });
 
@@ -581,7 +591,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
           isLoading: _isUpdating,
         ),
         body: RefreshIndicator(
-          onRefresh: _fetchProfileData,
+          onRefresh: () => _fetchProfileData(resetData: true),
           color: Theme.of(context).primaryColor,
           child: Form(
             key: _formKey,

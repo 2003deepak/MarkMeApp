@@ -406,7 +406,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
 
           const SizedBox(height: 20),
           TextButton(
-            onPressed: _isLoading ? null : () => context.go('/login'),
+            onPressed: _isLoading ? null : () => context.push('/login'),
             child: Text(
               'Back to Login',
               style: TextStyle(

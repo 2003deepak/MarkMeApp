@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:markmeapp/data/repositories/student_repository.dart';
 import 'package:markmeapp/state/student_state.dart';
+import 'dart:async';
 import 'package:markmeapp/state/refresh_state.dart';
 
 class TimeTablePage extends ConsumerStatefulWidget {
@@ -22,6 +23,7 @@ class _TimeTableState extends ConsumerState<TimeTablePage>
   String errorMessage = '';
   late AnimationController _animationController;
   late Animation<double> _opacityAnimation;
+  Timer? _timeUpdateTimer;
 
   // Timeline configuration
   static const double pixelsPerHour = 100.0;
@@ -52,11 +54,17 @@ class _TimeTableState extends ConsumerState<TimeTablePage>
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
 
+    // Update the UI periodically to keep the timeline current
+    _timeUpdateTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
+      if (mounted) setState(() {});
+    });
+
     _fetchTimetable();
   }
 
   @override
   void dispose() {
+    _timeUpdateTimer?.cancel();
     _animationController.dispose();
     super.dispose();
   }
@@ -217,12 +225,6 @@ class _TimeTableState extends ConsumerState<TimeTablePage>
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(dashboardRefreshProvider, (previous, next) {
-      if (next > 0) {
-        _fetchTimetable();
-      }
-    });
-
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -437,8 +439,11 @@ class _TimeTableState extends ConsumerState<TimeTablePage>
         return Stack(
           children: [
             // Vertical scrollable content (time labels + events)
-            SingleChildScrollView(
-              child: SizedBox(
+            RefreshIndicator(
+              onRefresh: _fetchTimetable,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: SizedBox(
                 height: timelineHeight,
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -514,6 +519,10 @@ class _TimeTableState extends ConsumerState<TimeTablePage>
 
                           // Actual events with proper spacing
                           ..._buildEventWidgets(events),
+
+                          // Current time line
+                          if (_buildCurrentTimeLine() != null)
+                            _buildCurrentTimeLine()!,
                         ],
                       ),
                     ),
@@ -521,9 +530,53 @@ class _TimeTableState extends ConsumerState<TimeTablePage>
                 ),
               ),
             ),
+            ),
           ],
         );
       },
+    );
+  }
+
+  Widget? _buildCurrentTimeLine() {
+    final now = DateTime.now();
+    // Weekday is 1 (Mon) to 7 (Sun). Our index is 0 (Mon) to 5 (Sat).
+    final currentDayIndex = now.weekday - 1; 
+
+    // Only show the line if viewing the current day
+    if (currentDayIndex != selectedDayIndex) return null;
+
+    final currentHour = now.hour;
+    final currentMinute = now.minute;
+
+    // Check if within visible hours
+    if (currentHour < startHour || currentHour >= startHour + totalHours) {
+      return null;
+    }
+
+    final topPosition = (currentHour - startHour + currentMinute / 60.0) * pixelsPerHour;
+
+    return Positioned(
+      top: topPosition - 5, // offset by half the height of the circle to center it on the line
+      left: 0,
+      right: 0,
+      child: Row(
+        children: [
+          Container(
+            width: 10,
+            height: 10,
+            decoration: const BoxDecoration(
+              color: Colors.red,
+              shape: BoxShape.circle,
+            ),
+          ),
+          Expanded(
+            child: Container(
+              height: 2,
+              color: Colors.red,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

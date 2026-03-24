@@ -53,7 +53,7 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
 
       _controller = CameraController(
         _cameras!.first,
-        ResolutionPreset.low, // Lowered resolution to reduce buffer load
+        ResolutionPreset.veryHigh, // Lowered resolution to reduce buffer load
         enableAudio: false,
       );
 
@@ -401,7 +401,7 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
       // Create new controller with low resolution
       _controller = CameraController(
         newCamera,
-        ResolutionPreset.low,
+        ResolutionPreset.veryHigh,
         enableAudio: false,
       );
 

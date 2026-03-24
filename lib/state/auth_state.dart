@@ -374,6 +374,10 @@ class AuthStore extends StateNotifier<AuthState> {
     }
   }
 
+  Future<void> updateAccessToken(String newToken) async {
+    state = state.copyWith(accessToken: newToken);
+  }
+
   Future<void> clearSession(SharedPreferences prefs) async {
     await prefs.remove('refreshToken');
     await prefs.remove('fcmToken');

@@ -93,11 +93,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(dashboardRefreshProvider, (previous, next) {
-      if (next > 0) {
-        ref.read(teacherStoreProvider.notifier).loadProfile();
-      }
-    });
     final w = MediaQuery.of(context).size.width;
     final hPad = w < 380 ? 16.0 : 20.0;
     final state = ref.watch(teacherStoreProvider);
@@ -125,8 +120,13 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         backgroundColor: const Color(
           0xFFF8FAFC,
         ), // Light background similar to dashboard
-        body: SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(hPad, 16, hPad, 32),
+        body: RefreshIndicator(
+          onRefresh: () async {
+            await ref.read(teacherStoreProvider.notifier).loadProfile();
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: EdgeInsets.fromLTRB(hPad, 16, hPad, 32),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -241,18 +241,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 decoration: _cardDecoration,
                 child: Column(
                   children: [
-                    ProfileTab(
-                      icon: Icons.bar_chart_rounded,
-                      label: 'Attendance Summary',
-                      subtitle: 'View your attendance statistics',
-                      onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Open Attendance Summary'),
-                          ),
-                        );
-                      },
-                    ),
+                    
                     Container(
                       height: 1,
                       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -332,11 +321,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       icon: Icons.help_outline_rounded,
                       label: 'Help & Support',
                       subtitle: 'Get assistance',
-                      onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Open Help & Support')),
-                        );
-                      },
+                      onTap: () => context.push('/teacher/faq'),
                     ),
                     Container(
                       height: 1,
@@ -441,6 +426,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               ),
             ],
           ),
+        ),
         ),
       ),
     );

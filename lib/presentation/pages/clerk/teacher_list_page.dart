@@ -140,6 +140,13 @@ class _TeacherListPageState extends ConsumerState<TeacherListPage> {
     }
   }
 
+  int get _activeFilterCount {
+    int count = 0;
+    if (_selectedProgram != null) count++;
+    if (_selectedDepartment != null) count++;
+    return count;
+  }
+
   @override
   void dispose() {
     _debounceTimer?.cancel();
@@ -199,28 +206,20 @@ class _TeacherListPageState extends ConsumerState<TeacherListPage> {
           const SizedBox(height: 24),
 
           // Search and Filter Row
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: AppSearchBar(
-                    controller: _searchController,
-                    hintText: 'Search by name, email, or ID...',
-                    onChanged: (txt) {
-                      if (txt.isEmpty) _fetchTeachers();
-                    },
-                    onClear: () {
-                      _searchController.clear();
-                      _fetchTeachers();
-                    },
-                  ),
-                ),
-                const SizedBox(width: 8),
-                _buildFilterButton(isDark),
-              ],
-            ),
+          AppSearchBar(
+            controller: _searchController,
+            hintText: 'Search by name, email, or ID...',
+            onChanged: (txt) {
+              if (txt.isEmpty) _fetchTeachers();
+            },
+            onClear: () {
+              _searchController.clear();
+              _fetchTeachers();
+            },
+            onFilterTap: _showFilterSheet, 
+            activeFilterCount: _activeFilterCount, 
           ),
+                  
 
           // Error Message
           _buildErrorMessage(),

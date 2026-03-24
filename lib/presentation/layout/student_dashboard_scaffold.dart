@@ -62,14 +62,7 @@ class StudentDashboardScaffold extends ConsumerWidget {
           const SizedBox(width: 8),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          ref.read(dashboardRefreshProvider.notifier).state++;
-          // Give it a small delay to show the indicator
-          await Future.delayed(const Duration(milliseconds: 1000));
-        },
-        child: navigationShell,
-      ),
+      body: navigationShell,
       bottomNavigationBar: NavigationBar(
         selectedIndex: navigationShell.currentIndex,
         onDestinationSelected: (index) => _onTap(context, index),

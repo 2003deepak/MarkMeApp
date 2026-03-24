@@ -265,7 +265,7 @@ class _StudentListPageState extends ConsumerState<StudentListPage> {
           const SizedBox(height: 24),
           AppSearchBar(
             controller: _searchController,
-            hintText: 'Search students by name, email, or roll number...',
+            hintText: 'Search by name, email, or roll number...',
             onChanged: (txt) => _debounceSearch(),
             onFilterTap: _showFilterBottomSheet,
             activeFilterCount: _activeFilterCount,

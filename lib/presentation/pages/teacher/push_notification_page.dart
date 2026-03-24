@@ -81,7 +81,7 @@ class _PushNotificationPageState extends ConsumerState<PushNotificationPage> {
       backgroundColor: _backgroundColor,
       appBar: MarkMeAppBar(
         title: 'Push Notification',
-        onBackPressed: () => context.push("/teacher"),
+        onBackPressed: () => context.pop(),
       ),
       body: SafeArea(
         child: Column(

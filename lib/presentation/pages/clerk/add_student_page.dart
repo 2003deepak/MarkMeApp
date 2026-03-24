@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:markmeapp/data/models/user_model.dart';
-import 'package:markmeapp/data/repositories/auth_repository.dart';
+import 'package:markmeapp/data/repositories/clerk_repository.dart';
 import 'package:markmeapp/presentation/widgets/ui/input_field.dart';
 import 'package:markmeapp/presentation/widgets/ui/otp_field.dart';
 import 'package:markmeapp/presentation/widgets/ui/snackbar.dart';
@@ -87,15 +87,15 @@ class _AddStudentPageState extends ConsumerState<AddStudentPage> {
       });
 
       try {
-        final authRepo = ref.read(authRepositoryProvider);
+        final clerkRepo = ref.read(clerkRepositoryProvider);
 
         final user = User(
           firstName: _firstNameController.text.trim(),
           lastName: _lastNameController.text.trim(),
-          email: _emailController.text.trim()
+          email: _emailController.text.trim(),
         );
 
-        final result = await authRepo.registerUser(
+        final result = await clerkRepo.registerUser(
           user,
           program: _selectedProgram,
           department: _selectedDepartment,
@@ -112,7 +112,7 @@ class _AddStudentPageState extends ConsumerState<AddStudentPage> {
         } else {
           showErrorSnackBar(
             context,
-            result['message'] ?? 'Failed to register student',
+            result['error'] ?? 'Failed to register student',
           );
         }
       } catch (e) {
@@ -149,7 +149,7 @@ class _AddStudentPageState extends ConsumerState<AddStudentPage> {
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: MarkMeAppBar(
         title: 'Add Student',
-        onBackPressed: _isLoading ? null : () => context.go("/clerk"),
+        onBackPressed: _isLoading ? null : () => context.pop(),
         isLoading: _isLoading,
       ),
       body: SafeArea(

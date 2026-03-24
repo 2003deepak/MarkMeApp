@@ -37,7 +37,7 @@ class _RaiseExceptionPageState extends ConsumerState<RaiseExceptionPage> {
   List<int> _activeWeekdays = [];
 
   String? _selectedSessionId;
-  String? _selectedClassId;
+  String? _selectedSubjectId;
 
   // UI State
   bool _isLoading = false;
@@ -221,7 +221,7 @@ class _RaiseExceptionPageState extends ConsumerState<RaiseExceptionPage> {
     switch (_selectedAction) {
       case 'Add':
         return _selectedDate != null &&
-            _selectedClassId != null &&
+            _selectedSubjectId != null &&
             _selectedStartTime != null &&
             _selectedEndTime != null &&
             _selectedEndTime!.hour * 60 + _selectedEndTime!.minute >
@@ -267,12 +267,18 @@ class _RaiseExceptionPageState extends ConsumerState<RaiseExceptionPage> {
             '${_selectedEndTime!.minute.toString().padLeft(2, '0')}';
       }
 
-      final effectiveSessionId = _selectedAction == 'Add'
-          ? _selectedClassId!
-          : _selectedSessionId!;
+      String? sessionId;
+      String? subjectId;
+
+      if (_selectedAction == 'Add') {
+        subjectId = _selectedSubjectId;
+      } else {
+        sessionId = _selectedSessionId;
+      }
 
       final result = await repo.raiseSessionException(
-        sessionId: effectiveSessionId,
+        sessionId: sessionId,
+        subjectId: subjectId,
         date: _dateController.text,
         action: _selectedAction,
         reason: _reasonController.text.trim(),
@@ -284,7 +290,11 @@ class _RaiseExceptionPageState extends ConsumerState<RaiseExceptionPage> {
       if (mounted) {
         if (result['success'] == true) {
           _showSuccess(result['message']);
-          context.push('/teacher');
+          if (context.canPop()) {
+            context.pop();
+          } else {
+            context.go('/teacher');
+          }
         } else if (result['code'] == 'OVERLAP_FOUND') {
           setState(() {
             _overlapData = result['data'];
@@ -636,8 +646,8 @@ class _RaiseExceptionPageState extends ConsumerState<RaiseExceptionPage> {
       label: 'Select Subject/Class',
       hint: 'Select a class',
       items: flatSubjects.map<String>((e) => e['id'] as String).toList(),
-      value: _selectedClassId,
-      onChanged: (val) => setState(() => _selectedClassId = val),
+      value: _selectedSubjectId,
+      onChanged: (val) => setState(() => _selectedSubjectId = val),
       displayText: getClassDisplay,
     );
   }

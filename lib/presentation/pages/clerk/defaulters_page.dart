@@ -202,6 +202,8 @@ class _DefaultersPageState extends ConsumerState<DefaultersPage> {
       ),
       body: Column(
         children: [
+
+          SizedBox(height: 20), // Vertical space
           AppSearchBar(
             controller: _searchController,
             hintText: 'Search by name...',

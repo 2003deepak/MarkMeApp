@@ -120,7 +120,11 @@ class _SessionPageState extends State<SessionPage>
   void _handleBackPressed() {
     if (mounted) {
       HapticFeedback.lightImpact();
-      context.go('/teacher');
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go('/teacher');
+      }
     }
   }
 

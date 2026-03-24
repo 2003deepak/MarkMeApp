@@ -12,6 +12,7 @@ import 'package:markmeapp/state/auth_state.dart';
 import 'package:markmeapp/data/repositories/teacher_repository.dart';
 import 'package:intl/intl.dart';
 import 'package:markmeapp/presentation/widgets/ui/custom_bottom_sheet_layout.dart';
+import 'package:markmeapp/state/clerk_state.dart';
 import 'package:markmeapp/presentation/widgets/ui/multi_select_dropdown.dart';
 import 'package:markmeapp/state/refresh_state.dart';
 import 'package:markmeapp/presentation/widgets/ui/error.dart';
@@ -38,6 +39,7 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
   List<String> _selectedPrograms = [];
   List<String> _selectedSemesters = [];
   List<String> _selectedDepartments = [];
+  Map<String, List<String>> _programDepartmentsMap = {};
 
   // Available Metadata (for dropdowns)
   final List<String> _availablePrograms = ['MCA', "AI"]; // Default
@@ -85,6 +87,7 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
       await _fetchTeacherSubjects();
       await _fetchAttendanceData();
     } else if (role == 'clerk') {
+      await _fetchClerkScope();
       await _fetchClerkSubjects();
       await _fetchAttendanceData();
     } else {
@@ -143,18 +146,76 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
     }
   }
 
+  Future<void> _fetchClerkScope() async {
+    try {
+      final clerkState = ref.read(clerkStoreProvider);
+      
+      // Try to load if not available
+      if (clerkState.profile == null) {
+        await ref.read(clerkStoreProvider.notifier).loadProfile();
+      }
+
+      final profile = ref.read(clerkStoreProvider).profile;
+      
+      if (profile != null) {
+        final scope = profile.academicScopes;
+        
+        final Set<String> programs = {};
+        final Set<String> departments = {};
+        final Map<String, Set<String>> programDeptMapping = {};
+        
+        // Also include the clerk's primary department/program if they exist
+        if (profile.program != null && profile.department != null) {
+          programs.add(profile.program!);
+          departments.add(profile.department!);
+          programDeptMapping.putIfAbsent(profile.program!, () => {}).add(profile.department!);
+        }
+
+        for (var s in scope) {
+          if (s.programId.isNotEmpty) programs.add(s.programId);
+          if (s.departmentId.isNotEmpty) departments.add(s.departmentId);
+          
+          if (s.programId.isNotEmpty && s.departmentId.isNotEmpty) {
+            programDeptMapping.putIfAbsent(s.programId, () => {}).add(s.departmentId);
+          }
+        }
+        
+        final Map<String, List<String>> finalMapping = {};
+        programDeptMapping.forEach((k, v) => finalMapping[k] = v.toList()..sort());
+
+        if (mounted) {
+          setState(() {
+            _programDepartmentsMap = finalMapping;
+
+            _availablePrograms.clear();
+            _availablePrograms.addAll(programs.toList()..sort());
+            
+            _availableDepartments.clear();
+            _availableDepartments.addAll(departments.toList()..sort());
+            
+            // Semesters are not in academic scope, default to 1-8
+            _availableSemesters.clear();
+            _availableSemesters.addAll(List.generate(8, (i) => (i + 1).toString()));
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching clerk scope: $e');
+    }
+  }
+
   Future<void> _fetchClerkSubjects() async {
     try {
       final clerkRepo = ref.read(clerkRepositoryProvider);
 
-      final response = await clerkRepo.fetchSubjects(mode: "subject_listing");
+      final response = await clerkRepo.fetchSubjects();
 
       if (response['success'] == true) {
         final List data = response['data'] ?? [];
 
         final subjects = data.map<Map<String, String>>((e) {
           return {
-            'id': e['subject_id'],
+            'id': e['subject_id']?.toString() ?? e['_id']?.toString() ?? '',
             'name': '${e['subject_name']} (${e['component']})',
           };
         }).toList();
@@ -354,12 +415,6 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(dashboardRefreshProvider, (previous, next) {
-      if (next > 0) {
-        _fetchAttendanceData();
-      }
-    });
-
     final role = ref.watch(authStoreProvider.select((s) => s.role));
     final isStudent = role == 'student';
 
@@ -391,14 +446,18 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
               Expanded(
                 child: _isLoading
                     ? const Center(child: CircularProgressIndicator())
-                    : ListView(
-                        padding: const EdgeInsets.fromLTRB(
-                          20,
-                          8,
-                          20,
-                          80,
-                        ), // Added bottom padding for FAB
-                        children: _buildContent(),
+                    : RefreshIndicator(
+                        onRefresh: _initializePage,
+                        child: ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(
+                            20,
+                            8,
+                            20,
+                            80,
+                          ), // Added bottom padding for FAB
+                          children: _buildContent(),
+                        ),
                       ),
               ),
             ],
@@ -544,6 +603,7 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
         availableDepartments: _availableDepartments,
         availableTeacherSubjects: _availableTeacherSubjects,
         availableClerkSubjects: _availableClerkSubjects,
+        programDepartmentsMap: _programDepartmentsMap,
 
         onApply: (progs, sems, depts, subs) {
           setState(() {
@@ -1179,7 +1239,7 @@ class AttendanceDayStatus {
 
 enum AttendanceStatus { present, absent, late, none, current }
 
-class FilterBottomSheet extends StatefulWidget {
+class FilterBottomSheet extends ConsumerStatefulWidget {
   final String role;
   final List<String> initialPrograms;
   final List<String> initialSemesters;
@@ -1190,6 +1250,7 @@ class FilterBottomSheet extends StatefulWidget {
   final List<String> availableDepartments;
   final List<Map<String, String>> availableTeacherSubjects;
   final List<Map<String, String>> availableClerkSubjects;
+  final Map<String, List<String>> programDepartmentsMap;
   final Function(List<String>, List<String>, List<String>, List<String>)
   onApply;
 
@@ -1205,18 +1266,20 @@ class FilterBottomSheet extends StatefulWidget {
     required this.availableDepartments,
     required this.availableTeacherSubjects,
     required this.availableClerkSubjects,
+    this.programDepartmentsMap = const {},
     required this.onApply,
   });
 
   @override
-  State<FilterBottomSheet> createState() => _FilterBottomSheetState();
+  ConsumerState<FilterBottomSheet> createState() => _FilterBottomSheetState();
 }
 
-class _FilterBottomSheetState extends State<FilterBottomSheet> {
+class _FilterBottomSheetState extends ConsumerState<FilterBottomSheet> {
   List<String> _programs = [];
   List<String> _semesters = [];
   List<String> _departments = [];
   List<String> _subjectIds = [];
+  List<Map<String, String>> _dynamicClerkSubjects = [];
 
   @override
   void initState() {
@@ -1225,6 +1288,50 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
     _semesters = List.from(widget.initialSemesters);
     _departments = List.from(widget.initialDepartments);
     _subjectIds = List.from(widget.initialSubjectIds);
+    _dynamicClerkSubjects = List.from(widget.availableClerkSubjects);
+  }
+
+  Future<void> _fetchDynamicSubjects() async {
+    if (widget.role != 'clerk') return;
+
+    if (_programs.isEmpty || _departments.isEmpty || _semesters.isEmpty) {
+      if (mounted) {
+        setState(() {
+          _dynamicClerkSubjects = [];
+          _subjectIds = [];
+        });
+      }
+      return;
+    }
+
+    try {
+      final clerkRepo = ref.read(clerkRepositoryProvider);
+      final response = await clerkRepo.fetchSubjects(
+        program: _programs.isNotEmpty ? _programs.join(',') : null,
+        department: _departments.isNotEmpty ? _departments.join(',') : null,
+        semester: _semesters.isNotEmpty ? _semesters.join(',') : null,
+      );
+
+      if (response['success'] == true) {
+        final List data = response['data'] ?? [];
+        final subjects = data.map<Map<String, String>>((e) {
+          return {
+            'id': e['subject_id']?.toString() ?? e['_id']?.toString() ?? '',
+            'name': '${e['subject_name']} (${e['component']})',
+          };
+        }).toList();
+
+        if (mounted) {
+          setState(() {
+            _dynamicClerkSubjects = subjects;
+            final availableIds = subjects.map((e) => e['id']!).toList();
+            _subjectIds = _subjectIds.where((id) => availableIds.contains(id)).toList();
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching specific clerk subjects: $e');
+    }
   }
 
   @override
@@ -1268,24 +1375,50 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
           ],
 
           if (widget.role == 'admin' || widget.role == 'clerk') ...[
-            if (widget.role == 'admin') ...[
-              MultiSelectDropdown<String>(
-                label: 'Department',
-                hint: 'Select Department',
-                items: widget.availableDepartments,
-                selectedValues: _departments,
-                onChanged: (v) => setState(() => _departments = v),
-              ),
-              const SizedBox(height: 20),
-            ],
 
             MultiSelectDropdown<String>(
               label: 'Program',
               hint: 'Select Program',
               items: widget.availablePrograms,
               selectedValues: _programs,
-              onChanged: (v) => setState(() => _programs = v),
+              onChanged: (v) {
+                setState(() {
+                  _programs = v;
+                  _departments = []; // Reset departments when program changes
+                });
+                _fetchDynamicSubjects();
+              },
             ),
+            const SizedBox(height: 20),
+
+            if (widget.role == 'admin' || widget.role == 'clerk') ...[
+              Builder(
+                builder: (context) {
+                  List<String> displayDepartments = widget.availableDepartments;
+                  
+                  if (_programs.isNotEmpty && widget.programDepartmentsMap.isNotEmpty) {
+                    final Set<String> validDepts = {};
+                    for (final p in _programs) {
+                      validDepts.addAll(widget.programDepartmentsMap[p] ?? []);
+                    }
+                    if (validDepts.isNotEmpty) {
+                      displayDepartments = validDepts.toList()..sort();
+                    }
+                  }
+
+                  return MultiSelectDropdown<String>(
+                    label: 'Department',
+                    hint: 'Select Department',
+                    items: displayDepartments,
+                    selectedValues: _departments.where((d) => displayDepartments.contains(d)).toList(),
+                    onChanged: (v) {
+                      setState(() => _departments = v);
+                      _fetchDynamicSubjects();
+                    },
+                  );
+                }
+              ),
+            ],
             const SizedBox(height: 20),
 
             MultiSelectDropdown<String>(
@@ -1293,7 +1426,10 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
               hint: 'Select Semester',
               items: widget.availableSemesters,
               selectedValues: _semesters,
-              onChanged: (v) => setState(() => _semesters = v),
+              onChanged: (v) {
+                setState(() => _semesters = v);
+                _fetchDynamicSubjects();
+              },
             ),
             const SizedBox(height: 20),
 
@@ -1301,13 +1437,13 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
               MultiSelectDropdown<String>(
                 label: 'Subject',
                 hint: 'Select Subject',
-                items: widget.availableClerkSubjects
+                items: _dynamicClerkSubjects
                     .map((e) => e['id']!)
                     .toList(),
                 selectedValues: _subjectIds,
                 onChanged: (v) => setState(() => _subjectIds = v),
                 displayText: (id) =>
-                    widget.availableClerkSubjects.firstWhere(
+                    _dynamicClerkSubjects.firstWhere(
                       (e) => e['id'] == id,
                       orElse: () => {'name': id},
                     )['name'] ??

@@ -355,7 +355,8 @@ class TeacherRepository {
   }
 
   Future<Map<String, dynamic>> raiseSessionException({
-    required String sessionId,
+    String? sessionId,
+    String? subjectId,
     required String date,
     required String action,
     required String reason,
@@ -368,12 +369,19 @@ class TeacherRepository {
       const url = '/teacher/create-exception';
 
       final Map<String, dynamic> body = {
-        'session_id': sessionId,
         'date': date,
         'action': action,
         'reason': reason,
         'confirm_swap': confirmSwap,
       };
+
+      if (sessionId != null) {
+        body['session_id'] = sessionId;
+      }
+
+      if (subjectId != null) {
+        body['subject_id'] = subjectId;
+      }
 
       if (newStartTime != null) body['new_start_time'] = newStartTime;
       if (newEndTime != null) body['new_end_time'] = newEndTime;
@@ -586,7 +594,7 @@ class TeacherRepository {
 
 
       // Send PUT request to the correct endpoint
-      final response = await _dio.put(
+      final response = await _dio.patch(
         '/teacher/me/update-profile',
         data: formData,
         options: Options(

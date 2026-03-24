@@ -66,7 +66,7 @@ class LectureCardWidget extends StatelessWidget {
     enhancedData['navigation_timestamp'] = DateTime.now().toIso8601String();
 
     // ✅ ONLY TEACHER can navigate
-    context.go('/teacher/session/$sessionId', extra: enhancedData);
+    context.push('/teacher/session/$sessionId', extra: enhancedData);
   }
 
   @override

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:markmeapp/presentation/widgets/ui/snackbar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -383,9 +384,9 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
     if (data['status'] == 'progress') {
       // Progress update handling
     } else if (data['status'] == 'image_processed') {
-      if (data['annotated_image_base64'] != null) {
+      if (data['annotated_image_url'] != null) {
         setState(() {
-          _annotatedImages.add(data['annotated_image_base64'].toString());
+          _annotatedImages.add(data['annotated_image_url'].toString());
         });
       }
     } else if (data['status'] == 'complete') {
@@ -529,6 +530,96 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
         ],
       ),
       centerTitle: true,
+      actions: [
+        if (_annotatedImages.isNotEmpty)
+          IconButton(
+            icon: const Icon(Icons.photo_library_outlined, color: Colors.white),
+            tooltip: 'View Processed Images',
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              _showAnnotatedImagesDialog();
+            },
+          ),
+      ],
+    );
+  }
+
+  void _showAnnotatedImagesDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: const Color(0xFF1E293B),
+          insetPadding: const EdgeInsets.all(16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.only(left: 8.0),
+                      child: Text(
+                        'Processed Images',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(
+                height: MediaQuery.of(context).size.height * 0.6,
+                child: PageView.builder(
+                  itemCount: _annotatedImages.length,
+                  itemBuilder: (context, index) {
+                    return InteractiveViewer(
+                      minScale: 0.5,
+                      maxScale: 4.0,
+                      child: CachedNetworkImage(
+                        imageUrl: _annotatedImages[index],
+                        fit: BoxFit.contain,
+                        placeholder: (context, url) => const Center(
+                          child: CircularProgressIndicator(color: Colors.white),
+                        ),
+                        errorWidget: (context, url, _) => Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: const [
+                            Icon(Icons.broken_image, color: Colors.white54, size: 48),
+                            SizedBox(height: 8),
+                            Text("Failed to load image", style: TextStyle(color: Colors.white54)),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              if (_annotatedImages.length > 1)
+                Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Text(
+                    'Swipe to see more (${_annotatedImages.length} images)',
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
+                ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -912,7 +1003,6 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
   }
 
   Widget _buildSubmitButton(int presentCount, int totalCount) {
-    final hasMarkedAttendance = presentCount > 0;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -938,7 +1028,7 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: hasMarkedAttendance && !_isSubmitting
+                onPressed:!_isSubmitting
                     ? _handleAttendanceSubmission
                     : null,
                 style: ElevatedButton.styleFrom(
@@ -1040,51 +1130,27 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
           _isSubmitting = false;
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.error, color: Colors.white, size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  resp['message']?.toString() ?? 'Failed to submit attendance',
-                ),
-              ],
-            ),
-            backgroundColor: const Color(0xFFEF4444),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            duration: const Duration(seconds: 3),
-          ),
+        showErrorSnackBar(
+          context,
+          resp['message']?.toString() ?? 'Failed to submit attendance',
         );
       }
       return;
     } else {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle, color: Colors.white, size: 20),
-                const SizedBox(width: 8),
-                Text(resp['message']?.toString() ?? 'Attendance submitted'),
-              ],
-            ),
-            backgroundColor: const Color(0xFF10B981),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            duration: const Duration(seconds: 3),
-          ),
+        showSuccessSnackBar(
+          context,
+          resp['message']?.toString() ?? 'Attendance submitted',
         );
 
         // Navigate back after a short delay
         Future.delayed(const Duration(seconds: 2), () {
           if (mounted) {
-            context.go("/teacher");
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/teacher');
+            }
           }
         });
       }
@@ -1170,7 +1236,11 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
         _showSnackBar('Attendance updated successfully');
         Future.delayed(const Duration(seconds: 2), () {
           if (mounted) {
-            context.go("/teacher");
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/teacher');
+            }
           }
         });
       }
@@ -1178,26 +1248,10 @@ class _AttendanceMarkingPageState extends ConsumerState<AttendanceMarkingPage>
   }
 
   void _showSnackBar(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(
-              isError ? Icons.error : Icons.check_circle,
-              color: Colors.white,
-              size: 20,
-            ),
-            const SizedBox(width: 8),
-            Text(message),
-          ],
-        ),
-        backgroundColor: isError
-            ? const Color(0xFFEF4444)
-            : const Color(0xFF10B981),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        duration: const Duration(seconds: 3),
-      ),
-    );
+    if (isError) {
+      showErrorSnackBar(context, message);
+    } else {
+      showSuccessSnackBar(context, message);
+    }
   }
 }

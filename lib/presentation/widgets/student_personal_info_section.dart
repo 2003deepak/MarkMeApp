@@ -106,6 +106,7 @@ class StudentPersonalInfoSection extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Calendar(
+            key: ValueKey(dob),
             controller: dobCtrl,
             label: 'Date of Birth',
             isRequired: true,

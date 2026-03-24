@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:markmeapp/presentation/widgets/dashboard_action_card.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:markmeapp/state/refresh_state.dart';
+import 'package:markmeapp/state/clerk_state.dart';
 
 class ClerkDashboardPage extends ConsumerStatefulWidget {
   const ClerkDashboardPage({super.key});
@@ -16,6 +17,10 @@ class _ClerkDashboardPageState extends ConsumerState<ClerkDashboardPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(clerkStoreProvider.notifier).loadProfile();
+    });
+
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,

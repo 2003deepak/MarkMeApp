@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
+import 'package:markmeapp/data/models/user_model.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:markmeapp/core/network/api_client.dart';
 import 'package:markmeapp/core/utils/app_logger.dart';
@@ -8,6 +9,77 @@ class ClerkRepository {
   final Dio _dio;
 
   ClerkRepository(this._dio);
+
+  
+
+  Future<Map<String, dynamic>> registerUser(
+    User user, {
+    String? program,
+    String? department,
+    int? semester,
+  }) async {
+    AppLogger.info(
+      '🔵 [AuthRepository] registerUser called with email: ${user.email}',
+    );
+
+    try {
+      final url = '/clerk/student';
+      AppLogger.info('🔵 [AuthRepository] Making POST request to: $url');
+
+      final response = await _dio.post(
+        url,
+        data: {
+          'first_name': user.firstName,
+          'last_name': user.lastName,
+          'email': user.email,
+          'password': user.password,
+          if (program != null) 'program': program,
+          if (department != null) 'department': department,
+          if (semester != null) 'semester': semester,
+        },
+      );
+
+      AppLogger.info(
+        '🔵 [AuthRepository] HTTP Status Code: ${response.statusCode}',
+      );
+      AppLogger.info('🔵 [AuthRepository] Response Body: ${response.data}');
+
+      final responseBody = response.data;
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        if (responseBody['success'] == true) {
+          AppLogger.info('🟢 [AuthRepository] Registration successful');
+          return {'success': true, 'data': responseBody['data']};
+        } else {
+          return {
+            'success': false,
+            'message': responseBody['message'] ?? 'Registration failed',
+            'error': responseBody['error'] ?? 'Failed to register student',
+          };
+        }
+      } else {
+        return {
+          'success': false,
+          'message':
+              responseBody['message'] ?? 'Server error: ${response.statusCode}',
+          'error': responseBody['error'] ?? 'Failed to register student',
+        };
+      }
+    } on DioException catch (e) {
+      AppLogger.error('🔴 [AuthRepository] DioException caught: $e');
+      AppLogger.error(
+        '🔴 [AuthRepository] Error response: ${e.response?.data}',
+
+      );
+
+      final errorMessage =
+          e.response?.data?['message'] ?? e.message ?? 'Network error occurred';
+      return {'success': false, 'message': errorMessage, 'error': e.response?.data?['error'] ?? 'Failed to register student'};
+    } catch (e) {
+      AppLogger.error('🔴 [AuthRepository] Exception caught: $e');
+      return {'success': false, 'message': e.toString(), 'error': 'Failed to register student'};
+    }
+  }
 
   Future<Map<String, dynamic>> fetchProfile() async {
     try {
@@ -102,44 +174,37 @@ class ClerkRepository {
       } else {
         return {
           'success': false,
-          'error': responseData['message'] ?? 'Failed to create subject',
+          'message': responseData['message'] ?? 'Subject Created Successfully',
+          'error': responseData['error'] ?? 'Failed to create subject',
         };
       }
     } on DioException catch (e) {
       AppLogger.error("Dio error: $e");
       return {
         'success': false,
-        'error': e.response?.data?['message'] ?? e.message ?? 'Network error',
+        'message': e.response?.data?['message'] ?? 'Subject Creation Failed',
+        'error': e.response?.data?['error'] ?? 'Failed to create subject',
       };
     } catch (e) {
       AppLogger.error("Other error: $e");
-      return {'success': false, 'error': e.toString()};
+      return {'success': false, 'message': 'Subject Creation Failed', 'error': e.toString()};
     }
   }
 
   Future<Map<String, dynamic>> fetchSubjects({
+    String? department,
     String? program,
-    int? semester,
-    String? mode = 'subject_teacher_listing',
+    String? semester,
   }) async {
     try {
-      final Map<String, dynamic> query = {};
-
-      if (program != null && program.trim().isNotEmpty) {
-        query['program'] = program.trim();
-      }
-
-      if (semester != null) {
-        query['semester'] = semester;
-      }
-
-      if (mode != null && mode.trim().isNotEmpty) {
-        query['mode'] = mode.trim();
-      }
+      final Map<String, dynamic> queryParams = {};
+      if (program != null && program.isNotEmpty) queryParams['program'] = program;
+      if (department != null && department.isNotEmpty) queryParams['department'] = department;
+      if (semester != null && semester.isNotEmpty) queryParams['semester'] = semester;
 
       final response = await _dio.get(
-        '/clerk/subject',
-        queryParameters: query.isNotEmpty ? query : null,
+        '/timetable/subject',
+        queryParameters: queryParams,
       );
 
       if (response.statusCode == 200) {
@@ -164,7 +229,36 @@ class ClerkRepository {
     }
   }
 
-  Future<Map<String, dynamic>> createTeacher(Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> fetchAssignableSubjects() async {
+    try {
+      
+      final response = await _dio.get(
+        '/clerk/subject/assignable',
+      );
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'data': response.data['data'],
+          'message': response.data['message'],
+        };
+      } else {
+        return {
+          'success': false,
+          'error': response.data['message'] ?? 'Failed to fetch assignable subjects',
+        };
+      }
+    } on DioException catch (e) {
+      return {
+        'success': false,
+        'error': e.response?.data?['message'] ?? e.message ?? 'Network error',
+      };
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+Future<Map<String, dynamic>> createTeacher(Map<String, dynamic> data) async {
     try {
       // Prepare request body according to API
       final requestBody = {
@@ -197,20 +291,43 @@ class ClerkRepository {
       if (response.statusCode == 200 || response.statusCode == 201) {
         return responseData;
       } else {
+        // For non-success status codes, return the error details
         return {
           'success': false,
-          'error': responseData['message'] ?? 'Failed to create teacher',
+          'message': responseData['message'] ?? 'Failed to create teacher',
+          'error': responseData['error'], 
         };
       }
     } on DioException catch (e) {
       AppLogger.error("Dio error: $e");
+      
+      // Extract error details from DioException
+      Map<String, dynamic> errorResponse = {};
+      if (e.response?.data != null) {
+        if (e.response!.data is String) {
+          try {
+            errorResponse = json.decode(e.response!.data);
+          } catch (_) {
+            errorResponse = {'message': e.response!.data};
+          }
+        } else if (e.response!.data is Map<String, dynamic>) {
+          errorResponse = e.response!.data;
+        }
+      }
+      
       return {
         'success': false,
-        'error': e.response?.data?['message'] ?? e.message ?? 'Network error',
+        'message': errorResponse['message'] ?? e.message ?? 'Network error',
+        'error': errorResponse['error'], 
+        'statusCode': e.response?.statusCode,
       };
     } catch (e) {
       AppLogger.error("Other error: $e");
-      return {'success': false, 'error': e.toString()};
+      return {
+        'success': false, 
+        'message': e.toString(),
+        'error': e.toString(),
+      };
     }
   }
 

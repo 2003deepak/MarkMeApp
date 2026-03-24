@@ -178,7 +178,11 @@ class _EditProfilePageState extends ConsumerState<ClerkEditProfilePage> {
     if (mounted) {
       setState(() => _isFormDirty = false);
       _showSnackBar('Profile updated successfully', Colors.green);
-      context.go("/clerk/profile");
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go("/clerk/profile");
+      }
     }
   }
 
@@ -396,7 +400,11 @@ class _EditProfilePageState extends ConsumerState<ClerkEditProfilePage> {
     if (_isFormDirty) {
       _showUnsavedChangesDialog();
     } else {
-      context.go("/clerk/profile");
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go("/clerk/profile");
+      }
     }
   }
 
@@ -416,7 +424,11 @@ class _EditProfilePageState extends ConsumerState<ClerkEditProfilePage> {
           TextButton(
             onPressed: () {
               Navigator.of(context).pop();
-              context.go("/clerk/profile");
+              if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go("/clerk/profile");
+      }
             },
             child: const Text('Leave', style: TextStyle(color: Colors.red)),
           ),

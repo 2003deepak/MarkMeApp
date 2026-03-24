@@ -216,12 +216,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(dashboardRefreshProvider, (previous, next) {
-      if (next > 0) {
-        ref.read(studentStoreProvider.notifier).loadProfile();
-      }
-    });
-
     final studentState = ref.watch(studentStoreProvider);
     final profile = studentState.profile;
     final w = MediaQuery.of(context).size.width;
@@ -231,8 +225,13 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       data: AppTheme.theme,
       child: Scaffold(
         backgroundColor: const Color(0xFFF8FAFC),
-        body: SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(hPad, 16, hPad, 32),
+        body: RefreshIndicator(
+          onRefresh: () async {
+            await ref.read(studentStoreProvider.notifier).loadProfile();
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: EdgeInsets.fromLTRB(hPad, 16, hPad, 32),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -446,9 +445,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       label: 'Help & Support',
                       subtitle: 'Get assistance',
                       onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Open Help & Support')),
-                        );
+                        context.push('/student/faq');
                       },
                     ),
                     Container(
@@ -549,6 +546,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               ),
             ],
           ),
+        ),
         ),
       ),
     );

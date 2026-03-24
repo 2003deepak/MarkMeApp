@@ -222,20 +222,21 @@ Future<void> _fetchAttendanceData() async {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(dashboardRefreshProvider, (previous, next) {
-      if (next > 0) {
-        _retryFetch();
-      }
-    });
-
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth > 600;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(isDesktop ? 24.0 : 16.0),
-        child: _buildDashboardContent(isDesktop),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          _retryFetch();
+          await Future.delayed(const Duration(milliseconds: 500));
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.all(isDesktop ? 24.0 : 16.0),
+          child: _buildDashboardContent(isDesktop),
+        ),
       ),
     );
   }

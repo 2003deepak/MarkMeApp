@@ -77,10 +77,10 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
   final List<String> _academicYears = ['2024', '2025', '2026', '2027'];
   String? _selectedProgram;
   String? _selectedDepartment;
-  int? _selectedSemester;
+  String? _selectedSemester;
   List<String> _programs = [];
   List<String> _departments = [];
-  List<int> _semesters = [];
+  List<String> _semesters = [];
 
   @override
   void initState() {
@@ -100,9 +100,9 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
       final clerkRepo = ref.read(clerkRepositoryProvider);
 
       final result = await clerkRepo.fetchSubjects(
+        department: _selectedDepartment!,
         program: _selectedProgram!,
-        semester: _selectedSemester!,
-        mode: "subject_listing",
+        semester: _selectedSemester,
       );
 
       if (result['success'] == true) {
@@ -112,14 +112,14 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
         final List<Map<String, dynamic>> subjectsList = [];
 
         for (var subject in subjectsData) {
-          final subjectId = subject['subject_id']?.toString() ?? '';
+          final subjectId = subject['_id']?.toString() ?? '';
           final subjectName = subject['subject_name']?.toString() ?? '';
           final component = subject['component']?.toString() ?? '';
 
           if (subjectId.isNotEmpty) {
             subjectsList.add({
               'id': subjectId,
-              'name': '$subjectName',
+              'name': '$subjectName ($component)',
               'raw': subject,
             });
           }
@@ -190,24 +190,24 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
       final result = await clerkRepo.fetchTimeTable(
         program: _selectedProgram!,
         department: _selectedDepartment!,
-        semester: _selectedSemester!,
+        semester: int.parse(_selectedSemester!),
         academicYear: _selectedAcademicYear!,
       );
 
       if (result['success'] == true && result['data'] != null) {
         final data = result['data'];
         _timetableId = data['_id'] ?? data['id'];
-        final schedule = data['schedule'] as List<dynamic>;
+        final List<dynamic> schedule = data['schedule'] ?? [];
 
         setState(() {
           _isEditMode = true;
 
-          for (var dayData in schedule) {
-            final String dayName = dayData['day'] ?? '';
+          for (var daySchedule in schedule) {
+            final String dayName = daySchedule['day'] ?? '';
+            final List<dynamic> sessions = daySchedule['sessions'] ?? [];
             final int dayIndex = days.indexOf(dayName);
 
             if (dayIndex != -1) {
-              final sessions = dayData['sessions'] as List<dynamic>;
               addedSubjectsByDay[dayIndex] = sessions.map((item) {
                 final subjectName = item['subject_name'] ?? 'Unknown';
                 final component = item['component'] ?? 'Lecture';
@@ -404,6 +404,16 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
     return addedSubjectsByDay[selectedDayIndex]!.isNotEmpty;
   }
 
+  // Check if at least one day has subjects (for creation mode)
+  bool get _hasAtLeastOneSubject {
+    for (var daySubjects in addedSubjectsByDay.values) {
+      if (daySubjects.isNotEmpty) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   @override
   Widget build(BuildContext context) {
     final clerkState = ref.watch(clerkStoreProvider);
@@ -418,7 +428,7 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
           .toList();
 
       if (_selectedDepartment != null) {
-        _semesters = [1, 2, 3, 4, 5, 6, 7, 8];
+        _semesters = ['1', '2', '3', '4', '5', '6', '7', '8'];
       } else {
         _semesters = [];
       }
@@ -596,7 +606,7 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
                                   ),
                                   const SizedBox(width: 8),
                                   Expanded(
-                                    child: Dropdown<int>(
+                                    child: Dropdown<String>(
                                       label: "Sem",
                                       hint: "Sem",
                                       items: _semesters,
@@ -912,18 +922,18 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
                     const SizedBox(height: 32),
 
                     // Final Save Button
-                    if (_allDaysHaveSubjects)
+                    if (_isEditMode || _hasAtLeastOneSubject)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 20),
                         child: SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: (_allDaysHaveSubjects && _isSelectionComplete)
+                            onPressed: (_isEditMode || _hasAtLeastOneSubject) && _isSelectionComplete
                                 ? _saveSchedule
                                 : null,
                             style: ElevatedButton.styleFrom(
                               backgroundColor:
-                                  (_allDaysHaveSubjects && _isSelectionComplete)
+                                  (_isEditMode || _hasAtLeastOneSubject) && _isSelectionComplete
                                       ? const Color(0xFF0F172A)
                                       : Colors.grey,
                               foregroundColor: Colors.white,
@@ -1211,24 +1221,21 @@ class _AddTimeTableState extends ConsumerState<AddTimeTablePage> {
 
   Future<void> _saveSchedule() async {
     try {
-      // Prepare schedule as a List of Day objects
-      final List<Map<String, dynamic>> scheduleData = [];
+      // Prepare schedule as a Map
+      final Map<String, dynamic> scheduleData = {};
 
       for (int i = 0; i < days.length; i++) {
         final dayName = days[i];
         final daySubjects = addedSubjectsByDay[i]!;
 
         if (daySubjects.isNotEmpty) {
-          scheduleData.add({
-            'day': dayName,
-            'sessions': daySubjects.map((subject) {
-              return {
-                'start_time': subject['start_time_24'],
-                'end_time': subject['end_time_24'],
-                'subject': subject['subject_id'],
-              };
-            }).toList(),
-          });
+          scheduleData[dayName] = daySubjects.map((subject) {
+            return {
+              'start_time': subject['start_time_24'],
+              'end_time': subject['end_time_24'],
+              'subject': subject['subject_id'],
+            };
+          }).toList();
         }
       }
 

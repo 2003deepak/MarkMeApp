@@ -109,7 +109,7 @@ class SubjectSelectorWidget extends StatelessWidget {
                   _buildFilterSection(
                     chips: [
                       _buildSubjectChip(
-                        'All Subjects',
+                        'All',
                         null,
                         'Lecture',
                         true,

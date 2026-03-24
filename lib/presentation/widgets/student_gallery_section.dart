@@ -25,10 +25,8 @@ class _StudentGallerySectionState extends State<StudentGallerySection> {
     try {
       final XFile? pickedFile = await _imagePicker.pickImage(
         source: ImageSource.camera,
-        preferredCameraDevice: CameraDevice.front, // Force front camera
-        maxWidth: 800,
-        maxHeight: 800,
-        imageQuality: 85,
+        preferredCameraDevice: CameraDevice.front, 
+        imageQuality: 100,
       );
 
       if (pickedFile != null) {

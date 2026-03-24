@@ -35,6 +35,7 @@ import 'package:markmeapp/presentation/pages/student/profile_page.dart'
 import 'package:markmeapp/presentation/pages/student/edit_profile.dart';
 import 'package:markmeapp/presentation/pages/student/timetable.dart';
 import 'package:markmeapp/presentation/pages/student/notification_page.dart';
+import 'package:markmeapp/presentation/pages/student/faq_page.dart';
 
 // Clerk Pages
 import 'package:markmeapp/presentation/pages/clerk/dashboard_page.dart';
@@ -63,6 +64,8 @@ import 'package:markmeapp/presentation/pages/teacher/timetable.dart'
     as teacher_time_table;
 import 'package:markmeapp/presentation/pages/teacher/edit_profile.dart'
     as teacher_edit_profile;
+import 'package:markmeapp/presentation/pages/teacher/faq_page.dart'
+    as teacher_faq;
 
 // Admin Pages
 import 'package:markmeapp/presentation/pages/admin/dashboard_page.dart';
@@ -450,6 +453,11 @@ class AppRouter {
               builder: (context, state) => const ChangePasswordPage(),
             ),
             GoRoute(
+              path: '/student/faq',
+              name: 'student_faq',
+              builder: (context, state) => const FaqPage(),
+            ),
+            GoRoute(
               path: '/notifications',
               name: 'notifications',
               builder: (context, state) => const NotificationPage(),
@@ -576,6 +584,13 @@ class AppRouter {
               builder:
                   (context, state) =>
                       const teacher_edit_profile.TeacherEditProfilePage(),
+            ),
+            
+            // Teacher FAQ
+            GoRoute(
+              path: '/teacher/faq',
+              name: 'teacher_faq',
+              builder: (context, state) => const teacher_faq.FaqPage(),
             ),
 
             // Clerk Analytics Routes

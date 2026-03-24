@@ -123,7 +123,7 @@ class _AddSubjectPageState extends ConsumerState<AddSubjectPage> {
 
       if (result['success'] == true) {
         // Show success snackbar
-        showSuccessSnackBar(context, 'Subject added successfully!');
+        showSuccessSnackBar(context, '${result['message']}');
 
         // Reset form after a short delay
         await Future.delayed(const Duration(milliseconds: 500));
@@ -182,7 +182,7 @@ class _AddSubjectPageState extends ConsumerState<AddSubjectPage> {
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: MarkMeAppBar(
         title: 'Add New Subject',
-        onBackPressed: _isLoading ? null : () => context.go("/clerk"),
+        onBackPressed: _isLoading ? null : () => context.pop(),
         isLoading: _isLoading,
       ),
       body: SafeArea(

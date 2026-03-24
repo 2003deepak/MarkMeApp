@@ -56,7 +56,7 @@ class _RequestsPageState extends ConsumerState<RequestsPage> {
 
       String? status;
       if (_selectedStatuses.isNotEmpty) {
-        status = _selectedStatuses.first.toLowerCase();
+         status = _selectedStatuses.map((e) => e.toLowerCase()).join(',');
       }
 
       final response = await repo.fetchRequests(

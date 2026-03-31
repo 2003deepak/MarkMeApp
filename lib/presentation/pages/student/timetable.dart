@@ -4,6 +4,7 @@ import 'package:markmeapp/data/repositories/student_repository.dart';
 import 'package:markmeapp/state/student_state.dart';
 import 'dart:async';
 import 'package:markmeapp/state/refresh_state.dart';
+import 'package:markmeapp/presentation/widgets/incomplete_profile.dart';
 
 class TimeTablePage extends ConsumerStatefulWidget {
   const TimeTablePage({super.key});
@@ -14,13 +15,14 @@ class TimeTablePage extends ConsumerStatefulWidget {
 
 class _TimeTableState extends ConsumerState<TimeTablePage>
     with SingleTickerProviderStateMixin {
-  int selectedDayIndex = 0; // Monday as default
+  int selectedDayIndex = DateTime.now().weekday == 7 ? 0 : DateTime.now().weekday - 1; // Default to current day
   final List<String> days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   // API data state
   Map<String, dynamic>? timetableData;
   bool isLoading = true;
   String errorMessage = '';
+  List<String> _missingFields = [];
   late AnimationController _animationController;
   late Animation<double> _opacityAnimation;
   Timer? _timeUpdateTimer;
@@ -74,6 +76,7 @@ class _TimeTableState extends ConsumerState<TimeTablePage>
       setState(() {
         isLoading = true;
         errorMessage = '';
+        _missingFields = [];
       });
 
       // Get repository using Riverpod
@@ -97,11 +100,18 @@ class _TimeTableState extends ConsumerState<TimeTablePage>
       final batch = profile['batch_year']?.toString();
 
       if (program == null || dept == null || sem == null || batch == null) {
-          setState(() {
-            errorMessage = 'Incomplete profile data. Please update your profile.';
-            isLoading = false;
-          });
-          return;
+        final List<String> missing = [];
+        if (program == null) missing.add('Program');
+        if (dept == null) missing.add('Department');
+        if (sem == null) missing.add('Semester');
+        if (batch == null) missing.add('Batch Year');
+
+        setState(() {
+          _missingFields = missing;
+          errorMessage = 'Incomplete profile data. Please update your profile.';
+          isLoading = false;
+        });
+        return;
       }
 
       final result = await studentRepo.fetchTimeTable(
@@ -119,6 +129,9 @@ class _TimeTableState extends ConsumerState<TimeTablePage>
       } else {
         setState(() {
           errorMessage = result['error'] ?? 'Failed to load timetable';
+          if (result['missing_fields'] != null) {
+            _missingFields = List<String>.from(result['missing_fields']);
+          }
           isLoading = false;
         });
       }
@@ -314,36 +327,6 @@ class _TimeTableState extends ConsumerState<TimeTablePage>
 
             const SizedBox(height: 16),
 
-            // Error message
-            if (errorMessage.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.red[50],
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.red[100]!),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.error_outline,
-                        color: Colors.red,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          errorMessage,
-                          style: const TextStyle(color: Colors.red),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
             // Day Selector
             SizedBox(
               height: 60,
@@ -405,6 +388,15 @@ class _TimeTableState extends ConsumerState<TimeTablePage>
   Widget _buildContent() {
     if (isLoading) {
       return _buildLoadingSkeleton();
+    }
+
+    if (_missingFields.isNotEmpty) {
+      return Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: IncompleteProfileWidget(missingFields: _missingFields),
+        ),
+      );
     }
 
     if (errorMessage.isNotEmpty && timetableData == null) {

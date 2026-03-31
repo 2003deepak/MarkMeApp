@@ -16,6 +16,7 @@ import 'package:markmeapp/state/clerk_state.dart';
 import 'package:markmeapp/presentation/widgets/ui/multi_select_dropdown.dart';
 import 'package:markmeapp/state/refresh_state.dart';
 import 'package:markmeapp/presentation/widgets/ui/error.dart';
+import 'package:markmeapp/presentation/widgets/incomplete_profile.dart';
 
 class AttendanceHistoryPage extends ConsumerStatefulWidget {
   const AttendanceHistoryPage({super.key});
@@ -34,6 +35,7 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
   Map<int, AttendanceDayStatus> _dayStatusMap = {};
   List<Map<String, String>> _subjects = [];
   List<String> _selectedSubjectIds = [];
+  List<String> _missingFields = [];
 
   // Filter State
   List<String> _selectedPrograms = [];
@@ -266,98 +268,128 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
   }
 
   Future<void> _fetchAttendanceData() async {
-    if (_groupedRecords.isEmpty) {
-      setState(() {
-        _isLoading = true;
-        _errorMessage = null;
-      });
-    }
-
-    try {
-      final repository = ref.read(studentRepositoryProvider);
-      final response = await repository.fetchAttendanceHistory(
-        month: _selectedMonth.month,
-        year: _selectedMonth.year,
-        subjectId: _selectedSubjectIds.isNotEmpty
-            ? _selectedSubjectIds.join(',')
-            : null,
-        program: _selectedPrograms.isNotEmpty
-            ? _selectedPrograms.join(',')
-            : null,
-        semester: _selectedSemesters.isNotEmpty
-            ? _selectedSemesters.join(',')
-            : null,
-        department: _selectedDepartments.isNotEmpty
-            ? _selectedDepartments.join(',')
-            : null,
-      );
-
-      final attendanceResponse = AttendanceHistoryResponse.fromJson(response);
-
-      if (attendanceResponse.success) {
-        final records = attendanceResponse.records;
-
-        // Group records by date
-        final Map<String, List<AttendanceHistoryRecord>> grouped = {};
-        final Map<int, AttendanceDayStatus> dayMap = {};
-
-        for (var record in records) {
-          final dateString = record.date;
-
-          // Group by date
-          if (!grouped.containsKey(dateString)) {
-            grouped[dateString] = [];
-          }
-          grouped[dateString]!.add(record);
-        }
-
-        // Calculate day status for each unique day
-        for (var entry in grouped.entries) {
-          final date = DateTime.parse(entry.key);
-          final dayRecords = entry.value;
-          final day = date.day;
-
-          final totalClasses = dayRecords.length;
-          final presentClasses = dayRecords.where((r) => r.present).length;
-          final absentClasses = totalClasses - presentClasses;
-          final percentage = totalClasses > 0
-              ? (presentClasses / totalClasses * 100).round()
-              : 0;
-
-          dayMap[day] = AttendanceDayStatus(
-            date: date,
-            totalClasses: totalClasses,
-            presentClasses: presentClasses,
-            absentClasses: absentClasses,
-            percentage: percentage,
-          );
-        }
-
-        setState(() {
-          _groupedRecords = grouped;
-          _dayStatusMap = dayMap;
-
-          // Set initial selected day to today if it has records
-          final today = DateTime.now();
-          if (_groupedRecords.containsKey(_formatDate(today))) {
-            _selectedDay = today;
-          }
-
-          _isLoading = false;
-        });
-      } else {
-        setState(() {
-          _errorMessage = attendanceResponse.message;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _errorMessage = 'Failed to load attendance: $e';
-        _isLoading = false;
-      });
-    }
+  if (_groupedRecords.isEmpty) {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+      _missingFields = [];
+    });
   }
+
+  try {
+    final repository = ref.read(studentRepositoryProvider);
+    final response = await repository.fetchAttendanceHistory(
+      month: _selectedMonth.month,
+      year: _selectedMonth.year,
+      subjectId: _selectedSubjectIds.isNotEmpty
+          ? _selectedSubjectIds.join(',')
+          : null,
+      program: _selectedPrograms.isNotEmpty
+          ? _selectedPrograms.join(',')
+          : null,
+      semester: _selectedSemesters.isNotEmpty
+          ? _selectedSemesters.join(',')
+          : null,
+      department: _selectedDepartments.isNotEmpty
+          ? _selectedDepartments.join(',')
+          : null,
+    );
+
+    // Check if response is an error response (400)
+    if (response.containsKey('success') && response['success'] == false) {
+      setState(() {
+        _errorMessage = response['message'];
+        _missingFields = List<String>.from(response['missing_fields'] ?? []);
+        _isLoading = false;
+        // Clear attendance data but KEEP dayStatusMap for calendar?
+        // Actually, we should clear them but the calendar can still work
+        _groupedRecords = {};
+        // Don't clear _dayStatusMap immediately - keep existing data if any
+        // But for safety, clear it
+        _dayStatusMap = {};
+        _selectedDay = null;
+      });
+      return; // Exit early
+    }
+
+    // Only process as AttendanceHistoryResponse if success is true
+    final attendanceResponse = AttendanceHistoryResponse.fromJson(response);
+
+    if (attendanceResponse.success) {
+      final records = attendanceResponse.records;
+
+      // Group records by date
+      final Map<String, List<AttendanceHistoryRecord>> grouped = {};
+      final Map<int, AttendanceDayStatus> dayMap = {};
+
+      for (var record in records) {
+        final dateString = record.date;
+
+        // Group by date
+        if (!grouped.containsKey(dateString)) {
+          grouped[dateString] = [];
+        }
+        grouped[dateString]!.add(record);
+      }
+
+      // Calculate day status for each unique day
+      for (var entry in grouped.entries) {
+        final date = DateTime.parse(entry.key);
+        final dayRecords = entry.value;
+        final day = date.day;
+
+        final totalClasses = dayRecords.length;
+        final presentClasses = dayRecords.where((r) => r.present).length;
+        final absentClasses = totalClasses - presentClasses;
+        final percentage = totalClasses > 0
+            ? (presentClasses / totalClasses * 100).round()
+            : 0;
+
+        dayMap[day] = AttendanceDayStatus(
+          date: date,
+          totalClasses: totalClasses,
+          presentClasses: presentClasses,
+          absentClasses: absentClasses,
+          percentage: percentage,
+        );
+      }
+
+      setState(() {
+        _groupedRecords = grouped;
+        _dayStatusMap = dayMap;
+
+        // Set initial selected day to today if it has records
+        final today = DateTime.now();
+        if (_groupedRecords.containsKey(_formatDate(today))) {
+          _selectedDay = today;
+        }
+
+        _isLoading = false;
+        _errorMessage = null;
+        _missingFields = [];
+      });
+    } else {
+      setState(() {
+        _errorMessage = attendanceResponse.message;
+        _missingFields = attendanceResponse.missingFields;
+        _isLoading = false;
+        // Clear attendance data
+        _groupedRecords = {};
+        _dayStatusMap = {};
+        _selectedDay = null;
+      });
+    }
+  } catch (e) {
+    setState(() {
+      _errorMessage = 'Failed to load attendance: $e';
+      _isLoading = false;
+      // Clear attendance data
+      _groupedRecords = {};
+      _dayStatusMap = {};
+      _selectedDay = null;
+    });
+  }
+}
 
   void _handlePreviousMonth() {
     setState(() {
@@ -467,38 +499,28 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
     );
   }
 
-  List<Widget> _buildContent() {
-    if (_errorMessage != null) {
-      return [
-        CustomErrorWidget(
-          errorMessage: _errorMessage!,
-          onRetry: _fetchAttendanceData,
-          isDesktop: false,
-        ),
-      ];
-    }
+List<Widget> _buildContent() {
+  final role = ref.read(authStoreProvider).role;
 
-    final role = ref.read(authStoreProvider).role;
-
-    return [
-      if (role == 'student')
-        _buildSubjectFilter()
-      else
-        _buildActiveFilterSummary(),
-      const SizedBox(height: 16),
-      AttendanceCalendar(
-        selectedMonth: _selectedMonth,
-        selectedDay: _selectedDay,
-        dayStatusMap: _dayStatusMap,
-        onPrevMonth: _handlePreviousMonth,
-        onNextMonth: _handleNextMonth,
-        onDaySelected: _handleDaySelected,
-      ),
-
-      const SizedBox(height: 24),
-      _buildAttendanceRecordsSection(),
-    ];
-  }
+  // Always show calendar, even when there are missing fields
+  return [
+    if (role == 'student')
+      _buildSubjectFilter()
+    else
+      _buildActiveFilterSummary(),
+    const SizedBox(height: 16),
+    AttendanceCalendar(
+      selectedMonth: _selectedMonth,
+      selectedDay: _selectedDay,
+      dayStatusMap: _dayStatusMap,
+      onPrevMonth: _handlePreviousMonth,
+      onNextMonth: _handleNextMonth,
+      onDaySelected: _handleDaySelected,
+    ),
+    const SizedBox(height: 24),
+    _buildAttendanceRecordsSection(),
+  ];
+}
 
   Widget _buildActiveFilterSummary() {
     final role = ref.read(authStoreProvider).role;
@@ -721,51 +743,56 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final dayRecords = _getSelectedDayRecords();
 
+    // If there are missing fields, show profile incomplete widget
+    if (_missingFields.isNotEmpty) {
+      return IncompleteProfileWidget(missingFields: _missingFields);
+    }
+
     if (_selectedDay == null) {
-      return _buildEmptyState(
-        icon: Icons.calendar_today_outlined,
-        title: 'Select a Day',
-        message: 'Tap on any date in the calendar to view attendance records',
-        isDark: isDark,
-      );
-    }
-
-    if (dayRecords.isEmpty) {
-      return _buildEmptyState(
-        icon: Icons.event_busy_outlined,
-        title: 'No Attendance Records',
-        message:
-            'No attendance was marked on ${DateFormat('MMMM d, yyyy').format(_selectedDay!)}',
-        isDark: isDark,
-      );
-    }
-
-    // Sort records by start time if available, otherwise by date/id
-    final sortedRecords = List<AttendanceHistoryRecord>.from(dayRecords);
-
-    sortedRecords.sort((a, b) {
-      if (a.startTime != null && b.startTime != null) {
-        return _safeMinutes(a.startTime).compareTo(_safeMinutes(b.startTime));
-      }
-      return 0; // Maintain original order or sort by another field if needed
-    });
-
-    final role = ref.read(authStoreProvider).role;
-    final isStudent = role == 'student';
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ...sortedRecords.map((record) {
-          if (isStudent) {
-            return _buildAttendanceRecordCard(record);
-          } else {
-            return _buildTeacherAttendanceCard(record);
-          }
-        }),
-      ],
+    return _buildEmptyState(
+      icon: Icons.calendar_today_outlined,
+      title: 'Select a Day',
+      message: 'Tap on any date in the calendar to view attendance records',
+      isDark: isDark,
     );
   }
+
+  if (dayRecords.isEmpty) {
+    return _buildEmptyState(
+      icon: Icons.event_busy_outlined,
+      title: 'No Attendance Records',
+      message:
+          'No attendance was marked on ${DateFormat('MMMM d, yyyy').format(_selectedDay!)}',
+      isDark: isDark,
+    );
+  }
+
+  // Sort records by start time if available, otherwise by date/id
+  final sortedRecords = List<AttendanceHistoryRecord>.from(dayRecords);
+
+  sortedRecords.sort((a, b) {
+    if (a.startTime != null && b.startTime != null) {
+      return _safeMinutes(a.startTime).compareTo(_safeMinutes(b.startTime));
+    }
+    return 0;
+  });
+
+  final role = ref.read(authStoreProvider).role;
+  final isStudent = role == 'student';
+
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      ...sortedRecords.map((record) {
+        if (isStudent) {
+          return _buildAttendanceRecordCard(record);
+        } else {
+          return _buildTeacherAttendanceCard(record);
+        }
+      }),
+    ],
+  );
+}
 
   Widget _buildEmptyState({
     required IconData icon,

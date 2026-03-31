@@ -101,7 +101,7 @@ class TomorrowBunkSafetyCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Tomorrow\'s Bunk Safety',
+                        'Attendance Buffer',
                         style: TextStyle(
                           color: color.withValues(alpha: 0.8),
                           fontSize: 12,
@@ -111,7 +111,7 @@ class TomorrowBunkSafetyCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        safeToBunk ? 'Safe to Bunk! 🎉' : 'Better Attend! 😅',
+                        safeToBunk ? 'Safe to Miss! ' : 'Better Attend! ',
                         style: TextStyle(
                           color: color,
                           fontSize: 18,
@@ -161,7 +161,7 @@ class TomorrowBunkSafetyCard extends StatelessWidget {
                     Container(width: 1, height: 40, color: Colors.grey[200]),
                     Expanded(
                       child: _buildStat(
-                        'If You Bunk',
+                        'If You Miss',
                         '${attendanceIfBunk.toStringAsFixed(2)}%',
                         color,
                       ),

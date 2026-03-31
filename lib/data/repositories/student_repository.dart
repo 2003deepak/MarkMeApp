@@ -328,6 +328,15 @@ class StudentRepository {
     } on DioException catch (e) {
       AppLogger.error('🔴 [StudentRepository] DioException: ${e.message}');
 
+      if (e.response?.statusCode == 400) {
+        final errorData = e.response?.data;
+        return {
+          'success': false,
+          'error': errorData?['message'] ?? 'Student academic details incomplete',
+          'missing_fields': errorData?['missing_fields'],
+        };
+      }
+
       if (e.response?.statusCode == 401) {
         return {'success': false, 'error': 'Authentication required'};
       } else if (e.response?.statusCode == 404) {
@@ -498,6 +507,17 @@ class StudentRepository {
       }
     } on DioException catch (e) {
       AppLogger.error('🔴 [StudentRepository] DioException: ${e.message}');
+      
+      if (e.response != null && e.response!.statusCode == 400) {
+        final errorData = e.response!.data;
+        return {
+          'success': false,
+          'message': errorData['message'] ?? 'Student academic details are incomplete',
+          'missing_fields': errorData['missing_fields'],
+          'records': [],
+        };
+      }
+
       return {
         'success': false,
         'message': e.message ?? 'Network error',

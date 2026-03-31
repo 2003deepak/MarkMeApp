@@ -1,40 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:markmeapp/data/models/attendance_trends_model.dart';
 
 class TrendsChartCard extends StatefulWidget {
-  const TrendsChartCard({super.key});
+  final List<AttendanceTrendData>? data;
+  final bool isLoading;
+  final String selectedPeriod;
+  final Function(String) onPeriodChanged;
+
+  const TrendsChartCard({
+    super.key,
+    required this.data,
+    required this.isLoading,
+    required this.selectedPeriod,
+    required this.onPeriodChanged,
+  });
 
   @override
   State<TrendsChartCard> createState() => _TrendsChartCardState();
 }
 
 class _TrendsChartCardState extends State<TrendsChartCard> {
-  String _activeTab = "Week";
-
-  // Mock data for different periods
-  final Map<String, List<FlSpot>> _chartData = {
-    "Week": [
-      const FlSpot(0, 400),
-      const FlSpot(1, 450),
-      const FlSpot(2, 600),
-      const FlSpot(3, 700),
-      const FlSpot(4, 550),
-    ],
-    "Month": [
-      const FlSpot(0, 300),
-      const FlSpot(1, 500),
-      const FlSpot(2, 400),
-      const FlSpot(3, 800),
-      const FlSpot(4, 650),
-    ],
-    "Year": [
-      const FlSpot(0, 200),
-      const FlSpot(1, 400),
-      const FlSpot(2, 700),
-      const FlSpot(3, 500),
-      const FlSpot(4, 900),
-    ],
-  };
+  List<FlSpot> _generateSpots() {
+    if (widget.data == null || widget.data!.isEmpty) {
+      return const [];
+    }
+    return List.generate(widget.data!.length, (index) {
+      return FlSpot(index.toDouble(), widget.data![index].attendance);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -99,7 +93,7 @@ class _TrendsChartCardState extends State<TrendsChartCard> {
                     getTooltipItems: (touchedSpots) {
                       return touchedSpots.map((spot) {
                         return LineTooltipItem(
-                          '${spot.y.toInt()} Attendees',
+                          '${spot.y.toStringAsFixed(1)}%',
                           const TextStyle(
                             color: Colors.white,
                             fontSize: 12,
@@ -133,18 +127,22 @@ class _TrendsChartCardState extends State<TrendsChartCard> {
                           color: const Color(0xFF94A3B8),
                           fontWeight: FontWeight.bold,
                         );
-                        String text;
-                        switch (value.toInt()) {
-                          case 0: text = _activeTab == "Week" ? 'MON' : 'W1'; break;
-                          case 1: text = _activeTab == "Week" ? 'TUE' : 'W2'; break;
-                          case 2: text = _activeTab == "Week" ? 'WED' : 'W3'; break;
-                          case 3: text = _activeTab == "Week" ? 'THU' : 'W4'; break;
-                          case 4: text = _activeTab == "Week" ? 'FRI' : 'W5'; break;
-                          default: return const SizedBox.shrink();
+                        final index = value.toInt();
+                        if (widget.data == null || index < 0 || index >= widget.data!.length) {
+                          return const SizedBox.shrink();
                         }
+                        
+                        // For labels like "Week 1", maybe abbreviate to "W1" to fit
+                        String label = widget.data![index].label;
+                        if (label.startsWith('Week ')) {
+                           label = 'W${label.split(' ')[1]}';
+                        } else if (label.length > 3) {
+                           label = label.substring(0, 3).toUpperCase();
+                        }
+                        
                         return SideTitleWidget(
                           axisSide: meta.axisSide,
-                          child: Text(text, style: style),
+                          child: Text(label, style: style),
                         );
                       },
                     ),
@@ -153,12 +151,13 @@ class _TrendsChartCardState extends State<TrendsChartCard> {
                 ),
                 borderData: FlBorderData(show: false),
                 minX: 0,
-                maxX: 4,
+                maxX: (widget.data == null || widget.data!.isEmpty) ? 0 : (widget.data!.length - 1).toDouble(),
                 minY: 0,
-                maxY: 1000,
+                maxY: 100, // Assuming 100% is the maximum attendance
                 lineBarsData: [
-                  LineChartBarData(
-                    spots: _chartData[_activeTab]!,
+                  if (widget.data != null && widget.data!.isNotEmpty)
+                    LineChartBarData(
+                      spots: _generateSpots(),
                     isCurved: true,
                     gradient: const LinearGradient(
                       colors: [Color(0xFF2563EB), Color(0xFF3B82F6)],
@@ -200,9 +199,11 @@ class _TrendsChartCardState extends State<TrendsChartCard> {
   }
 
   Widget _buildChartTab(String label) {
-    final isActive = _activeTab == label;
+    // Map "Week" -> "week", "Month" -> "month"
+    final apiRange = label.toLowerCase();
+    final isActive = widget.selectedPeriod == apiRange;
     return GestureDetector(
-      onTap: () => setState(() => _activeTab = label),
+      onTap: () => widget.onPeriodChanged(apiRange),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),

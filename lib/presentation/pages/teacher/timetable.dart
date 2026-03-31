@@ -13,7 +13,7 @@ class TimeTablePage extends ConsumerStatefulWidget {
 
 class _TimeTableState extends ConsumerState<TimeTablePage>
     with SingleTickerProviderStateMixin {
-  int selectedDayIndex = 0; // Monday as default
+  int selectedDayIndex = DateTime.now().weekday == 7 ? 0 : DateTime.now().weekday - 1; // Default to current day
   final List<String> days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   // API data state

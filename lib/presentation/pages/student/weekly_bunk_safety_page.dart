@@ -53,7 +53,7 @@ class _WeeklyBunkSafetyPageState extends ConsumerState<WeeklyBunkSafetyPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: MarkMeAppBar(
-        title: 'Weekly Bunk Monitor',
+        title: 'Weekly Attendance Buffer',
         onBackPressed: () => context.pop(),
       ),
       body: _buildBody(),
@@ -147,7 +147,7 @@ class _WeeklyBunkSafetyPageState extends ConsumerState<WeeklyBunkSafetyPage> {
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
           subtitle: Text(
-            safeToBunk ? 'Safe to Bunk' : 'Attend Recommended',
+            safeToBunk ? 'Safe to Miss' : 'Attend Recommended',
             style: TextStyle(color: color, fontWeight: FontWeight.w600),
           ),
           children: [
@@ -178,7 +178,7 @@ class _WeeklyBunkSafetyPageState extends ConsumerState<WeeklyBunkSafetyPage> {
                     'Current Aggregate: ${(aggregate['current'] as num?)?.toStringAsFixed(2)}%',
                   ),
                   Text(
-                    'If Bunk: ${(aggregate['if_bunk'] as num?)?.toStringAsFixed(2)}%',
+                    'If Miss: ${(aggregate['if_bunk'] as num?)?.toStringAsFixed(2)}%',
                     style: TextStyle(fontWeight: FontWeight.bold, color: color),
                   ),
                 ],

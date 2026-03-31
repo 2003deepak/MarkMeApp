@@ -52,7 +52,7 @@ class Clerk {
 
   factory Clerk.fromJson(Map<String, dynamic> json) {
     return Clerk(
-      id: json['clerk_id'] ?? '',
+      id: json['clerk_id'] ?? json['id'] ?? '',
       firstName: json['first_name'] ?? '',
       middleName: json['middle_name'],
       lastName: json['last_name'] ?? '',

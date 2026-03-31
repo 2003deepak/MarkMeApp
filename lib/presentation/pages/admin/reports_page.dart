@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:markmeapp/presentation/widgets/ui/dropdown.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:markmeapp/data/repositories/admin_repository.dart';
 import 'package:markmeapp/core/utils/snackbar_utils.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:markmeapp/presentation/widgets/ui/app_bar.dart';
 import 'package:markmeapp/state/admin_state.dart';
 
 class AdminReportsPage extends ConsumerStatefulWidget {
@@ -108,6 +110,10 @@ class _AdminReportsPageState extends ConsumerState<AdminReportsPage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
+      appBar: MarkMeAppBar(
+        title: "Generate Reports",
+        onBackPressed: () => context.pop()
+      ),
       body: Stack(
         children: [
           SafeArea(

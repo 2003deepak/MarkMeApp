@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:markmeapp/presentation/widgets/ui/otp_field.dart';
+import 'package:markmeapp/presentation/widgets/ui/app_bar.dart';
 import 'package:markmeapp/state/auth_state.dart';
 import 'package:markmeapp/core/utils/snackbar_utils.dart';
 import 'package:markmeapp/core/utils/app_logger.dart';
@@ -145,105 +146,108 @@ class _OTPVerificationPageState extends ConsumerState<OTPVerificationPage> {
       }
   }
 
-
   @override
-  Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isDesktop = screenWidth > 600;
-    final primaryColor = Colors.blue.shade600;
+Widget build(BuildContext context) {
+  final screenWidth = MediaQuery.of(context).size.width;
+  final isDesktop = screenWidth > 600;
+  final primaryColor = Colors.blue.shade600;
 
-    return Scaffold(
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(isDesktop ? 32.0 : 24.0),
-        child: Column(
-          children: [
-            SizedBox(height: isDesktop ? 60 : 40),
-            SvgPicture.asset('assets/logo.svg', height: 80),
-            const SizedBox(height: 32),
-            
-            Text(
-              'Verification',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.w700,
-                color: Colors.black87,
-              ),
+  return Scaffold(
+    appBar: MarkMeAppBar(
+      title: 'OTP Verification',
+      showBackButton : false
+    ),
+    body: SingleChildScrollView(
+      padding: EdgeInsets.all(isDesktop ? 32.0 : 24.0),
+      child: Column(
+        children: [
+          SizedBox(height: isDesktop ? 60 : 40),
+          SvgPicture.asset('assets/logo.svg', height: 80),
+          const SizedBox(height: 32),
+          
+          Text(
+            'Verification',
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.w700,
+              color: Colors.black87,
             ),
-             const SizedBox(height: 12),
-            Text(
-              'Enter the 6-digit code sent to\n${widget.email}',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
-            ),
-            
-            const SizedBox(height: 40),
-            
-            OTPField(
-              length: 6,
-              onCompleted: _onOTPCompleted,
-              onChanged: _onOTPCompleted,
-              fieldWidth: isDesktop ? 60 : 50,
-              fieldHeight: isDesktop ? 70 : 60,
-              borderColor: Colors.grey.shade300,
-              focusedBorderColor: primaryColor,
-            ),
-            
-            const SizedBox(height: 40),
-            
-             SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: ElevatedButton(
-                onPressed: (_isLoading || _otp.length != 6) ? null : _handleVerify,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryColor,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-                child: _isLoading 
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                  : const Text(
-                  'Verify Email',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Enter the 6-digit code sent to\n${widget.email}',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+          ),
+          
+          const SizedBox(height: 40),
+          
+          OTPField(
+            length: 6,
+            onCompleted: _onOTPCompleted,
+            onChanged: _onOTPCompleted,
+            fieldWidth: isDesktop ? 60 : 50,
+            fieldHeight: isDesktop ? 70 : 60,
+            borderColor: Colors.grey.shade300,
+            focusedBorderColor: primaryColor,
+          ),
+          
+          const SizedBox(height: 40),
+          
+          SizedBox(
+            width: double.infinity,
+            height: 56,
+            child: ElevatedButton(
+              onPressed: (_isLoading || _otp.length != 6) ? null : _handleVerify,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
                 ),
               ),
-            ),
-            
-            const SizedBox(height: 24),
-            
-            TextButton(
-              onPressed: (_isResending || !_canResend) ? null : _handleResendOtp,
-              child: _isResending
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Text(
-                      _canResend
-                          ? 'Resend Code'
-                          : 'Resend Code in ${_remainingSeconds}s',
-                      style: TextStyle(
-                        color: _canResend ? primaryColor : Colors.grey,
-                        fontWeight: FontWeight.w600,
-                      ),
+              child: _isLoading 
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                     ),
+                  )
+                : const Text(
+                'Verify Email',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
             ),
-          ],
-        ),
+          ),
+          
+          const SizedBox(height: 24),
+          
+          TextButton(
+            onPressed: (_isResending || !_canResend) ? null : _handleResendOtp,
+            child: _isResending
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Text(
+                    _canResend
+                        ? 'Resend Code'
+                        : 'Resend Code in ${_remainingSeconds}s',
+                    style: TextStyle(
+                      color: _canResend ? primaryColor : Colors.grey,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+          ),
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
 }

@@ -21,6 +21,7 @@ import 'package:markmeapp/state/refresh_state.dart';
 import 'package:markmeapp/state/admin_state.dart';
 import 'package:markmeapp/data/models/teacher_leaderboard_model.dart';
 import 'package:markmeapp/data/models/attendance_extremes_model.dart';
+import 'package:markmeapp/data/models/attendance_trends_model.dart';
 
 
 class AdminDashboardPage extends ConsumerStatefulWidget {
@@ -33,9 +34,9 @@ class AdminDashboardPage extends ConsumerStatefulWidget {
 class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
   late TextEditingController _searchController;
   Map<String, String?> _activeFilters = {
+    'Program': null,
     'Department': null,
-    'Subject': null,
-    'Teacher': null,
+    'Semester': null,
   };
   List<LiveSession>? _liveSessions;
   bool _isLoadingLiveSessions = false;
@@ -53,6 +54,12 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
   String? _extremesError;
   String _selectedExtremesPeriod = 'weekly';
 
+  // Trends state
+  List<AttendanceTrendData>? _trendsData;
+  bool _isLoadingTrends = false;
+  String? _trendsError;
+  String _selectedTrendsPeriod = 'week';
+
   @override
   void initState() {
     super.initState();
@@ -66,6 +73,7 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
     _fetchLiveSessions();
     _fetchLeaderboard();
     _fetchExtremes();
+    _fetchTrends();
   }
 
 
@@ -76,7 +84,15 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
         _liveSessionsError = null;
       });
 
-      final result = await ref.read(adminRepositoryProvider).fetchLiveClasses();
+      final program = _activeFilters['Program'];
+      final department = _activeFilters['Department'];
+      final semester = _activeFilters['Semester'];
+
+      final result = await ref.read(adminRepositoryProvider).fetchLiveClasses(
+        program: program,
+        department: department,
+        semester: semester,
+      );
 
       if (mounted) {
         if (result['success'] == true) {
@@ -118,6 +134,7 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
           setState(() {
             _activeFilters = newFilters;
           });
+          _refreshAllData();
         },
       ),
     );
@@ -130,7 +147,16 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
         _leaderboardError = null;
       });
 
-      final result = await ref.read(adminRepositoryProvider).fetchTeacherLeaderboard(_selectedLeaderboardPeriod);
+      final program = _activeFilters['Program'];
+      final department = _activeFilters['Department'];
+      final semester = _activeFilters['Semester'];
+
+      final result = await ref.read(adminRepositoryProvider).fetchTeacherLeaderboard(
+        _selectedLeaderboardPeriod,
+        program: program,
+        department: department,
+        semester: semester,
+      );
 
       if (mounted) {
         if (result['success'] == true) {
@@ -163,7 +189,16 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
         _extremesError = null;
       });
 
-      final result = await ref.read(adminRepositoryProvider).fetchAttendanceExtremes(_selectedExtremesPeriod);
+      final program = _activeFilters['Program'];
+      final department = _activeFilters['Department'];
+      final semester = _activeFilters['Semester'];
+
+      final result = await ref.read(adminRepositoryProvider).fetchAttendanceExtremes(
+        _selectedExtremesPeriod,
+        program: program,
+        department: department,
+        semester: semester,
+      );
 
       if (mounted) {
         if (result['success'] == true) {
@@ -188,12 +223,56 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
     }
   }
 
+  Future<void> _fetchTrends() async {
+    try {
+      setState(() {
+        _isLoadingTrends = true;
+        _trendsError = null;
+      });
+
+      final program = _activeFilters['Program'];
+      final department = _activeFilters['Department'];
+      final semester = _activeFilters['Semester'];
+
+      final result = await ref.read(adminRepositoryProvider).fetchAttendanceTrends(
+        _selectedTrendsPeriod,
+        program: program,
+        department: department,
+        semester: semester,
+      );
+
+      if (mounted) {
+        if (result['success'] == true) {
+          final response = result['data'] as AttendanceTrendsResponse;
+          setState(() {
+            _trendsData = response.data;
+            _isLoadingTrends = false;
+          });
+        } else {
+          setState(() {
+            _trendsError = result['error'];
+            _isLoadingTrends = false;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _trendsError = e.toString();
+          _isLoadingTrends = false;
+        });
+      }
+    }
+  }
+
   Future<void> _refreshAllData() async {
     await Future.wait([
       _fetchLiveSessions(),
       _fetchLeaderboard(),
       _fetchExtremes(),
-      ref.read(adminStoreProvider.notifier).loadProfile(),
+      _fetchTrends(),
+      // No need to reload profile here just for filters
+      // ref.read(adminStoreProvider.notifier).loadProfile(),
     ]);
   }
 
@@ -239,18 +318,19 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
               child: Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: _activeFilters.entries
-                    .where((e) => e.value != null)
-                    .map<Widget>((e) => FilterChipWidget(
-                          label: "${e.key}: ${e.value!}",
-                          onRemove: () {
-                            setState(() {
-                              _activeFilters[e.key] = null;
-                            });
-                          },
-                          isDark: Theme.of(context).brightness == Brightness.dark,
-                        ))
-                    .toList(),
+                  children: _activeFilters.entries
+                      .where((e) => e.value != null)
+                      .map<Widget>((e) => FilterChipWidget(
+                            label: "${e.key}: ${e.value!}",
+                            onRemove: () {
+                              setState(() {
+                                _activeFilters[e.key] = null;
+                              });
+                              _refreshAllData(); // Refresh all API calls with updated filters
+                            },
+                            isDark: Theme.of(context).brightness == Brightness.dark,
+                          ))
+                      .toList(),
               ),
             ),
 
@@ -262,6 +342,7 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
             height: 200,
             child: _buildLiveSessionsList(),
           ),
+          const SizedBox(height: 24),
 
           // 3. Summary Stats
           Padding(
@@ -308,12 +389,21 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
 
           // 5. Past Attendance Trends
           const DashboardSectionHeader(
-            title: "Past Attendance Trends",
-            actionText: "View Report",
+            title: "Past Attendance Trends"
           ),
-          _isLoadingLiveSessions // Proxying
+          _isLoadingTrends
               ? const TrendsChartSkeleton()
-              : const TrendsChartCard(),
+              : TrendsChartCard(
+                  data: _trendsData,
+                  isLoading: _isLoadingTrends,
+                  selectedPeriod: _selectedTrendsPeriod,
+                  onPeriodChanged: (period) {
+                    setState(() {
+                      _selectedTrendsPeriod = period;
+                    });
+                    _fetchTrends();
+                  },
+                ),
 
           const SizedBox(height: 24),
 
@@ -386,8 +476,8 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
 
     if (_liveSessions == null || _liveSessions!.isEmpty) {
       return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 20),
         width: double.infinity,
-        margin: const EdgeInsets.only(left: 20, right: 20, bottom: 20),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(24),

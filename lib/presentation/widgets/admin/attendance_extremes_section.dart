@@ -40,18 +40,75 @@ class AttendanceExtremesSection extends StatelessWidget {
         if (isLoading)
           const AttendanceExtremesSkeleton()
         else if (extremes != null) ...[
-          ExtremeStatCard(
-            subject: extremes!.highest.subject,
-            dateTime: extremes!.highest.date,
-            percentage: extremes!.highest.attendance.toStringAsFixed(1),
-            isHighest: true,
-          ),
-          ExtremeStatCard(
-            subject: extremes!.lowest.subject,
-            dateTime: extremes!.lowest.date,
-            percentage: extremes!.lowest.attendance.toStringAsFixed(1),
-            isHighest: false,
-          ),
+          if (extremes!.highest != null)
+            ExtremeStatCard(
+              subject: extremes!.highest!.subject,
+              dateTime: extremes!.highest!.date,
+              percentage: extremes!.highest!.attendance.toStringAsFixed(1),
+              isHighest: true,
+            ),
+          if (extremes!.lowest != null)
+            ExtremeStatCard(
+              subject: extremes!.lowest!.subject,
+              dateTime: extremes!.lowest!.date,
+              percentage: extremes!.lowest!.attendance.toStringAsFixed(1),
+              isHighest: false,
+            ),
+          if (extremes!.highest == null && extremes!.lowest == null)
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.05),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.event_busy_rounded,
+                      color: Colors.grey,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "No Extreme Data",
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF1E293B),
+                              ),
+                        ),
+                        Text(
+                          "Insufficient records for this period",
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Colors.grey[600],
+                                fontWeight: FontWeight.w500,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ] else
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 40),

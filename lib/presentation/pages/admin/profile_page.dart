@@ -279,17 +279,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       color: const Color(0xFFF1F5F9),
                     ),
                     ProfileTab(
-                      icon: Icons.account_balance_outlined,
-                      label: 'Hierarchical Flow',
-                      subtitle: 'View the hierarchical flow of the institution',
-                      onTap: () => context.push('/admin/hierarchical-flow'),
-                    ),
-                    Container(
-                      height: 1,
-                      margin: const EdgeInsets.symmetric(horizontal: 16),
-                      color: const Color(0xFFF1F5F9),
-                    ),
-                    ProfileTab(
                       icon: Icons.person_add_outlined,
                       label: 'Create Clerk',
                       subtitle: 'Register a new clerk account',

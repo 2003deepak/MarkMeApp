@@ -13,8 +13,13 @@ class ExtremeSession {
     return ExtremeSession(
       date: json['date'] ?? '',
       subject: json['subject'] ?? '',
-      attendance: (json['attendance'] as num).toDouble(),
+      attendance: ((json['attendance'] ?? 0) as num).toDouble(),
     );
+  }
+
+  static ExtremeSession? fromJsonOrNull(Map<String, dynamic>? json) {
+    if (json == null || json.isEmpty) return null;
+    return ExtremeSession.fromJson(json);
   }
 }
 
@@ -23,16 +28,16 @@ class AttendanceExtremesResponse {
   final String period;
   final String startDate;
   final String endDate;
-  final ExtremeSession highest;
-  final ExtremeSession lowest;
+  final ExtremeSession? highest;
+  final ExtremeSession? lowest;
 
   AttendanceExtremesResponse({
     required this.success,
     required this.period,
     required this.startDate,
     required this.endDate,
-    required this.highest,
-    required this.lowest,
+    this.highest,
+    this.lowest,
   });
 
   factory AttendanceExtremesResponse.fromJson(Map<String, dynamic> json) {
@@ -43,8 +48,8 @@ class AttendanceExtremesResponse {
       period: json['period'] ?? '',
       startDate: json['start_date'] ?? '',
       endDate: json['end_date'] ?? '',
-      highest: ExtremeSession.fromJson(extremes['highest'] ?? {}),
-      lowest: ExtremeSession.fromJson(extremes['lowest'] ?? {}),
+      highest: ExtremeSession.fromJsonOrNull(extremes['highest']),
+      lowest: ExtremeSession.fromJsonOrNull(extremes['lowest']),
     );
   }
 }

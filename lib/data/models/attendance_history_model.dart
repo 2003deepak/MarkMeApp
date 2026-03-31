@@ -2,17 +2,24 @@ class AttendanceHistoryResponse {
   final bool success;
   final String message;
   final List<AttendanceHistoryRecord> records;
+  final List<String> missingFields;
 
   AttendanceHistoryResponse({
     required this.success,
     required this.message,
     required this.records,
+    this.missingFields = const [],
   });
 
   factory AttendanceHistoryResponse.fromJson(Map<String, dynamic> json) {
     return AttendanceHistoryResponse(
       success: json['success'] ?? false,
       message: json['message'] ?? '',
+      missingFields:
+          (json['missing_fields'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
       records:
           (json['records'] as List<dynamic>?)
               ?.map((e) => AttendanceHistoryRecord.fromJson(e))

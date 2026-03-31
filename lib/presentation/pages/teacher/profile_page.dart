@@ -51,8 +51,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         ),
       );
 
-      ref.read(teacherStoreProvider.notifier).clearState();
+      // Perform logout first to prevent profile page rebuild before navigation
       await ref.read(authStoreProvider.notifier).setLogOut();
+      ref.read(teacherStoreProvider.notifier).clearState();
     }
   }
 

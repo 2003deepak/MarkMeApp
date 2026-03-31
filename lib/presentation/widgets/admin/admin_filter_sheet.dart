@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:markmeapp/presentation/widgets/ui/custom_bottom_sheet_layout.dart';
 import 'package:markmeapp/presentation/widgets/ui/dropdown.dart';
+import 'package:markmeapp/state/admin_state.dart';
 
-class AdminFilterSheet extends StatefulWidget {
+class AdminFilterSheet extends ConsumerStatefulWidget {
   final Map<String, String?> initialFilters;
   final void Function(Map<String, String?>) onApply;
 
@@ -13,40 +15,59 @@ class AdminFilterSheet extends StatefulWidget {
   });
 
   @override
-  State<AdminFilterSheet> createState() => _AdminFilterSheetState();
+  ConsumerState<AdminFilterSheet> createState() => _AdminFilterSheetState();
 }
 
-class _AdminFilterSheetState extends State<AdminFilterSheet> {
-  late String? selectedProgram;
-  late String? selectedDepartment;
-  late String? selectedSubject;
-  late String? selectedTeacher;
+class _AdminFilterSheetState extends ConsumerState<AdminFilterSheet> {
+  String? selectedProgram;
+  String? selectedDepartment;
+  String? selectedSemester;
 
   @override
   void initState() {
     super.initState();
     selectedProgram = widget.initialFilters['Program'];
     selectedDepartment = widget.initialFilters['Department'];
-    selectedSubject = widget.initialFilters['Subject'];
-    selectedTeacher = widget.initialFilters['Teacher'];
+    selectedSemester = widget.initialFilters['Semester'];
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(adminStoreProvider.notifier).fetchHierarchicalMetadata();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final metadata = ref.watch(adminStoreProvider).hierarchyMetadata ?? {};
+    final programs = metadata.keys.toList();
+
+    List<String> departments = [];
+    if (selectedProgram != null && metadata[selectedProgram] is Map) {
+      departments = (metadata[selectedProgram] as Map<String, dynamic>).keys.toList();
+    }
+
+    List<String> semesters = [];
+    if (selectedProgram != null &&
+        selectedDepartment != null &&
+        metadata[selectedProgram] is Map &&
+        (metadata[selectedProgram] as Map)[selectedDepartment] is List) {
+      final sems = (metadata[selectedProgram] as Map)[selectedDepartment] as List;
+      semesters = sems.map((s) => s.toString()).toList();
+    }
+
     return CustomBottomSheetLayout(
       title: "Filter Options",
       onReset: () {
         setState(() {
+          selectedProgram = null;
           selectedDepartment = null;
-          selectedSubject = null;
-          selectedTeacher = null;
+          selectedSemester = null;
         });
       },
       onApply: () {
-        widget.onApply({
+        widget.onApply(<String, String?>{
+          'Program': selectedProgram,
           'Department': selectedDepartment,
-          'Subject': selectedSubject,
-          'Teacher': selectedTeacher,
+          'Semester': selectedSemester,
         });
         Navigator.pop(context);
       },
@@ -54,27 +75,42 @@ class _AdminFilterSheetState extends State<AdminFilterSheet> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Dropdown<String>(
+            label: "Program",
+            hint: "Select Program",
+            items: programs.cast<String>(),
+            value: selectedProgram,
+            onChanged: (val) {
+              setState(() {
+                selectedProgram = val;
+                selectedDepartment = null;
+                selectedSemester = null;
+              });
+            },
+          ),
+          const SizedBox(height: 20),
+          Dropdown<String>(
             label: "Department",
             hint: "Select Department",
-            items: const ["Computer Science", "Mechanical", "Electrical", "Civil"],
+            items: departments,
             value: selectedDepartment,
-            onChanged: (val) => setState(() => selectedDepartment = val),
+            onChanged: (val) {
+              setState(() {
+                selectedDepartment = val;
+                selectedSemester = null;
+              });
+            },
           ),
           const SizedBox(height: 20),
           Dropdown<String>(
-            label: "Subject",
-            hint: "Select Subject",
-            items: const ["Algorithms", "Databases", "Mathematics", "History"],
-            value: selectedSubject,
-            onChanged: (val) => setState(() => selectedSubject = val),
-          ),
-          const SizedBox(height: 20),
-          Dropdown<String>(
-            label: "Teacher",
-            hint: "Select Teacher",
-            items: const ["Alan Turing", "Ada Lovelace", "John von Neumann"],
-            value: selectedTeacher,
-            onChanged: (val) => setState(() => selectedTeacher = val),
+            label: "Semester",
+            hint: "Select Semester",
+            items: semesters,
+            value: selectedSemester,
+            onChanged: (val) {
+              setState(() {
+                selectedSemester = val;
+              });
+            },
           ),
           const SizedBox(height: 20),
         ],
@@ -82,3 +118,4 @@ class _AdminFilterSheetState extends State<AdminFilterSheet> {
     );
   }
 }
+

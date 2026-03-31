@@ -5,7 +5,8 @@ import 'package:markmeapp/core/utils/app_logger.dart';
 import 'package:markmeapp/data/models/live_session_model.dart';
 import 'package:markmeapp/data/models/teacher_leaderboard_model.dart';
 import 'package:markmeapp/data/models/attendance_extremes_model.dart';
-
+import 'package:markmeapp/data/models/attendance_trends_model.dart';
+import 'package:markmeapp/data/models/attendance_heatmap_model.dart';
 
 class AdminRepository {
   final Dio _dio;
@@ -130,10 +131,19 @@ class AdminRepository {
     }
   }
 
-  Future<Map<String, dynamic>> fetchLiveClasses() async {
+  Future<Map<String, dynamic>> fetchLiveClasses({
+    String? program,
+    String? department,
+    String? semester,
+  }) async {
     try {
       AppLogger.info('🚀 [AdminRepository] Fetching live classes...');
-      final response = await _dio.get('/admin/live-classes');
+      final Map<String, dynamic> params = {};
+      if (program != null) params['program'] = program;
+      if (department != null) params['department'] = department;
+      if (semester != null) params['semester'] = semester;
+
+      final response = await _dio.get('/admin/live-classes', queryParameters: params);
 
       final body = response.data;
 
@@ -164,13 +174,71 @@ class AdminRepository {
     }
   }
 
+  Future<Map<String, dynamic>> fetchAttendanceTrends(
+    String range, {
+    String? program,
+    String? department,
+    String? semester,
+    String? subjectId,
+    String? teacherId,
+  }) async {
+    try {
+      final Map<String, dynamic> params = {'range': range};
 
-  Future<Map<String, dynamic>> fetchTeacherLeaderboard(String period) async {
+      if (program != null) params['program'] = program;
+      if (department != null) params['department'] = department;
+      if (semester != null) params['semester'] = semester;
+      if (subjectId != null) params['subject_id'] = subjectId;
+      if (teacherId != null) params['teacher_id'] = teacherId;
+
+      AppLogger.info('🚀 [AdminRepository] Fetching attendance trends: $params');
+      final response = await _dio.get(
+        '/admin/analytics/attendance-trends',
+        queryParameters: params,
+      );
+
+      final body = response.data;
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'data': AttendanceTrendsResponse.fromJson(body),
+        };
+      } else {
+        return {
+          'success': false,
+          'error': body['message'] ?? 'Failed to fetch attendance trends',
+        };
+      }
+    } on DioException catch (e) {
+      AppLogger.error('🔴 [AdminRepository] DioException: ${e.message}');
+      return {
+        'success': false,
+        'error': e.response?.data?['message'] ?? e.message ?? 'Network error',
+      };
+    } catch (e) {
+      AppLogger.error('🔴 [AdminRepository] Exception: $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+
+  Future<Map<String, dynamic>> fetchTeacherLeaderboard(
+    String period, {
+    String? program,
+    String? department,
+    String? semester,
+  }) async {
     try {
       AppLogger.info('🚀 [AdminRepository] Fetching teacher leaderboard for period: $period');
+      final Map<String, dynamic> params = {'period': period};
+      if (program != null) params['program'] = program;
+      if (department != null) params['department'] = department;
+      if (semester != null) params['semester'] = semester;
+
       final response = await _dio.get(
         '/admin/teacher-leaderboard',
-        queryParameters: {'period': period},
+        queryParameters: params,
       );
 
       final body = response.data;
@@ -199,12 +267,22 @@ class AdminRepository {
     }
   }
 
-  Future<Map<String, dynamic>> fetchAttendanceExtremes(String period) async {
+  Future<Map<String, dynamic>> fetchAttendanceExtremes(
+    String period, {
+    String? program,
+    String? department,
+    String? semester,
+  }) async {
     try {
       AppLogger.info('🚀 [AdminRepository] Fetching attendance extremes for: $period');
+      final Map<String, dynamic> params = {'period': period};
+      if (program != null) params['program'] = program;
+      if (department != null) params['department'] = department;
+      if (semester != null) params['semester'] = semester;
+
       final response = await _dio.get(
         '/admin/extremes',
-        queryParameters: {'period': period},
+        queryParameters: params,
       );
 
       final body = response.data;
@@ -472,6 +550,168 @@ class AdminRepository {
         'error': e.response?.data?['message'] ?? e.message ?? 'Network error',
       };
     } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> fetchClerks({
+    String? program,
+    String? department,
+    String? search,
+    int page = 1,
+    int limit = 10,
+  }) async {
+    try {
+      final Map<String, dynamic> params = {
+        'page': page,
+        'limit': limit,
+      };
+      
+      if (program != null && program.isNotEmpty && program != 'All Programs') params['program'] = program;
+      if (department != null && department.isNotEmpty && department != 'All Departments') params['department'] = department;
+      if (search != null && search.isNotEmpty) params['search'] = search;
+
+      AppLogger.info('🔍 [AdminRepository] Fetching clerks: $params');
+
+      final response = await _dio.get(
+        '/admin/clerk', 
+        queryParameters: params,
+      );
+
+      final body = response.data;
+      
+      if (response.statusCode == 200 && body['success'] == true) {
+         return {
+          'success': true,
+          'data': List<Map<String, dynamic>>.from(body['data'] ?? []),
+          'count': body['count'] ?? 0,
+          'total': body['total'],
+          'page': body['page'],
+          'limit': body['limit'],
+          'total_pages': body['total_pages'],
+          'has_next': body['has_next'],
+          'has_prev': body['has_prev'],
+          'message': body['message'] ?? "Fetched successfully",
+        };
+      } else {
+        return {
+          'success': false,
+          'error': body['message'] ?? 'Failed to fetch clerks',
+        };
+      }
+    } on DioException catch (e) {
+      return {
+        'success': false,
+        'error': e.response?.data?['message'] ?? e.message ?? 'Network error',
+      };
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> fetchClerkDetails(String clerkId) async {
+    try {
+      AppLogger.info('🚀 [AdminRepository] Fetching clerk details for $clerkId...');
+      final response = await _dio.get('/admin/clerk/$clerkId');
+      final body = response.data;
+
+      if (response.statusCode == 200 && body['success'] == true) {
+        return {
+          'success': true,
+          'data': body['data'],
+        };
+      } else {
+        return {
+          'success': false,
+          'error': body['message'] ?? 'Failed to fetch clerk details',
+        };
+      }
+    } on DioException catch (e) {
+      return {
+        'success': false,
+        'error': e.response?.data?['message'] ?? e.message ?? 'Network error',
+      };
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> updateClerkScopes(String clerkId, List<Map<String, String>> scopes) async {
+    try {
+      AppLogger.info('🚀 [AdminRepository] Updating scopes for clerk $clerkId...');
+      final response = await _dio.patch(
+        '/admin/clerk/$clerkId',
+        data: {
+          'academic_scopes': scopes,
+        },
+      );
+      final body = response.data;
+
+      if (response.statusCode == 200 && body['success'] == true) {
+        return {
+          'success': true,
+          'message': body['message'] ?? 'Academic scopes updated successfully',
+        };
+      } else {
+        return {
+          'success': false,
+          'error': body['message'] ?? 'Failed to update academic scopes',
+        };
+      }
+    } on DioException catch (e) {
+      return {
+        'success': false,
+        'error': e.response?.data?['message'] ?? e.message ?? 'Network error',
+      };
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> fetchAttendanceHeatmap({
+    String? department,
+    int? month,
+    String? program,
+    int? year,
+    int? semester,
+    int? batchYear,
+  }) async {
+    try {
+      final Map<String, dynamic> params = {};
+      if (department != null) params['department'] = department;
+      if (month != null) params['month'] = month;
+      if (program != null) params['program'] = program;
+      if (year != null) params['year'] = year;
+      if (semester != null) params['semester'] = semester;
+      if (batchYear != null) params['batch_year'] = batchYear;
+
+      AppLogger.info('🚀 [AdminRepository] Fetching attendance heatmap: $params');
+      final response = await _dio.get(
+        '/attendance/heatmap',
+        queryParameters: params,
+      );
+
+      final body = response.data;
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'data': AttendanceHeatmapResponse.fromJson(body).data,
+        };
+      } else {
+        return {
+          'success': false,
+          'error': body['message'] ?? 'Failed to fetch attendance heatmap',
+        };
+      }
+    } on DioException catch (e) {
+      AppLogger.error('🔴 [AdminRepository] DioException: ${e.message}');
+      return {
+        'success': false,
+        'error': e.response?.data?['message'] ?? e.message ?? 'Network error',
+      };
+    } catch (e) {
+      AppLogger.error('🔴 [AdminRepository] Exception: $e');
       return {'success': false, 'error': e.toString()};
     }
   }

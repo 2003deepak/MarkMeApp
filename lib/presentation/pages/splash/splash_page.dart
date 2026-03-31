@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:markmeapp/state/auth_state.dart';
 import 'dart:math' as math;
 
-class SplashPage extends StatefulWidget {
+class SplashPage extends ConsumerStatefulWidget {
   const SplashPage({super.key});
 
   @override
-  State<SplashPage> createState() => _SplashPageState();
+  ConsumerState<SplashPage> createState() => _SplashPageState();
 }
 
-class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
+class _SplashPageState extends ConsumerState<SplashPage> with TickerProviderStateMixin {
+  bool _minTimeElapsed = false;
   late AnimationController _fadeController;
   late AnimationController _scaleController;
   late AnimationController _slideController;
@@ -102,12 +105,28 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
 
     _startAnimations();
 
-    // Navigate after delay
+    // Navigate after delay AND when auth is loaded
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) {
-        context.go('/login');
+        setState(() {
+          _minTimeElapsed = true;
+        });
+        _checkAuthAndNavigate();
       }
     });
+  }
+
+  void _checkAuthAndNavigate() {
+    if (!_minTimeElapsed) return;
+    
+    final auth = ref.read(authStoreProvider);
+    if (auth.hasLoaded) {
+      if (auth.isLoggedIn && auth.role != null) {
+        context.go(ref.read(authStoreProvider.notifier).getRouteForRole(auth.role!));
+      } else {
+        context.go('/login');
+      }
+    }
   }
 
   void _startAnimations() {
@@ -153,6 +172,12 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<AuthState>(authStoreProvider, (previous, next) {
+      if (next.hasLoaded) {
+        _checkAuthAndNavigate();
+      }
+    });
+
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     final isDesktop = screenWidth > 600;

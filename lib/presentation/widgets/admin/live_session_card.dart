@@ -64,7 +64,9 @@ class LiveSessionCard extends StatelessWidget {
               const Icon(Icons.sensors, color: Colors.white, size: 20),
             ],
           ),
-          const Spacer(),
+
+          const SizedBox(height: 10),
+          
           Text(
             subject,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -102,7 +104,7 @@ class LiveSessionCard extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
-              value: active / total,
+              value: total > 0 ? active / total : 0.0,
               backgroundColor: Colors.white.withOpacity(0.2),
               valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
               minHeight: 6,

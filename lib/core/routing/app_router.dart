@@ -69,6 +69,7 @@ import 'package:markmeapp/presentation/pages/teacher/faq_page.dart'
 
 // Admin Pages
 import 'package:markmeapp/presentation/pages/admin/dashboard_page.dart';
+import 'package:markmeapp/presentation/pages/admin/analytics_page.dart';
 import 'package:markmeapp/presentation/pages/admin/profile_page.dart'
     as admin_profile;
 import 'package:markmeapp/presentation/pages/admin/defaulter_teacher_page.dart';
@@ -77,6 +78,10 @@ import 'package:markmeapp/presentation/pages/admin/create_program_page.dart';
 import 'package:markmeapp/presentation/pages/admin/create_department_page.dart';
 import 'package:markmeapp/presentation/pages/admin/hierarchical_flow_page.dart';
 import 'package:markmeapp/presentation/pages/admin/create_clerk_page.dart';
+import 'package:markmeapp/presentation/pages/admin/management_page.dart';
+import 'package:markmeapp/presentation/pages/admin/clerk_list_page.dart';
+import 'package:markmeapp/presentation/pages/admin/clerk_details_page.dart';
+import 'package:markmeapp/presentation/pages/admin/attendance_heatmap_page.dart';
 
 // State
 import 'package:markmeapp/state/auth_state.dart';
@@ -402,21 +407,19 @@ class AppRouter {
                 StatefulShellBranch(
                   routes: [
                     GoRoute(
-                      path: '/admin/reports',
-                      name: 'admin_reports',
-                      builder: (context, state) => const AdminReportsPage(),
+                      path: '/admin/analytics',
+                      name: 'admin_analytics',
+                      builder: (context, state) => const AdminAnalyticsPage(),
                     ),
                   ],
                 ),
-                // 3. Management (Placeholder)
+                // 3. Management
                 StatefulShellBranch(
                   routes: [
                     GoRoute(
                       path: '/admin/management',
                       name: 'admin_management',
-                      builder: (context, state) => const Scaffold(
-                        body: Center(child: Text('Management Coming Soon')),
-                      ),
+                      builder: (context, state) => const AdminManagementPage(),
                     ),
                   ],
                 ),
@@ -664,6 +667,29 @@ class AppRouter {
               path: '/admin/create-clerk',
               name: 'create_clerk',
               builder: (context, state) => const CreateClerkPage(),
+            ),
+            GoRoute(
+              path: '/admin/clerk-listing',
+              name: 'admin_clerk_listing',
+              builder: (context, state) => const ClerkListPage(),
+            ),
+            GoRoute(
+              path: '/admin/generate-reports',
+              name: 'admin_generate_reports',
+              builder: (context, state) => const AdminReportsPage(),
+            ),
+            GoRoute(
+              path: '/admin/attendance-heatmaps',
+              name: 'admin_attendance_heatmaps',
+              builder: (context, state) => const AttendanceHeatmapPage(),
+            ),
+            GoRoute(
+              path: '/admin/clerk/:id',
+              name: 'clerk_details',
+              builder: (context, state) {
+                final clerkId = state.pathParameters['id']!;
+                return ClerkDetailsPage(clerkId: clerkId);
+              },
             ),
           ],
         ),

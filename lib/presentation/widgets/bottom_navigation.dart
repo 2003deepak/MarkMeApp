@@ -118,10 +118,10 @@ class _BottomNavigationState extends State<BottomNavigation> {
             label: 'Home',
           ),
           NavigationDestination(
-            route: '$baseRoute/reports',
+            route: '$baseRoute/analytics',
             icon: Icons.analytics_outlined,
             activeIcon: Icons.analytics,
-            label: 'Reports',
+            label: 'Analytics',
           ),
           NavigationDestination(
             route: '$baseRoute/management',

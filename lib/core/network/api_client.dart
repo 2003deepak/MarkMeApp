@@ -59,6 +59,12 @@ final Provider<Dio> dioProvider = Provider<Dio>((ref) {
           return handler.next(error);
         }
 
+        // Prevent infinite loop if the refresh token endpoint itself returns 401
+        if (requestOptions.path.endsWith('/auth/refresh-token')) {
+          AppLogger.warning("⚠️ Refresh token expired or invalid (401) → passing error");
+          return handler.next(error);
+        }
+
         final authStore = ref.read(authStoreProvider.notifier);
         final refreshToken = await authStore.getRefreshToken();
 
@@ -73,10 +79,17 @@ final Provider<Dio> dioProvider = Provider<Dio>((ref) {
           try {
             final refreshResult = await refreshCompleter!.future;
             if (refreshResult['success'] == true) {
-              final newToken = refreshResult['data']['access_token'];
-              requestOptions.headers["Authorization"] = "Bearer $newToken";
-              final clonedResponse = await dio.fetch(requestOptions);
-              return handler.resolve(clonedResponse);
+              final newAccessToken = refreshResult['data']['access_token'];
+
+              if (!refreshCompleter!.isCompleted) {
+                refreshCompleter!.complete(refreshResult);
+              }
+
+              requestOptions.headers["Authorization"] = "Bearer $newAccessToken";
+
+              final retryResponse = await dio.fetch(requestOptions);
+
+              return handler.resolve(retryResponse);
             } else {
               throw Exception('Token refresh failed while waiting');
             }
@@ -136,7 +149,7 @@ final Provider<Dio> dioProvider = Provider<Dio>((ref) {
             'Token refresh failed after 2 attempts',
           );
           await authStore.setLogOut();
-          handler.reject(error);
+          return handler.reject(error);
         }
 
         isRefreshing = false;
